@@ -13,6 +13,7 @@ import { compressImage } from '../utils/imageOptimizer';
 import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../utils/errorHandler';
+import { AISummaryPanel } from '../components';
 
 const LOCAL_STORAGE_KEY = 'offline_visit_history';
 
@@ -24,8 +25,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
   const { customer } = useAuth();
 
   const [s, setS] = useState({
-    uri: null, 
-    review: '', 
+    uri: null,
+    review: '',
     visit_date: new Date().toISOString(), // 기본값은 현재시간
     loading: !!visitId, // 수정 모드일 때만 로딩 활성화
     saving: false,
@@ -46,22 +47,22 @@ const VisitDetailScreen = ({ route, navigation }) => {
         const list = stored ? JSON.parse(stored) : [];
         const item = list.find(v => v.id === visitId);
         if (item) {
-          up({ 
-            uri: item.card_image, 
-            review: item.card_review, 
+          up({
+            uri: item.card_image,
+            review: item.card_review,
             visit_date: item.visit_date, // 기존 날짜 유지
-            loading: false 
+            loading: false
           });
         }
       } else {
         // --- [ON 모드] 서버 데이터 불러오기 ---
         const { data } = await handleApiCall('VisitDetail.load', () => visitService.getVisit(visitId));
         if (data) {
-          up({ 
-            uri: data.card_image, 
-            review: data.card_review || '', 
+          up({
+            uri: data.card_image,
+            review: data.card_review || '',
             visit_date: data.visit_date, // 서버에 기록된 실제 방문 날짜 유지
-            loading: false 
+            loading: false
           });
         }
       }
@@ -77,7 +78,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
       allowsEditing: true, aspect: [4, 3], quality: 0.7
     });
-    
+
     if (!res.canceled && res.assets[0]) {
       try {
         const comp = await compressImage(res.assets[0].uri, { maxWidth: 800, quality: 0.6 });
@@ -103,23 +104,23 @@ const VisitDetailScreen = ({ route, navigation }) => {
         // --- [OFF 모드] 로컬 저장 로직 ---
         const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
         let list = stored ? JSON.parse(stored) : [];
-        
+
         if (s.isEdit) {
           list = list.map(v => v.id === visitId ? { ...v, ...payload } : v);
         } else {
           list = [{ ...payload, id: `local_${Date.now()}` }, ...list];
         }
-        
+
         await AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
       } else {
         // --- [ON 모드] 서버 저장 로직 ---
         // 서버 데이터는 이미 visit_history에 행(Row)이 있으므로 보통 updateVisit만 수행합니다.
-        const { error } = await handleApiCall('Visit.save', () => 
+        const { error } = await handleApiCall('Visit.save', () =>
           visitService.updateVisit(visitId, payload)
         );
         if (error) throw error;
       }
-      
+
       showSuccessAlert(s.isEdit ? 'UPDATE' : 'SAVE', Alert);
       setTimeout(() => navigation.goBack(), 1000);
     } catch (err) {
@@ -130,8 +131,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
   if (s.loading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
 
   // UI 테마: OFF 모드는 네이비, ON 모드는 황동/나무 색상 적용
-  const theme = isOffMode 
-    ? { c: DrawerTheme.navyLight, bg: '#10171E', btn: DrawerTheme.navyMid } 
+  const theme = isOffMode
+    ? { c: DrawerTheme.navyLight, bg: '#10171E', btn: DrawerTheme.navyMid }
     : { c: DrawerTheme.goldBrass, bg: DrawerTheme.woodMid, btn: DrawerTheme.woodDark };
 
   return (
@@ -139,7 +140,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : null} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 50 }}>
-            
+
             <View style={[styles.header, { backgroundColor: theme.bg, borderColor: theme.c }]}>
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Text style={styles.whiteText}>← 뒤로</Text>
@@ -152,9 +153,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
             <View style={[styles.imgBox, { borderColor: theme.c }]}>
               {s.uri ? (
                 <>
-                  <Image 
-                    source={{ uri: s.uri.startsWith('data') ? s.uri : `data:image/jpeg;base64,${s.uri}` }} 
-                    style={styles.fullImg} 
+                  <Image
+                    source={{ uri: s.uri.startsWith('data') ? s.uri : `data:image/jpeg;base64,${s.uri}` }}
+                    style={styles.fullImg}
                   />
                   <TouchableOpacity onPress={() => up({ uri: null })} style={styles.delBtn}>
                     <Text style={styles.whiteText}>✕</Text>
@@ -169,24 +170,26 @@ const VisitDetailScreen = ({ route, navigation }) => {
             </View>
 
             <View style={styles.btnRow}>
-              <CustomButton title="촬영하기" onPress={() => onPick('cam')} style={{flex:1}} />
-              <CustomButton title="앨범에서 선택" onPress={() => onPick('lib')} variant="secondary" style={{flex:1}} />
+              <CustomButton title="촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} />
+              <CustomButton title="앨범에서 선택" onPress={() => onPick('lib')} variant="secondary" style={{ flex: 1 }} />
             </View>
 
-            <TextInput 
-              style={[styles.input, { borderColor: theme.c + '40' }]} 
-              multiline 
-              value={s.review} 
+            <TextInput
+              style={[styles.input, { borderColor: theme.c + '40' }]}
+              multiline
+              value={s.review}
               onChangeText={v => up({ review: v })}
               placeholder={isOffMode ? "비밀스러운 메모를 남겨보세요..." : "상담 내용을 기록해두면 나중에 확인하기 좋아요."}
-              placeholderTextColor="#888" 
+              placeholderTextColor="#888"
             />
-            
-            <CustomButton 
-              title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")} 
-              onPress={onSave} 
-              loading={s.saving} 
-              style={[styles.saveBtn, { backgroundColor: theme.btn }]} 
+
+            <AISummaryPanel reviewText={s.review} visitDate={s.visit_date} />
+
+            <CustomButton
+              title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")}
+              onPress={onSave}
+              loading={s.saving}
+              style={[styles.saveBtn, { backgroundColor: theme.btn }]}
             />
 
           </ScrollView>

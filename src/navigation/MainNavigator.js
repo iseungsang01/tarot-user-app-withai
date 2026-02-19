@@ -8,6 +8,7 @@ import { useNotifications } from '../hooks/useNotifications';
 
 // Screens
 import HistoryScreen from '../screens/HistoryScreen';
+import AIChatScreen from '../screens/AIChatScreen';
 import CouponScreen from '../screens/CouponScreen';
 import VoteScreen from '../screens/VoteScreen';
 import NoticeScreen from '../screens/NoticeScreen';
@@ -68,6 +69,16 @@ const TabNavigator = () => {
           tabBarLabel: '홈',
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🏠" hasNotification={false} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AIChat"
+        component={AIChatScreen}
+        options={{
+          tabBarLabel: 'AI 상담',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="🔮" hasNotification={false} />
           ),
         }}
       />
