@@ -8,7 +8,7 @@ import { useNotifications } from '../hooks/useNotifications';
 
 // Screens
 import HistoryScreen from '../screens/HistoryScreen';
-import AIChatScreen from '../screens/AIChatScreen';
+import AIChatScreen from '../screens/AIchatScreen';
 import CouponScreen from '../screens/CouponScreen';
 import VoteScreen from '../screens/VoteScreen';
 import NoticeScreen from '../screens/NoticeScreen';
@@ -174,4 +174,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MainNavigator;
+export default MainNavigator; 

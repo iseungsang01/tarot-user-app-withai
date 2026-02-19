@@ -9,7 +9,7 @@ export { DrawerUnit } from './DrawerUnit';
 export { DrawerChest } from './DrawerChest';
 export { TarotCardModal } from './TarotCardModal';
 export { VoteCard } from './VoteCard';
-export { AISummaryPanel, AIHistoryAnalysisPanel } from './AIInsightPanelV2';
+export { AISummaryPanel, AIHistoryAnalysisPanel } from './AIInsightPanel';
 export { SettingPasswordForm } from './SettingPasswordForm';
 export { SettingReportManager } from './SettingReportManager';
 export { SettingDeleteAccount } from './SettingDeleteAccount';
