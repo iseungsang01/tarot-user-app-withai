@@ -29,6 +29,9 @@ export const STORAGE_KEYS = {
   VISIT_CACHE: 'visit_cache',
   COUPON_CACHE: 'coupon_cache',
   LAST_SYNC: 'last_sync',
+  DAILY_FORTUNE: 'daily_fortune',
+  ATTENDANCE: 'attendance_history',
+  AI_CHAT_HISTORY: 'ai_chat_history',
 };
 
 export const storage = {
@@ -357,6 +360,129 @@ export const storage = {
   async cacheCoupons(coupons) { await this.save(STORAGE_KEYS.COUPON_CACHE, coupons); },
   async getCachedCoupons() { return await this.get(STORAGE_KEYS.COUPON_CACHE) || []; },
   async getLastSyncTime() { return await this.get(STORAGE_KEYS.LAST_SYNC); },
+
+  // 오늘의 운세 관련 (날짜별 저장 지원)
+  async saveDailyFortune(fortune, dateStr) {
+    const date = dateStr || this._getLocalDateString();
+    const allFortunes = await this.get(STORAGE_KEYS.DAILY_FORTUNE) || {};
+    allFortunes[date] = fortune;
+    await this.save(STORAGE_KEYS.DAILY_FORTUNE, allFortunes);
+  },
+  async getDailyFortune(dateStr) {
+    const date = dateStr || this._getLocalDateString();
+    const allFortunes = await this.get(STORAGE_KEYS.DAILY_FORTUNE) || {};
+    return allFortunes[date] || null;
+  },
+  async getAllFortunes() {
+    return await this.get(STORAGE_KEYS.DAILY_FORTUNE) || {};
+  },
+  async deleteDailyFortune(dateStr) {
+    const date = dateStr || this._getLocalDateString();
+    const allFortunes = await this.get(STORAGE_KEYS.DAILY_FORTUNE) || {};
+    if (allFortunes[date]) {
+      delete allFortunes[date];
+      await this.save(STORAGE_KEYS.DAILY_FORTUNE, allFortunes);
+      return true;
+    }
+    return false;
+  },
+  _getLocalDateString() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  },
+
+  // 로컬 출석 체크 관련
+  async saveAttendance(dateStr) {
+    const date = dateStr || this._getLocalDateString();
+    const history = await this.get(STORAGE_KEYS.ATTENDANCE) || [];
+    if (!history.includes(date)) {
+      history.push(date);
+      await this.save(STORAGE_KEYS.ATTENDANCE, history);
+    }
+  },
+  async getAttendanceHistory() {
+    return await this.get(STORAGE_KEYS.ATTENDANCE) || [];
+  },
+  async checkAttendance(dateStr) {
+    const date = dateStr || this._getLocalDateString();
+    const history = await this.get(STORAGE_KEYS.ATTENDANCE) || [];
+    return history.includes(date);
+  },
+
+  // AI 상담 대화 내역 관련 (사용자별 저장)
+  async saveAIChatHistory(customerId, messages) {
+    if (!customerId) return;
+    const allHistories = await this.get(STORAGE_KEYS.AI_CHAT_HISTORY) || {};
+    allHistories[customerId] = messages;
+    await this.save(STORAGE_KEYS.AI_CHAT_HISTORY, allHistories);
+  },
+
+  async getAIChatHistory(customerId) {
+    if (!customerId) return [];
+    const allHistories = await this.get(STORAGE_KEYS.AI_CHAT_HISTORY) || {};
+    const history = allHistories[customerId] || [];
+
+    // ISO 날짜 문자열을 Date 객체로 복구
+    return history.map(msg => ({
+      ...msg,
+      timestamp: msg.timestamp ? new Date(msg.timestamp) : null
+    }));
+  },
+
+  async deleteAIChatHistory(customerId) {
+    if (!customerId) return;
+    const allHistories = await this.get(STORAGE_KEYS.AI_CHAT_HISTORY) || {};
+    if (allHistories[customerId]) {
+      delete allHistories[customerId];
+      await this.save(STORAGE_KEYS.AI_CHAT_HISTORY, allHistories);
+    }
+  },
+
+  // 세션 목록 관리 (모든 과거 대화 내역)
+  async archiveAIChatSession(customerId, messages) {
+    if (!customerId || !messages || messages.length <= 1) return;
+
+    const sessions = await this.get(`ai_sessions_${customerId}`) || [];
+
+    // 제목 추출 (첫 번째 사용자 메시지 혹은 기본값)
+    const firstUserMsg = messages.find(m => m.role === 'user');
+    const title = firstUserMsg
+      ? (firstUserMsg.content.length > 20 ? firstUserMsg.content.substring(0, 20) + '...' : firstUserMsg.content)
+      : '새로운 상담';
+
+    const newSession = {
+      id: `session_${Date.now()}`,
+      title,
+      date: new Date().toISOString(),
+      messageCount: messages.length,
+      messages: messages // 전체 메시지 저장
+    };
+
+    sessions.unshift(newSession); // 최신이 위로
+    await this.save(`ai_sessions_${customerId}`, sessions.slice(0, 50)); // 최대 50개 유지
+    return newSession;
+  },
+
+  async getAIChatSessions(customerId) {
+    if (!customerId) return [];
+    const sessions = await this.get(`ai_sessions_${customerId}`) || [];
+
+    // 각 세션 내의 메시지 타임스탬프 복구
+    return sessions.map(session => ({
+      ...session,
+      messages: (session.messages || []).map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp ? new Date(msg.timestamp) : null
+      }))
+    }));
+  },
+
+  async deleteAIChatSession(customerId, sessionId) {
+    if (!customerId || !sessionId) return;
+    const sessions = await this.get(`ai_sessions_${customerId}`) || [];
+    const filtered = sessions.filter(s => s.id !== sessionId);
+    await this.save(`ai_sessions_${customerId}`, filtered);
+  },
 
   // 데이터 정리
   async clearOldCache(days = 7) {

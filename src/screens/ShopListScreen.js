@@ -12,8 +12,8 @@ const SHOPS = [
         description: '신비로운 기운이 깃든 타로 전문점',
         address: '서울시 강남구 테헤란로 123',
         emoji: '🌙',
-        noticeCount: 2,
-        couponCount: 1,
+        noticeCount: 1,
+        couponCount: 2,
         voteCount: 1
     }
 ];

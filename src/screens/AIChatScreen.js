@@ -28,9 +28,18 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 
 const ChatBubble = ({ message }) => {
     const isUser = message.role === 'user';
-    const timeStr = message.timestamp
-        ? `${message.timestamp.getHours().toString().padStart(2, '0')}:${message.timestamp.getMinutes().toString().padStart(2, '0')}`
-        : '';
+
+    // 타임스탬프 처리 (Date 객체가 아닐 경우 변환 시도)
+    let timeStr = '';
+    if (message.timestamp) {
+        const date = typeof message.timestamp === 'string'
+            ? new Date(message.timestamp)
+            : message.timestamp;
+
+        if (date instanceof Date && !isNaN(date)) {
+            timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        }
+    }
 
     return (
         <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAI]}>
@@ -79,43 +88,53 @@ const TypingIndicator = () => (
 // 메인 화면
 // ─────────────────────────────────────────────────────────────
 
-const AIChatScreen = ({ navigation }) => {
+const AIChatScreen = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
     const scrollRef = useRef(null);
     const { customer } = useAuth();
     const [inputText, setInputText] = useState('');
 
-    const { messages, loading, initialized, initialize, sendMessage, resetChat } = useAIChat();
+    const isGuest = customer?.isGuest || customer?.id === 'guest';
+    const { messages, loading, initialized, initialize, sendMessage, resetChat, loadSession } = useAIChat();
 
-    const isPremium = customer?.membership_type === 'Pro' || customer?.membership_type === 'Premium';
+    // 회원 전용 기능 - 과거 세션 로드 처리
+    useEffect(() => {
+        if (route.params?.session) {
+            loadSession(route.params.session);
+            // 파라미터 초기화 (뒤로 가기 시 중복 방지)
+            navigation.setParams({ session: null });
+        }
+    }, [route.params?.session]);
+
+    const isPremium = !isGuest && (customer?.membership_type === 'Pro' || customer?.membership_type === 'Premium');
     const membershipType = customer?.membership_type || 'Free';
 
-    // 남은 횟수 계산 로직 (간소화)
+    // 남은 횟수 계산 로직
     let usageInfo = '';
     let hasRemaining = true;
 
-    if (customer && !customer.isGuest) {
+    if (customer && !isGuest) {
         if (membershipType === 'Free') {
-            const remaining = Math.max(0, 5 - (customer.monthly_ai_count || 0));
+            const remaining = Math.max(0, 100 - (customer.monthly_ai_count || 0));
             usageInfo = `이번 달 남은 상담: ${remaining}회`;
             hasRemaining = remaining > 0;
         } else if (membershipType === 'Pro') {
-            const remaining = Math.max(0, 5 - (customer.daily_ai_count || 0));
+            const remaining = Math.max(0, 10 - (customer.daily_ai_count || 0));
             usageInfo = `오늘 남은 상담: ${remaining}회`;
             hasRemaining = remaining > 0;
         } else if (membershipType === 'Premium') {
-            const remaining = Math.max(0, 30 - (customer.daily_ai_count || 0));
+            const remaining = Math.max(0, 50 - (customer.daily_ai_count || 0));
             usageInfo = `오늘 남은 상담: ${remaining}회`;
             hasRemaining = remaining > 0;
         }
-    } else {
-        usageInfo = '로그인 후 더 많은 상담이 가능합니다';
     }
 
-    // 화면 진입 시 초기화
+    // 화면 진입 및 초기화 상태 복구
     useEffect(() => {
-        initialize();
-    }, []);
+        if (!isGuest && !route.params?.session && !initialized && !loading) {
+            initialize();
+        }
+    }, [isGuest, initialized, loading]);
 
     // 새 메시지 올 때마다 스크롤 아래로
     useEffect(() => {
@@ -128,7 +147,7 @@ const AIChatScreen = ({ navigation }) => {
         const text = inputText.trim();
         if (!text || loading) return;
 
-        if (!hasRemaining && !customer?.isGuest) {
+        if (!hasRemaining) {
             Alert.alert(
                 '상담 횟수 소진',
                 `${membershipType === 'Free' ? '이번 달' : '오늘'} 무료 상담 횟수가 모두 소진되었습니다. 더 많은 상담을 위해 업그레이드할까요?`,
@@ -146,11 +165,11 @@ const AIChatScreen = ({ navigation }) => {
 
     const handleReset = () => {
         Alert.alert(
-            '대화 초기화',
-            '대화 내용을 모두 지우고 새로 시작할까요?',
+            '대화 저장 및 초기화',
+            '현재 대화 내용을 보관함에 저장하고 새로운 대화를 시작할까요?',
             [
                 { text: '취소', style: 'cancel' },
-                { text: '초기화', style: 'destructive', onPress: () => { resetChat(); setTimeout(initialize, 100); } },
+                { text: '저장 및 리셋', style: 'destructive', onPress: () => { resetChat(); } },
             ]
         );
     };
@@ -163,6 +182,32 @@ const AIChatScreen = ({ navigation }) => {
         '마음이 편안해지는 조언을 해주세요',
     ];
 
+    if (isGuest) {
+        return (
+            <GradientBackground>
+                <View style={[styles.guestContainer, { paddingTop: insets.top }]}>
+                    <View style={styles.guestCard}>
+                        <Text style={styles.guestEmoji}>🔐</Text>
+                        <Text style={styles.guestTitle}>회원 전용 기능입니다</Text>
+                        <Text style={styles.guestSubtitle}>
+                            AI 타로 상담사와 나누는 깊은 대화는{"\n"}
+                            회원님들께만 제공되는 특별한 서비스입니다.{"\n\n"}
+                            로그인하여 당신만을 위한{"\n"}
+                            섬세한 조언을 들어보세요.
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.guestLoginButton}
+                            onPress={() => navigation.navigate('Login')}
+                        >
+                            <Text style={styles.guestLoginButtonText}>로그인 / 회원가입</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </GradientBackground>
+        );
+    }
+
     return (
         <GradientBackground>
             <KeyboardAvoidingView
@@ -170,7 +215,7 @@ const AIChatScreen = ({ navigation }) => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
-                {/* 프리미엄 업그레이드 배너 (비회원용) */}
+                {/* 프리미엄 업그레이드 배너 */}
                 {!isPremium && (
                     <TouchableOpacity
                         style={[styles.premiumBanner, { paddingTop: insets.top }]}
@@ -189,6 +234,12 @@ const AIChatScreen = ({ navigation }) => {
                 {/* 헤더 */}
                 <View style={[styles.header, isPremium && { paddingTop: insets.top + 10 }]}>
                     <View style={styles.headerLeft}>
+                        <TouchableOpacity
+                            style={styles.historyTrigger}
+                            onPress={() => navigation.navigate('AIChatHistory')}
+                        >
+                            <Text style={styles.historyEmoji}>📋</Text>
+                        </TouchableOpacity>
                         <View style={styles.avatarMain}>
                             <Text style={styles.headerEmoji}>🖋️</Text>
                         </View>
@@ -210,7 +261,7 @@ const AIChatScreen = ({ navigation }) => {
                         </View>
                     </View>
                     <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
-                        <Text style={styles.resetText}>↻ 리셋</Text>
+                        <Text style={styles.resetText}>↻ 저장 및 리셋</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -366,6 +417,16 @@ const styles = StyleSheet.create({
     usageRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
     usageDot: { width: 6, height: 6, borderRadius: 3 },
     headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
+    historyTrigger: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 4,
+    },
+    historyEmoji: { fontSize: 18 },
     resetButton: {
         paddingHorizontal: 12,
         paddingVertical: 8,
@@ -500,6 +561,51 @@ const styles = StyleSheet.create({
     },
     sendButtonDisabled: { backgroundColor: 'rgba(255,255,255,0.1)', elevation: 0, shadowOpacity: 0 },
     sendIcon: { color: '#000', fontSize: 22, fontWeight: 'bold' },
+
+    // 게스트 모드 스타일
+    guestContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    guestCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 24,
+        padding: 40,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    guestEmoji: {
+        fontSize: 50,
+        marginBottom: 20,
+    },
+    guestTitle: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: DrawerTheme.goldBright,
+        marginBottom: 15,
+    },
+    guestSubtitle: {
+        fontSize: 15,
+        color: 'rgba(255, 255, 255, 0.6)',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 30,
+    },
+    guestLoginButton: {
+        backgroundColor: DrawerTheme.goldBright,
+        paddingHorizontal: 30,
+        paddingVertical: 15,
+        borderRadius: 14,
+        width: '100%',
+        alignItems: 'center',
+    },
+    guestLoginButtonText: {
+        color: '#000',
+        fontSize: 16,
+        fontWeight: '800',
+    },
 });
 
 export default AIChatScreen;

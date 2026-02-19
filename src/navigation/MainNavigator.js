@@ -14,6 +14,8 @@ import VisitDetailScreen from '../screens/VisitDetailScreen';
 import MembershipScreen from '../screens/MembershipScreen';
 import ShopListScreen from '../screens/ShopListScreen';
 import ShopContentsScreen from '../screens/ShopContentsScreen';
+import DailyFortuneScreen from '../screens/DailyFortuneScreen';
+import AIChatHistoryScreen from '../screens/AIChatHistoryScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -94,6 +96,16 @@ const TabNavigator = () => {
         }}
       />
       <Tab.Screen
+        name="DailyFortune"
+        component={DailyFortuneScreen}
+        options={{
+          tabBarLabel: '운세',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="🍀" hasNotification={false} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Shop"
         component={ShopNavigator}
         options={{
@@ -135,6 +147,13 @@ const MainNavigator = () => {
         component={VisitDetailScreen}
         options={{
           presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="AIChatHistory"
+        component={AIChatHistoryScreen}
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen

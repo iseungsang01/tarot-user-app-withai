@@ -77,7 +77,7 @@ const MembershipScreen = ({ navigation }) => {
                         price="₩0"
                         period="/ 평생"
                         features={[
-                            '월 5회 AI 상담',
+                            '월 100회 AI 상담',
                             '기본 운세 분석',
                             '방문 기록 저장',
                         ]}
@@ -86,12 +86,12 @@ const MembershipScreen = ({ navigation }) => {
 
                     <PricingCard
                         title="Pro"
-                        price="₩9,900"
+                        price="₩4,900"
                         period="/ 월"
                         isPopular={true}
                         features={[
                             '일일 운세 제공',
-                            '일일 5회 AI 상담',
+                            '일일 10회 AI 상담',
                             '광고 없는 쾌적한 환경',
                             '우선 순위 AI 응답',
                         ]}
@@ -100,13 +100,13 @@ const MembershipScreen = ({ navigation }) => {
 
                     <PricingCard
                         title="Premium"
-                        price="₩19,000"
+                        price="₩9,900"
                         period="/ 월"
                         features={[
                             '일일 운세 제공',
-                            '일일 30회 AI 상담',
+                            '일일 50회 AI 상담',
                             'Pro의 모든 기능 포함',
-                            '1:1 맞춤 상담사 설정',
+                            '월별 AI 리포트 제공',
                         ]}
                         color="#A06AF9"
                     />

@@ -1,8 +1,3 @@
-/**
- * src/hooks/useOpenAI.js
- * OpenAI 기능 관련 커스텀 훅
- */
-
 import { useState, useCallback, useRef } from 'react';
 import {
     summarizeReview,
@@ -12,6 +7,7 @@ import {
     incrementAIUsage,
 } from '../services/openaiService';
 import { useAuth } from './useAuth';
+import { storage } from '../utils/storage';
 
 // ─────────────────────────────────────────────────────────────
 // 1. 상담 기록 분석 훅
@@ -102,33 +98,48 @@ export const useAIChat = () => {
      * 채팅 초기화 및 환영 메시지 로드
      */
     const initialize = useCallback(async () => {
-        if (initialized) return;
+        if (initialized || !customer?.id) return;
 
         setLoading(true);
 
-        const { data, error } = await getWelcomeMessage();
+        // 1. 로컬 저장소에서 기존 대화 내역 시도
+        const localHistory = await storage.getAIChatHistory(customer.id);
 
-        if (!error && data) {
-            const welcomeMsg = {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: data,
-                timestamp: new Date(),
-            };
-            setMessages([welcomeMsg]);
-            conversationRef.current = [{ role: 'assistant', content: data }];
+        if (localHistory && localHistory.length > 0) {
+            setMessages(localHistory);
+            // API용 히스토리는 최근 20개만 유지
+            conversationRef.current = localHistory
+                .slice(-20)
+                .map(msg => ({ role: msg.role, content: msg.content }));
+        } else {
+            // 2. 내역 없으면 환영 메시지 가져오기
+            const { data, error } = await getWelcomeMessage();
+
+            if (!error && data) {
+                const welcomeMsg = {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: data,
+                    timestamp: new Date(),
+                };
+                setMessages([welcomeMsg]);
+                conversationRef.current = [{ role: 'assistant', content: data }];
+
+                // 환영 메시지 즉시 저장
+                await storage.saveAIChatHistory(customer.id, [welcomeMsg]);
+            }
         }
 
         setInitialized(true);
         setLoading(false);
-    }, [initialized]);
+    }, [initialized, customer?.id]);
 
     /**
      * 메시지 전송
      * @param {string} userText - 사용자 입력 텍스트
      */
     const sendMessage = useCallback(async (userText) => {
-        if (!userText?.trim() || loading) return;
+        if (!userText?.trim() || loading || !customer?.id) return;
 
         const userMsg = {
             id: Date.now().toString(),
@@ -138,8 +149,12 @@ export const useAIChat = () => {
         };
 
         // UI에 즉시 사용자 메시지 추가
-        setMessages(prev => [...prev, userMsg]);
+        const updatedMessagesWithUser = [...messages, userMsg];
+        setMessages(updatedMessagesWithUser);
         setLoading(true);
+
+        // 로컬 저장 (사용자 메시지 보낸 시점)
+        await storage.saveAIChatHistory(customer.id, updatedMessagesWithUser);
 
         // API 사용량 체크 및 차감
         if (customer && !customer.isGuest) {
@@ -152,15 +167,16 @@ export const useAIChat = () => {
                     timestamp: new Date(),
                     isError: true,
                 };
-                setMessages(prev => [...prev, limitMsg]);
+                const finalMessagesWithLimit = [...updatedMessagesWithUser, limitMsg];
+                setMessages(finalMessagesWithLimit);
+                await storage.saveAIChatHistory(customer.id, finalMessagesWithLimit);
                 setLoading(false);
                 return;
             }
-            // 실시간 갱신을 원한다면 refreshCustomer() 호출 가능
             refreshCustomer();
         }
 
-        // API 호출용 히스토리에 추가
+        // API 호출용 히스토리에 추가 (기존 히스토리 + 새 메시지)
         const updatedHistory = [...conversationRef.current, { role: 'user', content: userText.trim() }];
 
         const { data, error } = await sendChatMessage(
@@ -172,11 +188,13 @@ export const useAIChat = () => {
             const errorMsg = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: 'API 키 잔액 부족',
+                content: data || error.message || '상담 중 오류가 발생했습니다.',
                 timestamp: new Date(),
                 isError: true,
             };
-            setMessages(prev => [...prev, errorMsg]);
+            const finalMessagesWithError = [...updatedMessagesWithUser, errorMsg];
+            setMessages(finalMessagesWithError);
+            await storage.saveAIChatHistory(customer.id, finalMessagesWithError);
         } else {
             const assistantMsg = {
                 id: (Date.now() + 1).toString(),
@@ -184,9 +202,13 @@ export const useAIChat = () => {
                 content: data,
                 timestamp: new Date(),
             };
-            setMessages(prev => [...prev, assistantMsg]);
+            const finalMessagesWithAI = [...updatedMessagesWithUser, assistantMsg];
+            setMessages(finalMessagesWithAI);
 
-            // 히스토리 업데이트 (최대 20턴 유지 - 토큰 절약)
+            // AI 답변까지 포함하여 로컬 저장
+            await storage.saveAIChatHistory(customer.id, finalMessagesWithAI);
+
+            // context 히스토리 업데이트 (최대 20턴 유지 - 토큰 절약)
             conversationRef.current = [
                 ...updatedHistory,
                 { role: 'assistant', content: data },
@@ -194,16 +216,48 @@ export const useAIChat = () => {
         }
 
         setLoading(false);
-    }, [loading]);
+    }, [loading, customer, messages, refreshCustomer]);
+
+    /**
+     * 특정 과거 세션 로드
+     */
+    const loadSession = useCallback((session) => {
+        if (!session || !session.messages) return;
+        setMessages(session.messages);
+        conversationRef.current = session.messages
+            .slice(-20)
+            .map(msg => ({ role: msg.role, content: msg.content }));
+        setInitialized(true);
+    }, []);
 
     /**
      * 대화 초기화
+     * 초기화 전 현재 대화를 보관함에 저장(아카이빙)
      */
-    const resetChat = useCallback(() => {
+    const resetChat = useCallback(async () => {
+        // 1. 현재 대화가 있으면 아카이빙 (비동기)
+        if (customer?.id && messages.length > 1) {
+            try {
+                await storage.archiveAIChatSession(customer.id, messages);
+            } catch (e) {
+                console.error('Session archiving failed:', e);
+            }
+        }
+
+        // 2. 현재 활성 대화 내역 삭제 (비동기)
+        if (customer?.id) {
+            try {
+                await storage.deleteAIChatHistory(customer.id);
+            } catch (e) {
+                console.error('History deletion failed:', e);
+            }
+        }
+
+        // 3. 상태 초기화 (이 작업이 완료되면 useEffect 등에 의해 initialize가 트리거됨)
         setMessages([]);
         conversationRef.current = [];
         setInitialized(false);
-    }, []);
+    }, [customer?.id, messages]);
 
     return {
         messages,
@@ -212,5 +266,6 @@ export const useAIChat = () => {
         initialize,
         sendMessage,
         resetChat,
+        loadSession,
     };
 };

@@ -172,7 +172,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View>
               <Text style={[styles.infoLabel, { color: DrawerTheme.goldBright, marginBottom: 4 }]}>현재 멤버십 플랜</Text>
-              <Text style={[styles.infoValue, { fontSize: 18, fontWeight: '800' }]}>Free Plan</Text>
+              <Text style={[styles.infoValue, { fontSize: 18, fontWeight: '800' }]}>{customer?.membership_type || 'Free'} Plan</Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
               <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>관리</Text>

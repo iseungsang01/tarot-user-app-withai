@@ -7,19 +7,44 @@
 
 import { supabase } from './supabase';
 
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+const OPENAI_API_KEY = (process.env.EXPO_PUBLIC_OPENAI_API_KEY || '').trim();
+const GOOGLE_API_KEY = (process.env.EXPO_PUBLIC_GOOGLE_API_KEY || '').trim();
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const MODEL = 'gpt-4o-mini'; // 비용 효율적인 모델 (gpt-4o로 변경 가능)
+const MODEL = 'gpt-4o-mini';
 
 /**
- * 기본 OpenAI 호출 함수
+ * OpenAI 서버 상태 관리 변수
  */
+let openAIStatus = {
+    isHealthy: true,
+    lastChecked: 0,
+    failureCount: 0
+};
+
+const FAILURE_THRESHOLD = 2; // 연속 2회 실패 시 잠시 OpenAI 건너뜀
+const RETRY_AFTER = 5 * 60 * 1000; // 5분 후 다시 시도
+
+
 const callOpenAI = async (messages, options = {}) => {
     const {
         temperature = 0.7,
         maxTokens = 1000,
     } = options;
+
+    const now = Date.now();
+
+    // 1. OpenAI 상태 확인 (최근에 실패가 많았고 5분이 안 지났으면 바로 Google AI로)
+    const shouldSkipOpenAI = !openAIStatus.isHealthy && (now - openAIStatus.lastChecked < RETRY_AFTER);
+
+    if (!OPENAI_API_KEY || shouldSkipOpenAI) {
+        if (shouldSkipOpenAI) {
+            console.log('OpenAI is currently marked as unhealthy. Skipping to Google AI...');
+        } else {
+            console.log('OpenAI API Key is missing. Using Google AI...');
+        }
+        return await callGoogleAI(messages, options);
+    }
 
     try {
         const response = await fetch(OPENAI_API_URL, {
@@ -37,16 +62,24 @@ const callOpenAI = async (messages, options = {}) => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             const rawMessage = errorData.error?.message || '';
 
-            // 잔액 부족(Quota) 에러인 경우 'API 키 잔액 부족' 문자열 반환
-            if (rawMessage.includes('quota') || response.status === 429) {
-                return { data: 'API 키 잔액 부족', error: null };
+            // 상태 업데이트: 실패 기록
+            openAIStatus.failureCount++;
+            openAIStatus.lastChecked = now;
+            if (openAIStatus.failureCount >= FAILURE_THRESHOLD) {
+                openAIStatus.isHealthy = false;
             }
 
-            throw new Error(rawMessage || `HTTP error! status: ${response.status}`);
+            console.log(`OpenAI failure (${response.status}): ${rawMessage}. Falling back to Google AI...`);
+            return await callGoogleAI(messages, options);
         }
+
+        // 성공하면 상태 초기화
+        openAIStatus.isHealthy = true;
+        openAIStatus.failureCount = 0;
+        openAIStatus.lastChecked = now;
 
         const data = await response.json();
         return {
@@ -55,7 +88,114 @@ const callOpenAI = async (messages, options = {}) => {
             error: null,
         };
     } catch (error) {
-        return { data: null, error };
+        console.log('OpenAI Connection error, falling back to Google AI...', error.message);
+
+        // 상태 업데이트: 실패 기록
+        openAIStatus.failureCount++;
+        openAIStatus.lastChecked = now;
+        if (openAIStatus.failureCount >= FAILURE_THRESHOLD) {
+            openAIStatus.isHealthy = false;
+        }
+
+        return await callGoogleAI(messages, options);
+    }
+};
+
+
+
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+/**
+ * Google Gemini/Gemma AI SDK 설정
+ */
+const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
+const GOOGLE_MODEL_NAME = 'gemma-3-27b-it';
+
+/**
+ * Google AI SDK를 사용한 호출 함수 (시스템 지침 에러 대응)
+ */
+const callGoogleAI = async (messages, options = {}) => {
+    const {
+        temperature = 0.7,
+        maxTokens = 1000,
+    } = options;
+
+    if (!genAI) {
+        return { data: null, error: new Error('Google API Key is missing') };
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({
+            model: GOOGLE_MODEL_NAME,
+            generationConfig: {
+                temperature: temperature,
+                maxOutputTokens: maxTokens,
+            }
+        });
+
+        // OpenAI 메시지 형식을 Gemini/Gemma 형식으로 변환
+        const systemMessage = messages.find(m => m.role === 'system');
+        const chatMessages = messages.filter(m => m.role !== 'system');
+
+        const contents = [];
+        let lastRole = null;
+
+        // Gemma 3 등 일부 모델은 systemInstruction을 지원하지 않으므로 본문에 포함
+        let systemPromptPrefix = systemMessage ? `[시스템 지침]\n${systemMessage.content}\n\n---\n\n` : '';
+
+        for (let i = 0; i < chatMessages.length; i++) {
+            const m = chatMessages[i];
+            const role = (m.role === 'assistant' || m.role === 'model') ? 'model' : 'user';
+
+            let contentText = m.content;
+
+            // 첫 번째 메시지가 user인 경우 시스템 지침을 병합
+            if (i === 0 && role === 'user' && systemPromptPrefix) {
+                contentText = systemPromptPrefix + contentText;
+                systemPromptPrefix = ''; // 적용 완료
+            }
+
+            if (role === lastRole && contents.length > 0) {
+                contents[contents.length - 1].parts[0].text += '\n\n' + contentText;
+            } else {
+                contents.push({
+                    role: role,
+                    parts: [{ text: contentText }]
+                });
+                lastRole = role;
+            }
+        }
+
+        // 지침이 남아있거나(메시지가 없었던 경우) 첫 메시지가 model인 경우 처리
+        if (systemPromptPrefix && contents.length === 0) {
+            contents.push({ role: 'user', parts: [{ text: systemPromptPrefix + "대화를 시작합니다." }] });
+        } else if (contents.length > 0 && contents[0].role === 'model') {
+            contents.unshift({
+                role: 'user',
+                parts: [{ text: systemPromptPrefix || '이전 대화 맥락입니다.' }]
+            });
+        }
+
+        const result = await model.generateContent({ contents });
+        const response = await result.response;
+        const content = response.text();
+
+        return {
+            data: content,
+            usage: response.usageMetadata,
+            error: null,
+        };
+    } catch (error) {
+        console.error('Google AI SDK Error:', error.message);
+
+        let userFriendlyMessage = '시스템 연동 오류이거나 할당량이 부족합니다.';
+        if (error.message.includes('API Key') || error.message.includes('key')) {
+            userFriendlyMessage = 'API 설정 오류';
+        } else if (error.message.includes('quota') || error.message.includes('429')) {
+            userFriendlyMessage = 'AI 할당량 초과';
+        }
+
+        return { data: userFriendlyMessage, error };
     }
 };
 
@@ -175,21 +315,36 @@ export const analyzeVisitHistory = async (visits) => {
  * @param {string} customerId 
  */
 export const incrementAIUsage = async (customerId) => {
-    if (!customerId || customerId === 'guest') return { success: true }; // 게스트는 로컬 제한 (필요시)
+    if (!customerId || customerId === 'guest') return { success: true };
 
     try {
         const { data, error } = await supabase.rpc('increment_ai_usage', {
             p_customer_id: customerId
         });
 
-        if (error) throw error;
-        return data;
+        if (error) {
+            console.error('Supabase RPC Error (increment_ai_usage):', error);
+            return {
+                success: false,
+                message: `서버 연결 오류가 발생했습니다. (${error.message || 'Unknown'})`
+            };
+        }
+
+        // RPC에서 성공 여부를 담은 객체를 반환하므로 그대로 반환
+        if (data && typeof data === 'object') {
+            return data;
+        }
+
+        return { success: false, message: '알 수 없는 오류가 발생했습니다.' };
     } catch (error) {
-        // console.error('Increment AI Usage Error:', error);
-        // 사용자의 요청에 따라 API 관련 오류(또는 DB 연결 오류 포함) 시 'API 키 잔액 부족' 메시지 반환
-        return { success: false, message: 'API 키 잔액 부족' };
+        console.error('Increment AI Usage Catch Error:', error);
+        return {
+            success: false,
+            message: `상담 횟수 확인 중 연동 오류가 발생했습니다. (${error.message})`
+        };
     }
 };
+
 
 /**
  * 타로 상담사 AI 시스템 프롬프트
@@ -236,4 +391,54 @@ export const getWelcomeMessage = async () => {
     ];
 
     return await callOpenAI(messages, { temperature: 0.9, maxTokens: 200 });
+};
+
+/**
+ * 오늘의 운세 생성
+ * @param {string} userName 
+ * @param {string} previousFortune - 이전에 뽑은 운세 내용 (중복 방지용)
+ */
+export const getDailyFortune = async (userName = '사용자', previousFortune = '') => {
+    const messages = [
+        {
+            role: 'system',
+            content: `당신은 오늘의 운세를 알려주는 신비로운 타로 상담사입니다.
+사용자의 이름을 부르며, 오늘 하루를 위한 따뜻한 조언과 운세를 제공하세요.
+답변은 3-4문장 정도로 간결하고 희망차게 작성하세요.
+
+${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0, 50)}...'라는 내용의 운세를 확인했습니다. 
+이번에는 이전과는 다른 새로운 관점, 다른 타로 카드 상징, 혹은 다른 테마(재물, 인간관계, 건강 등)에 집중하여 '전혀 다른' 운세를 작성해주세요.` : ''}
+
+반드시 JSON 형식으로 응답하세요:
+{
+  "fortune": "오늘의 운세 내용 (이전과는 다른 새로운 내용)",
+  "luckyColor": "추천 행운의 색상",
+  "luckyItem": "행운의 아이템"
+}`,
+        },
+        {
+            role: 'user',
+            content: `${userName}님의 오늘의 운세를 알려주세요.${previousFortune ? ' 방금 전과는 다른 새로운 운세를 원합니다.' : ''}`,
+        },
+    ];
+
+    const { data, error } = await callOpenAI(messages, { temperature: 0.9, maxTokens: 450 });
+    if (error) return { data: null, error };
+
+    try {
+        const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanedData);
+        return { data: parsed, error: null };
+    } catch {
+        return { data: { fortune: data, luckyColor: '', luckyItem: '' }, error: null };
+    }
+};
+
+export default {
+    summarizeReview,
+    analyzeVisitHistory,
+    incrementAIUsage,
+    sendChatMessage,
+    getWelcomeMessage,
+    getDailyFortune,
 };
