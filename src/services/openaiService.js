@@ -5,7 +5,7 @@
  * - 대화형 AI 챗봇
  */
 
-import { OPENAI_API_KEY } from '@env';
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const MODEL = 'gpt-4o-mini'; // 비용 효율적인 모델 (gpt-4o로 변경 가능)
@@ -36,7 +36,14 @@ const callOpenAI = async (messages, options = {}) => {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+            const rawMessage = errorData.error?.message || '';
+
+            // 잔액 부족(Quota) 에러인 경우 'API 키 잔액 부족' 문자열 반환
+            if (rawMessage.includes('quota') || response.status === 429) {
+                return { data: 'API 키 잔액 부족', error: null };
+            }
+
+            throw new Error(rawMessage || `HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
@@ -46,7 +53,6 @@ const callOpenAI = async (messages, options = {}) => {
             error: null,
         };
     } catch (error) {
-        console.error('❌ [openaiService] API 호출 오류:', error.message);
         return { data: null, error };
     }
 };
