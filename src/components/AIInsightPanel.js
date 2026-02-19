@@ -172,7 +172,12 @@ export const AIHistoryAnalysisPanel = ({ visits }) => {
                 <TouchableOpacity style={[styles.triggerButton, styles.historyTrigger]} onPress={handleAnalyze} activeOpacity={0.8}>
                     <Text style={styles.triggerIcon}>🔍</Text>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.triggerText}>전체 상담 AI 종합 분석</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.triggerText}>전체 상담 AI 종합 분석</Text>
+                            <View style={styles.proBadgeMin}>
+                                <Text style={styles.proBadgeMinText}>PRO</Text>
+                            </View>
+                        </View>
                         <Text style={styles.triggerSubtext}>{validCount}개의 기록을 분석합니다</Text>
                     </View>
                     <Text style={styles.triggerArrow}>›</Text>
@@ -256,6 +261,17 @@ export const AIHistoryAnalysisPanel = ({ visits }) => {
 
 const styles = StyleSheet.create({
     container: { marginVertical: 8 },
+    proBadgeMin: {
+        backgroundColor: DrawerTheme.goldBright,
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        borderRadius: 4,
+    },
+    proBadgeMinText: {
+        color: '#000',
+        fontSize: 9,
+        fontWeight: '900',
+    },
 
     // 트리거 버튼
     triggerButton: {

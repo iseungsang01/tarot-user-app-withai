@@ -35,7 +35,7 @@ const ChatBubble = ({ message }) => {
         <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAI]}>
             {!isUser && (
                 <View style={styles.avatarContainer}>
-                    <Text style={styles.avatarEmoji}>🔮</Text>
+                    <Text style={styles.avatarEmoji}>🖋️</Text>
                 </View>
             )}
             <View style={styles.bubbleWrapper}>
@@ -63,12 +63,12 @@ const ChatBubble = ({ message }) => {
 const TypingIndicator = () => (
     <View style={[styles.bubbleRow, styles.bubbleRowAI]}>
         <View style={styles.avatarContainer}>
-            <Text style={styles.avatarEmoji}>🔮</Text>
+            <Text style={styles.avatarEmoji}>🖋️</Text>
         </View>
         <View style={[styles.bubble, styles.bubbleAI, styles.typingBubble]}>
             <View style={styles.typingDots}>
                 <ActivityIndicator size="small" color={DrawerTheme.goldBright} />
-                <Text style={styles.typingText}>  상담사가 답하는 중...</Text>
+                <Text style={styles.typingText}>  상담사가 신중하게 답변을 작성 중입니다...</Text>
             </View>
         </View>
     </View>
@@ -78,10 +78,12 @@ const TypingIndicator = () => (
 // 메인 화면
 // ─────────────────────────────────────────────────────────────
 
-const AIChatScreen = () => {
+const AIChatScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const scrollRef = useRef(null);
     const [inputText, setInputText] = useState('');
+    const [usageRemaining, setUsageRemaining] = useState(5); // 예시: 남은 횟수
+    const [isPremium, setIsPremium] = useState(false); // 예시: 프로 회원 여부
     const { messages, loading, initialized, initialize, sendMessage, resetChat } = useAIChat();
 
     // 화면 진입 시 초기화
@@ -99,8 +101,22 @@ const AIChatScreen = () => {
     const handleSend = async () => {
         const text = inputText.trim();
         if (!text || loading) return;
+
+        if (!isPremium && usageRemaining <= 0) {
+            Alert.alert(
+                '상담 횟수 소진',
+                '무료 상담 횟수가 모두 소진되었습니다. 무제한 상담을 위해 프리미엄으로 업그레이드할까요?',
+                [
+                    { text: '나중에', style: 'cancel' },
+                    { text: '업그레이드', onPress: () => navigation.navigate('Membership') }
+                ]
+            );
+            return;
+        }
+
         setInputText('');
         await sendMessage(text);
+        if (!isPremium) setUsageRemaining(prev => Math.max(0, prev - 1));
     };
 
     const handleReset = () => {
@@ -116,10 +132,10 @@ const AIChatScreen = () => {
 
     // 빠른 질문 예시
     const quickQuestions = [
-        '오늘 하루 운세가 궁금해요',
-        '인간관계가 고민이에요',
-        '중요한 결정을 앞두고 있어요',
-        '요즘 자꾸 불안해요',
+        '오늘의 행운을 불러오는 방법은?',
+        '연애운이 언제쯤 좋아질까요?',
+        '나에게 맞는 직업 방향은?',
+        '마음이 편안해지는 조언을 해주세요',
     ];
 
     return (
@@ -129,17 +145,47 @@ const AIChatScreen = () => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
+                {/* 프리미엄 업그레이드 배너 (비회원용) */}
+                {!isPremium && (
+                    <TouchableOpacity
+                        style={[styles.premiumBanner, { paddingTop: insets.top }]}
+                        onPress={() => navigation.navigate('Membership')}
+                        activeOpacity={0.9}
+                    >
+                        <View style={styles.premiumBannerContent}>
+                            <Text style={styles.premiumBannerText}>✨ 무제한 AI 상담과 독점 타로 혜택을 누려보세요!</Text>
+                            <View style={styles.premiumBadgeMin}>
+                                <Text style={styles.premiumBadgeMinText}>UPGRADE</Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                )}
+
                 {/* 헤더 */}
-                <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+                <View style={[styles.header, isPremium && { paddingTop: insets.top + 10 }]}>
                     <View style={styles.headerLeft}>
-                        <Text style={styles.headerEmoji}>🔮</Text>
+                        <View style={styles.avatarMain}>
+                            <Text style={styles.headerEmoji}>🖋️</Text>
+                        </View>
                         <View>
-                            <Text style={styles.headerTitle}>AI 타로 상담</Text>
-                            <Text style={styles.headerSubtitle}>당신의 이야기를 들려주세요</Text>
+                            <View style={styles.headerTitleRow}>
+                                <Text style={styles.headerTitle}>AI 타일러 상담소</Text>
+                                {isPremium && (
+                                    <View style={styles.proBadge}>
+                                        <Text style={styles.proBadgeText}>PRO</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <View style={styles.usageRow}>
+                                <View style={[styles.usageDot, { backgroundColor: usageRemaining > 0 ? '#4CAF50' : '#FF5252' }]} />
+                                <Text style={styles.headerSubtitle}>
+                                    {isPremium ? '무제한 상담 가능' : `남은 무료 상담: ${usageRemaining}회`}
+                                </Text>
+                            </View>
                         </View>
                     </View>
                     <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
-                        <Text style={styles.resetText}>↺ 초기화</Text>
+                        <Text style={styles.resetText}>↻ 리셋</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -155,7 +201,7 @@ const AIChatScreen = () => {
                     {!initialized && loading && (
                         <View style={styles.initLoading}>
                             <ActivityIndicator size="large" color={DrawerTheme.goldBright} />
-                            <Text style={styles.initLoadingText}>상담사를 불러오는 중...</Text>
+                            <Text style={styles.initLoadingText}>AI 상담사가 고민을 들을 준비를 하고 있습니다...</Text>
                         </View>
                     )}
 
@@ -170,17 +216,19 @@ const AIChatScreen = () => {
                     {/* 빠른 질문 버튼 (메시지가 1개 이하일 때만) */}
                     {messages.length <= 1 && !loading && initialized && (
                         <View style={styles.quickQuestions}>
-                            <Text style={styles.quickTitle}>💬 이런 고민은 어떠세요?</Text>
-                            {quickQuestions.map((q, i) => (
-                                <TouchableOpacity
-                                    key={i}
-                                    style={styles.quickBtn}
-                                    onPress={() => sendMessage(q)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.quickBtnText}>{q}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            <Text style={styles.quickTitle}>💬 AI 타일러에게 물어보세요</Text>
+                            <View style={styles.quickGrid}>
+                                {quickQuestions.map((q, i) => (
+                                    <TouchableOpacity
+                                        key={i}
+                                        style={styles.quickBtn}
+                                        onPress={() => sendMessage(q)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.quickBtnText}>{q}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
                     )}
                 </ScrollView>
@@ -192,10 +240,10 @@ const AIChatScreen = () => {
                             style={styles.textInput}
                             value={inputText}
                             onChangeText={setInputText}
-                            placeholder="고민을 자유롭게 이야기해보세요..."
-                            placeholderTextColor="rgba(255,255,255,0.35)"
+                            placeholder="이곳에 고민을 적어주세요..."
+                            placeholderTextColor="rgba(255,255,255,0.3)"
                             multiline
-                            maxLength={500}
+                            maxLength={1000}
                             returnKeyType="default"
                             editable={!loading}
                         />
@@ -205,12 +253,9 @@ const AIChatScreen = () => {
                             disabled={!inputText.trim() || loading}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.sendIcon}>➤</Text>
+                            <Text style={styles.sendIcon}>✦</Text>
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.disclaimer}>
-                        * AI 응답은 심리적 참고용이며, 전문적 상담을 대체하지 않습니다.
-                    </Text>
                 </View>
             </KeyboardAvoidingView>
         </GradientBackground>
@@ -222,118 +267,178 @@ const AIChatScreen = () => {
 // ─────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+    // 프리미엄 배너
+    premiumBanner: {
+        backgroundColor: '#7209B7',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.2)',
+    },
+    premiumBannerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        gap: 8,
+    },
+    premiumBannerText: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    premiumBadgeMin: {
+        backgroundColor: '#FFD700',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    premiumBadgeMinText: {
+        color: '#000',
+        fontSize: 10,
+        fontWeight: '900',
+    },
+
     // 헤더
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingBottom: 12,
+        paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.1)',
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderBottomColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
-    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    headerEmoji: { fontSize: 32 },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: DrawerTheme.goldBright,
-        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    },
-    headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
-    resetButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        backgroundColor: 'rgba(255,255,255,0.05)',
-    },
-    resetText: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
-
-    // 채팅 영역
-    chatArea: { flex: 1 },
-    chatContent: { paddingHorizontal: 16, paddingVertical: 20, gap: 12 },
-
-    // 말풍선
-    bubbleRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 4 },
-    bubbleRowUser: { justifyContent: 'flex-end' },
-    bubbleRowAI: { justifyContent: 'flex-start' },
-    avatarContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    avatarMain: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 8,
-        marginBottom: 18,
+        borderWidth: 1,
+        borderColor: DrawerTheme.goldBright,
     },
-    avatarEmoji: { fontSize: 18 },
-    bubbleWrapper: { maxWidth: '75%' },
-    bubble: {
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 18,
+    headerEmoji: { fontSize: 24 },
+    headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    headerTitle: {
+        fontSize: 17,
+        fontWeight: '800',
+        color: '#FFF',
+        letterSpacing: -0.5,
     },
-    bubbleUser: {
-        backgroundColor: DrawerTheme.woodMid,
-        borderBottomRightRadius: 4,
+    proBadge: {
+        backgroundColor: DrawerTheme.goldBright,
+        paddingHorizontal: 5,
+        paddingVertical: 1,
+        borderRadius: 4,
     },
-    bubbleAI: {
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        borderBottomLeftRadius: 4,
+    proBadgeText: {
+        color: '#000',
+        fontSize: 10,
+        fontWeight: '900',
+    },
+    usageRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+    usageDot: { width: 6, height: 6, borderRadius: 3 },
+    headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
+    resetButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    resetText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '600' },
+
+    // 채팅 영역
+    chatArea: { flex: 1 },
+    chatContent: { paddingHorizontal: 16, paddingVertical: 24, gap: 16 },
+
+    // 말풍선
+    bubbleRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 8 },
+    bubbleRowUser: { justifyContent: 'flex-end' },
+    bubbleRowAI: { justifyContent: 'flex-start' },
+    avatarContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
-    bubbleError: {
-        borderColor: 'rgba(255,100,100,0.3)',
-        backgroundColor: 'rgba(255,50,50,0.05)',
+    avatarEmoji: { fontSize: 16 },
+    bubbleWrapper: { maxWidth: '80%' },
+    bubble: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 22,
     },
-    bubbleText: { fontSize: 15, lineHeight: 22 },
-    bubbleTextUser: { color: '#FFF' },
-    bubbleTextAI: { color: 'rgba(255,255,255,0.9)' },
-    timeText: { fontSize: 10, marginTop: 4, color: 'rgba(255,255,255,0.3)' },
-    timeTextUser: { textAlign: 'right' },
+    bubbleUser: {
+        backgroundColor: '#7209B7',
+        borderBottomRightRadius: 2,
+    },
+    bubbleAI: {
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderBottomLeftRadius: 2,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+    },
+    bubbleError: {
+        borderColor: 'rgba(255,100,100,0.4)',
+        backgroundColor: 'rgba(255,50,50,0.1)',
+    },
+    bubbleText: { fontSize: 15, lineHeight: 22, color: '#FFF' },
+    bubbleTextUser: { fontWeight: '500' },
+    bubbleTextAI: { color: 'rgba(255,255,255,0.95)' },
+    timeText: { fontSize: 10, marginTop: 4, color: 'rgba(255,255,255,0.3)', fontWeight: '400' },
+    timeTextUser: { textAlign: 'right', marginRight: 4 },
     timeTextAI: { textAlign: 'left', marginLeft: 4 },
 
     // 타이핑 인디케이터
-    typingBubble: { paddingVertical: 12 },
+    typingBubble: { paddingVertical: 14, paddingHorizontal: 16 },
     typingDots: { flexDirection: 'row', alignItems: 'center' },
-    typingText: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
+    typingText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginLeft: 8 },
 
     // 초기 로딩
-    initLoading: { flex: 1, alignItems: 'center', paddingTop: 80, gap: 16 },
-    initLoadingText: { color: DrawerTheme.goldBright, fontSize: 14 },
+    initLoading: { flex: 1, alignItems: 'center', paddingTop: 100, gap: 20 },
+    initLoadingText: { color: DrawerTheme.goldBright, fontSize: 14, textAlign: 'center', opacity: 0.8 },
 
     // 빠른 질문
     quickQuestions: {
-        marginTop: 8,
-        gap: 8,
+        marginTop: 10,
+        gap: 12,
+        paddingHorizontal: 10,
     },
     quickTitle: {
         color: 'rgba(255,255,255,0.4)',
-        fontSize: 13,
-        marginBottom: 4,
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 8,
         textAlign: 'center',
+    },
+    quickGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        justifyContent: 'center',
     },
     quickBtn: {
         paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        paddingVertical: 12,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
-        alignSelf: 'flex-start',
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    quickBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+    quickBtnText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500' },
 
     // 입력창
     inputArea: {
         paddingHorizontal: 16,
-        paddingTop: 10,
-        backgroundColor: 'rgba(0,0,0,0.25)',
+        paddingVertical: 12,
+        backgroundColor: 'rgba(15,0,30,0.8)',
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.08)',
     },
@@ -344,33 +449,32 @@ const styles = StyleSheet.create({
     },
     textInput: {
         flex: 1,
-        minHeight: 44,
-        maxHeight: 120,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        borderRadius: 22,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+        minHeight: 46,
+        maxHeight: 150,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 24,
+        paddingHorizontal: 18,
+        paddingVertical: 12,
         color: '#FFF',
         fontSize: 15,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.15)',
     },
     sendButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: DrawerTheme.woodMid,
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: DrawerTheme.goldBright,
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 4,
+        shadowColor: DrawerTheme.goldBright,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
-    sendButtonDisabled: { opacity: 0.4 },
-    sendIcon: { color: DrawerTheme.goldBright, fontSize: 18 },
-    disclaimer: {
-        fontSize: 10,
-        color: 'rgba(255,255,255,0.25)',
-        textAlign: 'center',
-        marginTop: 6,
-    },
+    sendButtonDisabled: { backgroundColor: 'rgba(255,255,255,0.1)', elevation: 0, shadowOpacity: 0 },
+    sendIcon: { color: '#000', fontSize: 22, fontWeight: 'bold' },
 });
 
 export default AIChatScreen;

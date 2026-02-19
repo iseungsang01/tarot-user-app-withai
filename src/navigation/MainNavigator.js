@@ -14,6 +14,7 @@ import VoteScreen from '../screens/VoteScreen';
 import NoticeScreen from '../screens/NoticeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import VisitDetailScreen from '../screens/VisitDetailScreen';
+import MembershipScreen from '../screens/MembershipScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -144,6 +145,13 @@ const MainNavigator = () => {
         component={VisitDetailScreen}
         options={{
           presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="Membership"
+        component={MembershipScreen}
+        options={{
+          presentation: 'modal',
         }}
       />
     </Stack.Navigator>

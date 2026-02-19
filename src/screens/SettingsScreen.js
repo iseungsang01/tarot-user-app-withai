@@ -29,7 +29,7 @@ const getStatusColor = (s) => ({
   접수: '#ffa500', 확인중: '#2196f3', 완료: '#4caf50'
 }[s] || DrawerTheme.woodLight);
 
-const SettingsScreen = () => {
+const SettingsScreen = ({ navigation }) => {
   const { customer, logout } = useAuth();
   const [activeSection, setActiveSection] = useState(null);
   const [myReports, setMyReports] = useState([]);
@@ -161,6 +161,23 @@ const SettingsScreen = () => {
             <View style={styles.divider} />
             <View style={styles.infoRow}><Text style={styles.infoLabel}>연락처</Text><Text style={styles.infoValue}>{customer?.isGuest ? '게스트' : customer?.phone_number}</Text></View>
           </View>
+        </View>
+
+        {/* 멤버십 서비스 (SAAS 지향) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💎 프리미엄 서비스</Text>
+          <TouchableOpacity
+            style={[styles.infoCard, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+            onPress={() => navigation.navigate('Membership')}
+          >
+            <View>
+              <Text style={[styles.infoLabel, { color: DrawerTheme.goldBright, marginBottom: 4 }]}>현재 멤버십 플랜</Text>
+              <Text style={[styles.infoValue, { fontSize: 18, fontWeight: '800' }]}>Free Plan</Text>
+            </View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
+              <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>관리</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* 설정 메뉴 (게스트는 숨김) */}
