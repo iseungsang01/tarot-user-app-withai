@@ -11,7 +11,7 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 // Hook
 import { useVoteLogic } from '../hooks/useVoteLogic';
 
-const VoteScreen = ({ navigation }) => {
+const VoteScreen = ({ navigation, isIntegrated = false }) => {
   const {
     state,
     actions,
@@ -92,12 +92,15 @@ const VoteScreen = ({ navigation }) => {
   if (loading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1 }}>
       <FlatList
         data={[{ id: 1 }]}
         renderItem={renderContent}
         keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listArea}
+        contentContainerStyle={[
+          styles.listArea,
+          { paddingTop: !isIntegrated ? (Platform.OS === 'ios' ? 60 : 40) : 10 }
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -106,14 +109,13 @@ const VoteScreen = ({ navigation }) => {
           />
         }
       />
-    </GradientBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   listArea: {
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 100
   },
 });

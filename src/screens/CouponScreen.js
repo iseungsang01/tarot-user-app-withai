@@ -9,7 +9,7 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 import { handleApiCall, createValidationError, showErrorAlert, showSuccessAlert } from '../utils/errorHandler';
 import { CommonStyles } from '../styles/CommonStyles';
 
-const CouponScreen = ({ navigation }) => {
+const CouponScreen = ({ navigation, isIntegrated = false }) => {
   const { customer, refreshCustomer } = useAuth();
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,29 +144,34 @@ const CouponScreen = ({ navigation }) => {
   const birthdayCoupons = coupons.filter(c => getCouponType(c.coupon_code) === 'birthday');
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1 }}>
       <ScrollView
-        contentContainerStyle={styles.listArea}
+        contentContainerStyle={[
+          styles.listArea,
+          { paddingTop: !isIntegrated ? (Platform.OS === 'ios' ? 60 : 40) : 10 }
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
       >
         {/* 🪵 NoticeScreen 규격과 100% 동일한 헤더 */}
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>COUPON BOX</Text>
-          </View>
-          <View style={styles.headerDivider} />
-          <Text style={styles.subtitle}>{customer.nickname}님의 소중한 혜택</Text>
+        {!isIntegrated && (
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>COUPON BOX</Text>
+            </View>
+            <View style={styles.headerDivider} />
+            <Text style={styles.subtitle}>{customer.nickname}님의 소중한 혜택</Text>
 
-          {/* 통계 Row (헤더 내부 배치) */}
-          <View style={styles.statsRow}>
-            {[[coupons.length, '보유중'], [stampCoupons.length, '스탬프'], [birthdayCoupons.length, '기타']].map(([val, lab], i) => (
-              <View key={i} style={styles.statBox}>
-                <Text style={styles.statValue}>{val}</Text>
-                <Text style={styles.statLabel}>{lab}</Text>
-              </View>
-            ))}
+            {/* 통계 Row (헤더 내부 배치) */}
+            <View style={styles.statsRow}>
+              {[[coupons.length, '보유중'], [stampCoupons.length, '스탬프'], [birthdayCoupons.length, '기타']].map(([val, lab], i) => (
+                <View key={i} style={styles.statBox}>
+                  <Text style={styles.statValue}>{val}</Text>
+                  <Text style={styles.statLabel}>{lab}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {stampCoupons.length > 0 && (
           <View style={styles.section}>
@@ -199,7 +204,7 @@ const CouponScreen = ({ navigation }) => {
           </Text>
         </View>
       </ScrollView>
-    </GradientBackground>
+    </View>
   );
 };
 
@@ -207,7 +212,6 @@ const styles = StyleSheet.create({
   // 🪵 NoticeScreen 규격 그대로 이식 (CommonStyles 사용)
   listArea: {
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 100
   },
   header: CommonStyles.headerBoard,

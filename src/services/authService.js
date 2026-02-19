@@ -123,6 +123,40 @@ export const authService = {
   },
 
   /**
+   * 회원가입
+   */
+  async register(phoneNumber, password, nickname = '') {
+    try {
+      const normalizedPhone = phoneNumber.trim();
+
+      const { data: resultData, error: rpcError } = await supabase
+        .rpc('register_customer', {
+          p_phone: normalizedPhone,
+          p_password: password,
+          p_nickname: nickname
+        });
+
+      if (rpcError) {
+        console.error('❌ RPC 에러:', rpcError);
+        return { data: null, error: { message: '서버 연결 중 오류가 발생했습니다.' } };
+      }
+
+      if (!resultData || resultData.success === false) {
+        return {
+          data: null,
+          error: { message: resultData?.message || '회원가입에 실패했습니다.' }
+        };
+      }
+
+      return { data: resultData, error: null };
+
+    } catch (error) {
+      console.error('❌ 시스템 에러:', error);
+      return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
+    }
+  },
+
+  /**
    * 회원 탈퇴
    */
   async deleteAccount(customerId) {

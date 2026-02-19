@@ -7,7 +7,7 @@ import { noticeService } from '../services/noticeService';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { CommonStyles } from '../styles/CommonStyles';
 
-const NoticeScreen = () => {
+const NoticeScreen = ({ isIntegrated = false }) => {
   const { customer } = useAuth();
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -45,19 +45,22 @@ const NoticeScreen = () => {
   if (loading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
 
   return (
-    <GradientBackground>
+    <View style={{ flex: 1 }}>
       <FlatList
         data={notices}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <NoticeCard notice={item} />}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={!isIntegrated ? renderHeader : null}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>📭</Text>
             <Text style={styles.emptyText}>아직 등록된 소식이 없습니다.</Text>
           </View>
         }
-        contentContainerStyle={styles.listArea}
+        contentContainerStyle={[
+          styles.listArea,
+          { paddingTop: !isIntegrated ? (Platform.OS === 'ios' ? 60 : 40) : 10 }
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -66,14 +69,13 @@ const NoticeScreen = () => {
           />
         }
       />
-    </GradientBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   listArea: {
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 100
   },
 

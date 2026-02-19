@@ -114,6 +114,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * 회원가입
+   */
+  const register = async (phoneNumber, password, nickname) => {
+    try {
+      const { data, error } = await authService.register(phoneNumber, password, nickname);
+      return { data, error };
+    } catch (error) {
+      logError('AuthContext.register', error, { phoneNumber });
+      return { data: null, error: { message: '회원가입 중 오류가 발생했습니다.' } };
+    }
+  };
+
   const value = {
     customer,
     loading,
@@ -121,6 +134,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     refreshCustomer,
     guestLogin,
+    register,
   };
 
   return (

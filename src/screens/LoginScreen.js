@@ -10,7 +10,7 @@ import { Gradients } from '../constants/Colors';
 import { createValidationError } from '../utils/errorHandler';
 import { ERROR_MESSAGES } from '../constants/ErrorMessages';
 
-const LoginScreen = () => {
+const LoginScreen = ({ navigation }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState({ text: '', type: '' });
@@ -126,26 +126,38 @@ const LoginScreen = () => {
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* ✅ 게스트 로그인 버튼 */}
-            <TouchableOpacity
-              onPress={async () => {
-                console.log('Guest Login Button Pressed'); // Debug Log
-                try {
-                  const { error } = await guestLogin();
-
-                  if (error) {
-                    setMessage({ text: '게스트 로그인 오류', type: 'error' });
+            {/* ✅ 하단 보조 버튼 영역 (게스트 / 회원가입) */}
+            <View style={styles.subButtonArea}>
+              <TouchableOpacity
+                onPress={async () => {
+                  console.log('Guest Login Button Pressed');
+                  try {
+                    const { error } = await guestLogin();
+                    if (error) {
+                      setMessage({ text: '게스트 로그인 오류', type: 'error' });
+                    }
+                  } catch (e) {
+                    console.error('Guest Login Error in UI:', e);
                   }
-                } catch (e) {
-                  console.error('Guest Login Error in UI:', e);
-                }
-              }}
-              disabled={loading}
-              activeOpacity={0.7}
-              style={styles.guestButtonWrapper}
-            >
-              <Text style={styles.guestButtonText}>게스트로 둘러보기</Text>
-            </TouchableOpacity>
+                }}
+                disabled={loading}
+                activeOpacity={0.7}
+                style={styles.subButton}
+              >
+                <Text style={styles.subButtonText}>게스트로 둘러보기</Text>
+              </TouchableOpacity>
+
+              <View style={styles.subButtonDivider} />
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Register')}
+                disabled={loading}
+                activeOpacity={0.7}
+                style={styles.subButton}
+              >
+                <Text style={styles.subButtonText}>회원가입</Text>
+              </TouchableOpacity>
+            </View>
 
 
             {/* 알림 메시지 디자인 */}
@@ -280,17 +292,28 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // ✅ 게스트 로그인 버튼 스타일
-  guestButtonWrapper: {
-    marginTop: 15,
+  // ✅ 하단 보조 버튼 스타일
+  subButtonArea: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 15,
+  },
+  subButton: {
     padding: 10,
   },
-  guestButtonText: {
+  subButtonText: {
     color: DrawerTheme.woodLight,
     fontSize: 14,
     textDecorationLine: 'underline',
     opacity: 0.8,
+  },
+  subButtonDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: DrawerTheme.woodLight,
+    marginHorizontal: 10,
+    opacity: 0.3,
   },
 
 
