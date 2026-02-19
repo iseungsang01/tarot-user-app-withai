@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "drawer",
+    "slug": "drawer",
+    "version": "1.0.5",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "primaryColor": "#FFFFFF",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a0033"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tarotstamp.app",
+      "buildNumber": "1.0.5",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "타로 도장을 찍기 위해 사진 갤러리에 접근합니다.",
+        "NSCameraUsageDescription": "타로 도장을 찍기 위해 카메라에 접근합니다.",
+        "UIUserInterfaceStyle": "Light"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a0033"
+      },
+      "package": "com.tarotstamp.app",
+      "versionCode": 4,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "타로 도장을 찍기 위해 사진 갤러리에 접근합니다.",
+          "cameraPermission": "타로 도장을 찍기 위해 카메라에 접근합니다."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9bd97c79-0da9-4e10-8ea1-3504e95df837"
+      }
+    }
+  }
+}

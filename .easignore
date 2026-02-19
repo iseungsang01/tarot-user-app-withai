@@ -1,0 +1,8 @@
+SupabaseSQL.md
+*.md
+.git
+.expo
+node_modules
+android
+ios
+build
