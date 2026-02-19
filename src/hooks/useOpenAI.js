@@ -9,7 +9,9 @@ import {
     analyzeVisitHistory,
     sendChatMessage,
     getWelcomeMessage,
+    incrementAIUsage,
 } from '../services/openaiService';
+import { useAuth } from './useAuth';
 
 // ─────────────────────────────────────────────────────────────
 // 1. 상담 기록 분석 훅
@@ -90,6 +92,7 @@ export const useAnalyzeHistory = () => {
  * 대화 히스토리 관리 및 메시지 전송
  */
 export const useAIChat = () => {
+    const { customer, refreshCustomer } = useAuth();
     const [messages, setMessages] = useState([]); // { id, role, content, timestamp }
     const [loading, setLoading] = useState(false);
     const [initialized, setInitialized] = useState(false);
@@ -138,6 +141,25 @@ export const useAIChat = () => {
         setMessages(prev => [...prev, userMsg]);
         setLoading(true);
 
+        // API 사용량 체크 및 차감
+        if (customer && !customer.isGuest) {
+            const usageResult = await incrementAIUsage(customer.id);
+            if (!usageResult.success) {
+                const limitMsg = {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: usageResult.message || '상담 횟수가 초과되었습니다.',
+                    timestamp: new Date(),
+                    isError: true,
+                };
+                setMessages(prev => [...prev, limitMsg]);
+                setLoading(false);
+                return;
+            }
+            // 실시간 갱신을 원한다면 refreshCustomer() 호출 가능
+            refreshCustomer();
+        }
+
         // API 호출용 히스토리에 추가
         const updatedHistory = [...conversationRef.current, { role: 'user', content: userText.trim() }];
 
@@ -150,7 +172,7 @@ export const useAIChat = () => {
             const errorMsg = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: '죄송합니다, 잠시 연결이 원활하지 않습니다. 다시 시도해주세요. 🙏',
+                content: 'API 키 잔액 부족',
                 timestamp: new Date(),
                 isError: true,
             };

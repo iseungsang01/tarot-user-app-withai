@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../components';
 import { useAIChat } from '../hooks/useOpenAI';
+import { useAuth } from '../hooks/useAuth';
 import { DrawerTheme } from '../constants/DrawerTheme';
 
 // ─────────────────────────────────────────────────────────────
@@ -81,10 +82,35 @@ const TypingIndicator = () => (
 const AIChatScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const scrollRef = useRef(null);
+    const { customer } = useAuth();
     const [inputText, setInputText] = useState('');
-    const [usageRemaining, setUsageRemaining] = useState(5); // 예시: 남은 횟수
-    const [isPremium, setIsPremium] = useState(false); // 예시: 프로 회원 여부
+
     const { messages, loading, initialized, initialize, sendMessage, resetChat } = useAIChat();
+
+    const isPremium = customer?.membership_type === 'Pro' || customer?.membership_type === 'Premium';
+    const membershipType = customer?.membership_type || 'Free';
+
+    // 남은 횟수 계산 로직 (간소화)
+    let usageInfo = '';
+    let hasRemaining = true;
+
+    if (customer && !customer.isGuest) {
+        if (membershipType === 'Free') {
+            const remaining = Math.max(0, 5 - (customer.monthly_ai_count || 0));
+            usageInfo = `이번 달 남은 상담: ${remaining}회`;
+            hasRemaining = remaining > 0;
+        } else if (membershipType === 'Pro') {
+            const remaining = Math.max(0, 5 - (customer.daily_ai_count || 0));
+            usageInfo = `오늘 남은 상담: ${remaining}회`;
+            hasRemaining = remaining > 0;
+        } else if (membershipType === 'Premium') {
+            const remaining = Math.max(0, 30 - (customer.daily_ai_count || 0));
+            usageInfo = `오늘 남은 상담: ${remaining}회`;
+            hasRemaining = remaining > 0;
+        }
+    } else {
+        usageInfo = '로그인 후 더 많은 상담이 가능합니다';
+    }
 
     // 화면 진입 시 초기화
     useEffect(() => {
@@ -102,10 +128,10 @@ const AIChatScreen = ({ navigation }) => {
         const text = inputText.trim();
         if (!text || loading) return;
 
-        if (!isPremium && usageRemaining <= 0) {
+        if (!hasRemaining && !customer?.isGuest) {
             Alert.alert(
                 '상담 횟수 소진',
-                '무료 상담 횟수가 모두 소진되었습니다. 무제한 상담을 위해 프리미엄으로 업그레이드할까요?',
+                `${membershipType === 'Free' ? '이번 달' : '오늘'} 무료 상담 횟수가 모두 소진되었습니다. 더 많은 상담을 위해 업그레이드할까요?`,
                 [
                     { text: '나중에', style: 'cancel' },
                     { text: '업그레이드', onPress: () => navigation.navigate('Membership') }
@@ -116,7 +142,6 @@ const AIChatScreen = ({ navigation }) => {
 
         setInputText('');
         await sendMessage(text);
-        if (!isPremium) setUsageRemaining(prev => Math.max(0, prev - 1));
     };
 
     const handleReset = () => {
@@ -171,15 +196,15 @@ const AIChatScreen = ({ navigation }) => {
                             <View style={styles.headerTitleRow}>
                                 <Text style={styles.headerTitle}>AI 타일러 상담소</Text>
                                 {isPremium && (
-                                    <View style={styles.proBadge}>
-                                        <Text style={styles.proBadgeText}>PRO</Text>
+                                    <View style={[styles.proBadge, { backgroundColor: membershipType === 'Premium' ? '#A06AF9' : DrawerTheme.goldBright }]}>
+                                        <Text style={styles.proBadgeText}>{membershipType.toUpperCase()}</Text>
                                     </View>
                                 )}
                             </View>
                             <View style={styles.usageRow}>
-                                <View style={[styles.usageDot, { backgroundColor: usageRemaining > 0 ? '#4CAF50' : '#FF5252' }]} />
+                                <View style={[styles.usageDot, { backgroundColor: hasRemaining ? '#4CAF50' : '#FF5252' }]} />
                                 <Text style={styles.headerSubtitle}>
-                                    {isPremium ? '무제한 상담 가능' : `남은 무료 상담: ${usageRemaining}회`}
+                                    {usageInfo}
                                 </Text>
                             </View>
                         </View>

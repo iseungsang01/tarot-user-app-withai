@@ -77,7 +77,7 @@ const MembershipScreen = ({ navigation }) => {
                         price="₩0"
                         period="/ 평생"
                         features={[
-                            '하루 5회 AI 상담',
+                            '월 5회 AI 상담',
                             '기본 운세 분석',
                             '방문 기록 저장',
                         ]}
@@ -90,8 +90,8 @@ const MembershipScreen = ({ navigation }) => {
                         period="/ 월"
                         isPopular={true}
                         features={[
-                            '무제한 AI 상담 (AI 타일러)',
-                            '심층 타로 분석 리포트',
+                            '일일 운세 제공',
+                            '일일 5회 AI 상담',
                             '광고 없는 쾌적한 환경',
                             '우선 순위 AI 응답',
                         ]}
@@ -103,10 +103,10 @@ const MembershipScreen = ({ navigation }) => {
                         price="₩19,000"
                         period="/ 월"
                         features={[
+                            '일일 운세 제공',
+                            '일일 30회 AI 상담',
                             'Pro의 모든 기능 포함',
                             '1:1 맞춤 상담사 설정',
-                            '고급 통계 마인드 맵',
-                            '가족/친구 공유 (최대 3인)',
                         ]}
                         color="#A06AF9"
                     />

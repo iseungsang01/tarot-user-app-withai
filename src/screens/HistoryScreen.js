@@ -10,7 +10,6 @@ import { DrawerUnit } from '../components/DrawerUnit';
 import { TarotCardModal } from '../components/TarotCardModal';
 import { HistoryHeader } from '../components/history/HistoryHeader';
 import { HistoryFilterBar } from '../components/history/HistoryFilterBar';
-import { AIHistoryAnalysisPanel } from '../components';
 import { DrawerTheme } from '../constants/DrawerTheme';
 
 // Hook
@@ -93,8 +92,7 @@ const HistoryScreen = ({ navigation }) => {
     const displayData = getDisplayData();
     return (
       <DrawerChest isManualMode={archiveMode === 'OFF'} selectionMode={selectionMode}>
-        {/* AI 종합 분석 패널 추가 */}
-        <AIHistoryAnalysisPanel visits={displayData} />
+        {/* AI 종합 분석 패널 제거됨 */}
 
         {archiveMode === 'OFF' && (
           <TouchableOpacity

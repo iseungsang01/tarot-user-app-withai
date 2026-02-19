@@ -5,6 +5,8 @@
  * - 대화형 AI 챗봇
  */
 
+import { supabase } from './supabase';
+
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -167,6 +169,27 @@ export const analyzeVisitHistory = async (visits) => {
 // ─────────────────────────────────────────────────────────────
 // 2. 대화형 AI 챗봇
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * AI 상담 사용량 증가 및 체크
+ * @param {string} customerId 
+ */
+export const incrementAIUsage = async (customerId) => {
+    if (!customerId || customerId === 'guest') return { success: true }; // 게스트는 로컬 제한 (필요시)
+
+    try {
+        const { data, error } = await supabase.rpc('increment_ai_usage', {
+            p_customer_id: customerId
+        });
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        // console.error('Increment AI Usage Error:', error);
+        // 사용자의 요청에 따라 API 관련 오류(또는 DB 연결 오류 포함) 시 'API 키 잔액 부족' 메시지 반환
+        return { success: false, message: 'API 키 잔액 부족' };
+    }
+};
 
 /**
  * 타로 상담사 AI 시스템 프롬프트
