@@ -1,11 +1,13 @@
 // Supabase Edge Function: ai-proxy
-// Deploy example: supabase functions deploy ai-proxy --no-verify-jwt
+// Deploy example: supabase functions deploy ai-proxy
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')?.trim() ?? '';
 const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
 
 const GEMINI_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
 const GEMINI_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemini-1.5-flash';
+
+const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'false').toLowerCase() === 'true';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,6 +103,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (REQUIRE_AUTH && !req.headers.get('authorization')) {
+      return new Response(
+        JSON.stringify({ error: '인증 정보가 필요합니다.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const { messages, options } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -125,8 +134,9 @@ Deno.serve(async (req) => {
       });
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
     return new Response(
-      JSON.stringify({ error: error.message || 'Unexpected error' }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
