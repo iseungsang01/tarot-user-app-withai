@@ -49,7 +49,11 @@ const LoginScreen = ({ navigation }) => {
       const { data, error } = await login(phone, password);
 
       if (data) {
-        setMessage({ text: '환영합니다!', type: 'success' });
+        if (data.must_change_password) {
+          setMessage({ text: '보안을 위해 비밀번호를 먼저 변경해주세요. 설정에서 변경할 수 있습니다.', type: 'info' });
+        } else {
+          setMessage({ text: '환영합니다!', type: 'success' });
+        }
       } else {
         setMessage({ text: error?.message || '로그인에 실패했습니다.', type: 'error' });
       }
@@ -130,14 +134,13 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.subButtonArea}>
               <TouchableOpacity
                 onPress={async () => {
-                  console.log('Guest Login Button Pressed');
                   try {
                     const { error } = await guestLogin();
                     if (error) {
                       setMessage({ text: '게스트 로그인 오류', type: 'error' });
                     }
                   } catch (e) {
-                    console.error('Guest Login Error in UI:', e);
+                    setMessage({ text: '게스트 로그인 중 오류가 발생했습니다.', type: 'error' });
                   }
                 }}
                 disabled={loading}
@@ -145,6 +148,17 @@ const LoginScreen = ({ navigation }) => {
                 style={styles.subButton}
               >
                 <Text style={styles.subButtonText}>게스트로 둘러보기</Text>
+              </TouchableOpacity>
+
+              <View style={styles.subButtonDivider} />
+
+              <TouchableOpacity
+                onPress={() => setMessage({ text: '비밀번호 재설정은 매장 문의를 통해 진행해주세요.', type: 'info' })}
+                disabled={loading}
+                activeOpacity={0.7}
+                style={styles.subButton}
+              >
+                <Text style={styles.subButtonText}>비밀번호를 잊으셨나요?</Text>
               </TouchableOpacity>
 
               <View style={styles.subButtonDivider} />
@@ -171,7 +185,7 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.footerArea}>
             <View style={styles.titleLine} />
             <Text style={styles.footerHelp}>
-              매장에 등록하신 번호로 이용 가능합니다.{"\n"}정보가 기억나지 않으시면 가게에 문의해주세요.{"\n"}초기 비밀번호는 1234입니다.{"\n"}로그인 후 비밀번호를 변경해주세요.
+              매장에 등록하신 번호로 이용 가능합니다.{"\n"}정보가 기억나지 않으시면 가게에 문의해주세요.{"\n"}비밀번호를 잊으신 경우 매장에 문의해 재설정 안내를 받아주세요.
             </Text>
           </View>
 

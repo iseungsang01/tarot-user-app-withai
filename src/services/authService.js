@@ -3,12 +3,40 @@ import { storage } from '../utils/storage';
 
 const CUSTOMER_KEY = 'tarot_customer';
 
+const LOGIN_GUARD_KEY = 'auth_login_guard';
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS = 5 * 60 * 1000;
+
+const defaultLoginGuard = { failedAttempts: 0, lockUntil: 0 };
+
+const getLoginGuard = async () => (await storage.get(LOGIN_GUARD_KEY)) || { ...defaultLoginGuard };
+
+const saveLoginGuard = async (guard) => {
+  await storage.save(LOGIN_GUARD_KEY, guard);
+};
+
+const resetLoginGuard = async () => {
+  await storage.remove(LOGIN_GUARD_KEY);
+};
+
+
 export const authService = {
   /**
    * 로그인 (RPC 방식 + 객체 응답 처리 수정됨)
    */
   async login(phoneNumber, password) {
     try {
+      const guard = await getLoginGuard();
+      const now = Date.now();
+
+      if (guard.lockUntil && now < guard.lockUntil) {
+        const remainSeconds = Math.ceil((guard.lockUntil - now) / 1000);
+        return {
+          data: null,
+          error: { message: `로그인 시도가 많아 잠시 제한되었습니다. ${remainSeconds}초 후 다시 시도해주세요.` },
+        };
+      }
+
       const normalizedPhone = phoneNumber.trim();
 
       const { data: resultData, error: rpcError } = await supabase
@@ -23,9 +51,17 @@ export const authService = {
       }
 
       if (!resultData || resultData.success === false) {
+        const failedAttempts = (guard.failedAttempts || 0) + 1;
+        const lockUntil = failedAttempts >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0;
+        await saveLoginGuard({ failedAttempts, lockUntil });
+
         return {
           data: null,
-          error: { message: resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.' }
+          error: {
+            message: lockUntil
+              ? '로그인 실패 횟수가 누적되어 5분간 잠금됩니다.'
+              : resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.'
+          }
         };
       }
 
@@ -41,6 +77,7 @@ export const authService = {
         return { data: null, error: { message: '회원 정보를 불러올 수 없습니다.' } };
       }
 
+      await resetLoginGuard();
       return { data: customerData, error: null };
 
     } catch (error) {

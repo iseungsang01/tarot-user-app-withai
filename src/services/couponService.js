@@ -39,7 +39,6 @@ export const couponService = {
   async getCouponCount(customerId) {
     if (customerId === 'guest') return { count: 0, error: null };
     try {
-      console.log('Counting coupons for customer:', customerId);
 
       const { count, error } = await supabase
         .from('coupon_history')
@@ -52,7 +51,6 @@ export const couponService = {
         throw error;
       }
 
-      console.log('Coupon count:', count || 0);
 
       return { count: count || 0, error: null };
     } catch (error) {
@@ -68,7 +66,6 @@ export const couponService = {
    */
   async useCoupon(couponId) {
     try {
-      console.log('Using coupon:', couponId);
 
       const { error } = await supabase
         .from('coupon_history')
@@ -83,7 +80,6 @@ export const couponService = {
         throw error;
       }
 
-      console.log('Coupon used successfully');
 
       return { error: null };
     } catch (error) {

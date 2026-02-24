@@ -95,7 +95,6 @@ export const AuthProvider = ({ children }) => {
    * 게스트 로그인
    */
   const guestLogin = async () => {
-    console.log('AuthContext: guestLogin called'); // Debug Log
     try {
       const guestUser = {
         id: 'guest',
@@ -109,7 +108,6 @@ export const AuthProvider = ({ children }) => {
       return { data: guestUser, error: null };
     } catch (error) {
       logError('AuthContext.guestLogin', error);
-      console.error('AuthContext: guestLogin failed', error); // Debug Log
       return { data: null, error: { message: '게스트 로그인 실패' } };
     }
   };
