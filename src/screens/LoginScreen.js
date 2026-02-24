@@ -132,45 +132,47 @@ const LoginScreen = ({ navigation }) => {
 
             {/* ✅ 하단 보조 버튼 영역 (게스트 / 회원가입) */}
             <View style={styles.subButtonArea}>
-              <TouchableOpacity
-                onPress={async () => {
-                  try {
-                    const { error } = await guestLogin();
-                    if (error) {
-                      setMessage({ text: '게스트 로그인 오류', type: 'error' });
+              <View style={styles.subButtonRow}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      const { error } = await guestLogin();
+                      if (error) {
+                        setMessage({ text: '게스트 로그인 오류', type: 'error' });
+                      }
+                    } catch (e) {
+                      setMessage({ text: '게스트 로그인 중 오류가 발생했습니다.', type: 'error' });
                     }
-                  } catch (e) {
-                    setMessage({ text: '게스트 로그인 중 오류가 발생했습니다.', type: 'error' });
-                  }
-                }}
-                disabled={loading}
-                activeOpacity={0.7}
-                style={styles.subButton}
-              >
-                <Text style={styles.subButtonText}>게스트로 둘러보기</Text>
-              </TouchableOpacity>
+                  }}
+                  disabled={loading}
+                  activeOpacity={0.7}
+                  style={styles.subButton}
+                >
+                  <Text style={styles.subButtonText}>게스트로 둘러보기</Text>
+                </TouchableOpacity>
+              </View>
 
-              <View style={styles.subButtonDivider} />
+              <View style={styles.subButtonRow}>
+                <TouchableOpacity
+                  onPress={() => setMessage({ text: '비밀번호 재설정은 매장 문의를 통해 진행해주세요.', type: 'info' })}
+                  disabled={loading}
+                  activeOpacity={0.7}
+                  style={styles.subButton}
+                >
+                  <Text style={styles.subButtonText}>비밀번호를 잊으셨나요?</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => setMessage({ text: '비밀번호 재설정은 매장 문의를 통해 진행해주세요.', type: 'info' })}
-                disabled={loading}
-                activeOpacity={0.7}
-                style={styles.subButton}
-              >
-                <Text style={styles.subButtonText}>비밀번호를 잊으셨나요?</Text>
-              </TouchableOpacity>
+                <View style={styles.subButtonDivider} />
 
-              <View style={styles.subButtonDivider} />
-
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Register')}
-                disabled={loading}
-                activeOpacity={0.7}
-                style={styles.subButton}
-              >
-                <Text style={styles.subButtonText}>회원가입</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Register')}
+                  disabled={loading}
+                  activeOpacity={0.7}
+                  style={styles.subButton}
+                >
+                  <Text style={styles.subButtonText}>회원가입</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
 
@@ -308,10 +310,14 @@ const styles = StyleSheet.create({
 
   // ✅ 하단 보조 버튼 스타일
   subButtonArea: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 15,
+  },
+  subButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   subButton: {
     padding: 10,
