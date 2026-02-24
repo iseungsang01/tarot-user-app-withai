@@ -1,24 +1,74 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { GradientBackground } from '../components/GradientBackground';
 import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { CommonStyles } from '../styles/CommonStyles';
+import { useAuth } from '../hooks/useAuth';
+import { noticeService } from '../services/noticeService';
+import { voteService } from '../services/voteService';
+import { couponService } from '../services/couponService';
 
-const SHOPS = [
+const INITIAL_SHOPS = [
     {
         id: 1,
         name: '타로 마스터 루나',
         description: '신비로운 기운이 깃든 타로 전문점',
         address: '서울시 강남구 테헤란로 123',
         emoji: '🌙',
-        noticeCount: 1,
-        couponCount: 2,
-        voteCount: 1
+        noticeCount: 0,
+        couponCount: 0,
+        voteCount: 0
     }
 ];
 
 const ShopListScreen = ({ navigation }) => {
+    const { customer } = useAuth();
+    const [shops, setShops] = useState(INITIAL_SHOPS);
+    const [refreshing, setRefreshing] = useState(false);
+
+    /**
+     * 매장 정보 및 숫자(소식, 투표, 쿠폰) 로드
+     */
+    const loadData = async () => {
+        try {
+            // 소식, 투표, 쿠폰 개수 동시 조회
+            const [noticesRes, votesRes, couponsRes] = await Promise.all([
+                noticeService.getNotices(),
+                voteService.getVotes(),
+                couponService.getValidCouponCount(customer?.id)
+            ]);
+
+            const noticeCount = noticesRes.data?.length || 0;
+            const voteCount = votesRes.data?.length || 0;
+            const couponCount = couponsRes.count || 0;
+
+            // 현재는 단일 매장 시스템이므로 전체 카운트를 매장에 적용
+            setShops(prevShops => prevShops.map(shop => ({
+                ...shop,
+                noticeCount,
+                voteCount,
+                couponCount
+            })));
+        } catch (error) {
+            console.error('ShopListScreen loadData error:', error);
+        }
+    };
+
+    // 화면 포커스 시 데이터 새로고침
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [customer?.id])
+    );
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await loadData();
+        setRefreshing(false);
+    };
+
     const renderShopItem = ({ item }) => (
         <TouchableOpacity
             style={styles.shopCard}
@@ -50,7 +100,7 @@ const ShopListScreen = ({ navigation }) => {
     return (
         <GradientBackground>
             <FlatList
-                data={SHOPS}
+                data={shops}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderShopItem}
                 ListHeaderComponent={() => (
@@ -63,6 +113,13 @@ const ShopListScreen = ({ navigation }) => {
                     </View>
                 )}
                 contentContainerStyle={styles.container}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={Colors.gold}
+                    />
+                }
             />
         </GradientBackground>
     );
@@ -152,3 +209,4 @@ const styles = StyleSheet.create({
 });
 
 export default ShopListScreen;
+
