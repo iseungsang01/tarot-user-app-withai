@@ -39,12 +39,13 @@ export const DrawerChest = ({ children, isManualMode }) => {
 
 const styles = StyleSheet.create({
   chestContainer: { 
-    width: '96%', 
+    width: '100%',
+    maxWidth: 460,
     alignSelf: 'center', 
     marginVertical: 10 
   },
   topMolding: { 
-    width: '106%', 
+    width: '100%', 
     height: 10, 
     alignSelf: 'center', 
     borderTopLeftRadius: 8, 
@@ -56,20 +57,20 @@ const styles = StyleSheet.create({
     elevation: 3
   },
   topSubMolding: { 
-    width: '102%', 
+    width: '100%', 
     height: 8, 
     alignSelf: 'center' 
   },
   mainBody: { 
-    borderLeftWidth: 10, 
-    borderRightWidth: 10,
+    borderLeftWidth: 8, 
+    borderRightWidth: 8,
   },
   drawerContent: { 
     paddingTop: 5,
     paddingBottom: 10
   },
   bottomMolding: { 
-    width: '104%', 
+    width: '100%', 
     height: 12, 
     alignSelf: 'center', 
     borderBottomLeftRadius: 6, 
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
   legsRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    paddingHorizontal: 40, 
+    paddingHorizontal: 32, 
     marginTop: -2 
   },
   leg: { 

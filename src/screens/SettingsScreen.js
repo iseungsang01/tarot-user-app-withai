@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Keyboard } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   GradientBackground,
@@ -21,6 +22,7 @@ import { APP_INFO } from '../constants/Config';
 import { styles } from '../styles/SettingsStyles';
 
 const SettingsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { customer, logout } = useAuth();
   const [activeSection, setActiveSection] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -86,7 +88,13 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <GradientBackground>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <View style={styles.titleRow}><Text style={styles.title}>SETTINGS</Text></View>
           <View style={styles.headerDivider} />
