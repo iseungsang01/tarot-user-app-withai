@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, FlatList, RefreshControl, Platform, View } from 'react-native';
+import { StyleSheet, FlatList, RefreshControl, Platform, View, Text } from 'react-native';
 
 // Components
 import { GradientBackground } from '../components/GradientBackground';
@@ -7,6 +7,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { VoteList } from '../components/vote/VoteList';
 import { VoteDetail } from '../components/vote/VoteDetail';
 import { DrawerTheme } from '../constants/DrawerTheme';
+import { CommonStyles } from '../styles/CommonStyles';
 
 // Hook
 import { useVoteLogic } from '../hooks/useVoteLogic';
@@ -97,6 +98,15 @@ const VoteScreen = ({ navigation, isIntegrated = false }) => {
         data={[{ id: 1 }]}
         renderItem={renderContent}
         keyExtractor={item => item.id.toString()}
+        ListHeaderComponent={!isIntegrated ? (
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>VOTE BOARD</Text>
+            </View>
+            <View style={styles.headerDivider} />
+            <Text style={styles.subtitle}>오늘의 선택을 남기고 결과를 확인해보세요</Text>
+          </View>
+        ) : null}
         contentContainerStyle={[
           styles.listArea,
           { paddingTop: !isIntegrated ? (Platform.OS === 'ios' ? 60 : 40) : 10 }
@@ -118,6 +128,11 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100
   },
+  header: CommonStyles.headerBoard,
+  titleRow: CommonStyles.titleRow,
+  title: CommonStyles.title,
+  headerDivider: CommonStyles.headerDivider,
+  subtitle: CommonStyles.subtitle,
 });
 
 export default VoteScreen;

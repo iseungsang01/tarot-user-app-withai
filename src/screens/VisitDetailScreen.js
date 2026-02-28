@@ -128,6 +128,14 @@ const VisitDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  const insertVoiceMemoMarker = () => {
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const marker = `\n🎙️ [음성 메모 ${stamp}] `;
+    up({ review: `${s.review}${marker}` });
+    Alert.alert('안내', '실녹음/업로드 기능은 다음 버전에서 제공됩니다. 우선 음성 메모 표시를 빠르게 남길 수 있게 구성했어요.');
+  };
+
   if (s.loading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
 
   // UI 테마: OFF 모드는 네이비, ON 모드는 황동/나무 색상 적용
@@ -183,6 +191,11 @@ const VisitDetailScreen = ({ route, navigation }) => {
               placeholderTextColor="#888"
             />
 
+            <View style={styles.voiceRow}>
+              <CustomButton title="🎙️ 녹음 메모 추가" onPress={insertVoiceMemoMarker} style={{ flex: 1 }} />
+              <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} />
+            </View>
+
             <AISummaryPanel reviewText={s.review} visitDate={s.visit_date} />
 
             <CustomButton
@@ -210,6 +223,7 @@ const styles = StyleSheet.create({
   placeholderSubText: { color: '#888', fontSize: 13 },
   btnRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 18, color: '#FFF', minHeight: 180, textAlignVertical: 'top', fontSize: 16, borderWidth: 1 },
+  voiceRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   whiteText: { color: '#FFF', fontWeight: 'bold' },
   saveBtn: { marginTop: 25, height: 55 }
 });

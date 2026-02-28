@@ -8,14 +8,14 @@ import { useNotifications } from '../hooks/useNotifications';
 
 // Screens
 import HistoryScreen from '../screens/HistoryScreen';
-import AIChatScreen from '../screens/AIChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import VisitDetailScreen from '../screens/VisitDetailScreen';
 import MembershipScreen from '../screens/MembershipScreen';
-import ShopListScreen from '../screens/ShopListScreen';
-import ShopContentsScreen from '../screens/ShopContentsScreen';
 import DailyFortuneScreen from '../screens/DailyFortuneScreen';
 import AIChatHistoryScreen from '../screens/AIChatHistoryScreen';
+import CouponScreen from '../screens/CouponScreen';
+import NoticeScreen from '../screens/NoticeScreen';
+import VoteScreen from '../screens/VoteScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -28,17 +28,6 @@ const TabIcon = ({ emoji, hasNotification }) => (
     <Text style={styles.iconEmoji}>{emoji}</Text>
     {hasNotification && <View style={styles.redDot} />}
   </View>
-);
-
-/**
- * 매장 네비게이터 (Stack)
- */
-const ShopStack = createStackNavigator();
-const ShopNavigator = () => (
-  <ShopStack.Navigator screenOptions={{ headerShown: false }}>
-    <ShopStack.Screen name="ShopList" component={ShopListScreen} />
-    <ShopStack.Screen name="ShopContents" component={ShopContentsScreen} />
-  </ShopStack.Navigator>
 );
 
 /**
@@ -86,16 +75,6 @@ const TabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="AIChat"
-        component={AIChatScreen}
-        options={{
-          tabBarLabel: 'AI 상담',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🔮" hasNotification={false} />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="DailyFortune"
         component={DailyFortuneScreen}
         options={{
@@ -106,12 +85,22 @@ const TabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Shop"
-        component={ShopNavigator}
+        name="Notice"
+        component={NoticeScreen}
         options={{
-          tabBarLabel: '매장',
+          tabBarLabel: '공지',
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🏪" hasNotification={hasAnyUnread} />
+            <TabIcon emoji="📢" hasNotification={hasAnyUnread} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Vote"
+        component={VoteScreen}
+        options={{
+          tabBarLabel: '투표',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="🗳️" hasNotification={false} />
           ),
         }}
       />
@@ -154,6 +143,13 @@ const MainNavigator = () => {
         component={AIChatHistoryScreen}
         options={{
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="Coupon"
+        component={CouponScreen}
+        options={{
+          presentation: 'card',
         }}
       />
       <Stack.Screen
