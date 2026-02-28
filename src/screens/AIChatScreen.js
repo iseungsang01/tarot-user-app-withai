@@ -26,7 +26,7 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 // 서브 컴포넌트: 채팅 말풍선
 // ─────────────────────────────────────────────────────────────
 
-const ChatBubble = ({ message }) => {
+const ChatBubble = React.memo(({ message }) => {
     const isUser = message.role === 'user';
 
     // 타임스탬프 처리 (Date 객체가 아닐 경우 변환 시도)
@@ -64,13 +64,13 @@ const ChatBubble = ({ message }) => {
             </View>
         </View>
     );
-};
+});
 
 // ─────────────────────────────────────────────────────────────
 // 서브 컴포넌트: AI 타이핑 인디케이터
 // ─────────────────────────────────────────────────────────────
 
-const TypingIndicator = () => (
+const TypingIndicator = React.memo(() => (
     <View style={[styles.bubbleRow, styles.bubbleRowAI]}>
         <View style={styles.avatarContainer}>
             <Text style={styles.avatarEmoji}>🖋️</Text>
@@ -82,7 +82,7 @@ const TypingIndicator = () => (
             </View>
         </View>
     </View>
-);
+));
 
 // ─────────────────────────────────────────────────────────────
 // 메인 화면
@@ -131,7 +131,7 @@ const AIChatScreen = ({ navigation, route }) => {
             Alert.alert(
                 '상담 횟수 소진',
                 '일시적으로 상담을 진행할 수 없습니다. 잠시 후 다시 시도해주세요.',
-[{ text: '확인', style: 'cancel' }]
+                [{ text: '확인', style: 'cancel' }]
             );
             return;
         }

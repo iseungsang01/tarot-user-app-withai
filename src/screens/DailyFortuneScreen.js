@@ -133,7 +133,7 @@ const DailyFortuneScreen = () => {
         setSelectedDate(dateStr);
     };
 
-    const renderCalendar = () => {
+    const calendarGrid = React.useMemo(() => {
         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
@@ -186,7 +186,7 @@ const DailyFortuneScreen = () => {
                 {days}
             </View>
         );
-    };
+    }, [currentYear, currentMonth, attendanceHistory, allFortunes, selectedDate, todayStr]);
 
     const todayFortune = allFortunes[todayStr];
     const hasFortuneToday = !!todayFortune && !!todayFortune.fortune && !isErrorFortune(todayFortune);
@@ -215,7 +215,7 @@ const DailyFortuneScreen = () => {
                         {loading ? (
                             <ActivityIndicator color={Colors.gold} size="large" style={{ marginVertical: 40 }} />
                         ) : (
-                            renderCalendar()
+                            calendarGrid
                         )}
                     </View>
                 )}

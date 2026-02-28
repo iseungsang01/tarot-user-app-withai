@@ -26,7 +26,7 @@ import { useSummarizeReview, useAnalyzeHistory } from '../hooks/useOpenAI';
  * @param {string} reviewText - 상담 기록 텍스트
  * @param {string} visitDate - 방문 날짜
  */
-export const AISummaryPanel = ({ reviewText, visitDate }) => {
+export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
     const { result, loading, error, summarize, reset } = useSummarizeReview();
     const [expanded, setExpanded] = useState(false);
 
@@ -148,7 +148,7 @@ export const AISummaryPanel = ({ reviewText, visitDate }) => {
  * 전체 방문 기록 종합 AI 분석
  * @param {Array} visits - 방문 기록 배열
  */
-export const AIHistoryAnalysisPanel = ({ visits }) => {
+export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
     const { result, loading, error, analyze, reset } = useAnalyzeHistory();
     const [expanded, setExpanded] = useState(false);
 

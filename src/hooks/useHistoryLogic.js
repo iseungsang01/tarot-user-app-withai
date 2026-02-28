@@ -130,23 +130,23 @@ export const useHistoryLogic = (navigation) => {
     }, [serverVisits, personalNotes, archiveMode, applyTimeFilter]);
 
     // Actions
-    const toggleSelection = (id) => {
+    const toggleSelection = useCallback((id) => {
         const newSet = new Set(selectedIds);
         if (newSet.has(id)) newSet.delete(id);
         else newSet.add(id);
         setSelectedIds(newSet);
-    };
+    }, [selectedIds]);
 
-    const handleLongPress = (visitId) => {
+    const handleLongPress = useCallback((visitId) => {
         if (!selectionMode) {
             setSelectionMode(true);
             setSelectedIds(new Set([visitId]));
         } else {
             toggleSelection(visitId);
         }
-    };
+    }, [selectionMode, toggleSelection]);
 
-    const handleDeleteVisit = async (visitId) => {
+    const handleDeleteVisit = useCallback(async (visitId) => {
         try {
             let itemToDelete = selectedItem;
             if (!itemToDelete) {
@@ -176,9 +176,9 @@ export const useHistoryLogic = (navigation) => {
             Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
             console.error(error);
         }
-    };
+    }, [selectedItem, getDisplayData, loadLocalData, deleteVisit, refreshCustomer]);
 
-    const handleMultiDelete = async () => {
+    const handleMultiDelete = useCallback(async () => {
         if (selectedIds.size === 0) {
             Alert.alert('선택 없음', '삭제할 항목을 선택해주세요.');
             return;
@@ -229,7 +229,7 @@ export const useHistoryLogic = (navigation) => {
                 }
             ]
         );
-    };
+    }, [selectedIds, getDisplayData, deleteVisit, loadLocalData, refreshCustomer]);
 
     return {
         state: {

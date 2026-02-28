@@ -244,17 +244,19 @@ export const storage = {
       const now = new Date();
       const thresholdTime = now.getTime() - (days * 24 * 60 * 60 * 1000);
 
-      const images = await this.getAllCardImages();
       let deletedCount = 0;
+      const deletePromises = [];
 
       for (const [visitId, metadata] of Object.entries(cache)) {
         const cacheTime = new Date(metadata.timestamp).getTime();
 
         if (cacheTime < thresholdTime) {
-          await this.deleteCardImage(visitId);
+          deletePromises.push(this.deleteCardImage(visitId));
           deletedCount++;
         }
       }
+
+      await Promise.allSettled(deletePromises);
 
       console.log('✅ [Storage] 오래된 이미지 캐시 정리 완료:', deletedCount, '개 삭제');
     } catch (error) {

@@ -10,7 +10,7 @@ import { DrawerTheme } from '../constants/DrawerTheme';
  * @param {boolean} selectionMode - 다중 선택 모드 여부
  * @param {boolean} isSelected - 현재 선택된 상태
  */
-export const DrawerUnit = ({ visit, onSelectCard, onLongPress, selectionMode, isSelected }) => {
+export const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode, isSelected }) => {
   // is_manual: false(서버기록) -> Wood 테마
   // is_manual: true(개인메모) -> Navy 테마
   const isManualMode = visit.is_manual === true;
@@ -103,7 +103,7 @@ export const DrawerUnit = ({ visit, onSelectCard, onLongPress, selectionMode, is
       </TouchableOpacity>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   drawerWrapper: {
