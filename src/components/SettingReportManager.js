@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { CustomButton } from './CustomButton';
 import { styles } from '../styles/SettingsStyles';
@@ -14,7 +14,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
     setReportData(prev => ({ ...prev, [field]: value }));
   };
 
-  const pickImage = async () => {
+  const pickImageFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (perm.status !== 'granted') return;
 
@@ -23,6 +23,25 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
       const comp = await compressImage(res.assets[0].uri, { maxWidth: 1000, quality: 0.6 });
       setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
     }
+  };
+
+  const pickImageFromCamera = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (perm.status !== 'granted') return;
+
+    const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.7 });
+    if (!res.canceled && res.assets?.[0]?.uri) {
+      const comp = await compressImage(res.assets[0].uri, { maxWidth: 1000, quality: 0.6 });
+      setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
+    }
+  };
+
+  const pickImage = () => {
+    Alert.alert('스크린샷 첨부', '이미지 가져오기 방식을 선택하세요.', [
+      { text: '취소', style: 'cancel' },
+      { text: '카메라 촬영', onPress: pickImageFromCamera },
+      { text: '앨범에서 선택', onPress: pickImageFromLibrary },
+    ]);
   };
 
   const handleSubmit = async () => {
@@ -50,7 +69,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
       />
 
       <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}>📎 스크린샷 첨부</Text>
+        <Text style={styles.uploadButtonText}>📎 스크린샷 첨부 (카메라/앨범)</Text>
       </TouchableOpacity>
       {!!reportData.screenshot && (
         <Image source={{ uri: `data:image/jpeg;base64,${reportData.screenshot}` }} style={styles.previewImage} />

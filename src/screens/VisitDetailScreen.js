@@ -10,7 +10,6 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useAuth } from '../hooks/useAuth';
 import { visitService } from '../services/visitService';
 import { compressImage } from '../utils/imageOptimizer';
-import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../utils/errorHandler';
 import { AISummaryPanel } from '../components';
@@ -26,6 +25,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
   const [s, setS] = useState({
     uri: null,
+    title: '',
     review: '',
     visit_date: new Date().toISOString(), // 기본값은 현재시간
     loading: !!visitId, // 수정 모드일 때만 로딩 활성화
@@ -49,6 +49,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         if (item) {
           up({
             uri: item.card_image,
+            title: item.title || item.drawer_title || '',
             review: item.card_review,
             visit_date: item.visit_date, // 기존 날짜 유지
             loading: false
@@ -60,6 +61,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         if (data) {
           up({
             uri: data.card_image,
+            title: data.title || data.drawer_title || '',
             review: data.card_review || '',
             visit_date: data.visit_date, // 서버에 기록된 실제 방문 날짜 유지
             loading: false
@@ -88,7 +90,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
   };
 
   const onSave = async () => {
-    if (!s.uri && !s.review.trim()) return Alert.alert("알림", "기록할 내용을 입력해주세요.");
+    if (!s.uri && !s.review.trim() && !s.title.trim()) return Alert.alert("알림", "제목 또는 기록할 내용을 입력해주세요.");
     up({ saving: true });
 
     const payload = {
@@ -105,10 +107,12 @@ const VisitDetailScreen = ({ route, navigation }) => {
         const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
         let list = stored ? JSON.parse(stored) : [];
 
+        const localPayload = { ...payload, title: s.title.trim() };
+
         if (s.isEdit) {
-          list = list.map(v => v.id === visitId ? { ...v, ...payload } : v);
+          list = list.map(v => v.id === visitId ? { ...v, ...localPayload } : v);
         } else {
-          list = [{ ...payload, id: `local_${Date.now()}` }, ...list];
+          list = [{ ...localPayload, id: `local_${Date.now()}` }, ...list];
         }
 
         await AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
@@ -157,6 +161,16 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 {isOffMode ? '✒️ 개인 메모 작성' : '📝 상담 기록 수정'}
               </Text>
             </View>
+
+
+            <TextInput
+              style={[styles.titleInput, { borderColor: theme.c + '40' }]}
+              value={s.title}
+              onChangeText={v => up({ title: v })}
+              placeholder="서랍 제목을 입력하세요"
+              placeholderTextColor="#888"
+              maxLength={40}
+            />
 
             <View style={[styles.imgBox, { borderColor: theme.c }]}>
               {s.uri ? (
@@ -222,6 +236,7 @@ const styles = StyleSheet.create({
   placeholderText: { fontSize: 40, marginBottom: 10 },
   placeholderSubText: { color: '#888', fontSize: 13 },
   btnRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#FFF', fontSize: 15, borderWidth: 1, marginBottom: 14 },
   input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 18, color: '#FFF', minHeight: 180, textAlignVertical: 'top', fontSize: 16, borderWidth: 1 },
   voiceRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   whiteText: { color: '#FFF', fontWeight: 'bold' },
