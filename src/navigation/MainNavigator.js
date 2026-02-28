@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, Platform, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,12 +10,14 @@ import { useNotifications } from '../hooks/useNotifications';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import VisitDetailScreen from '../screens/VisitDetailScreen';
-import MembershipScreen from '../screens/MembershipScreen';
 import DailyFortuneScreen from '../screens/DailyFortuneScreen';
 import AIChatHistoryScreen from '../screens/AIChatHistoryScreen';
 import CouponScreen from '../screens/CouponScreen';
 import NoticeScreen from '../screens/NoticeScreen';
+import NoticeDetailScreen from '../screens/NoticeDetailScreen';
 import VoteScreen from '../screens/VoteScreen';
+import BugReportScreen from '../screens/BugReportScreen';
+import BugReportDetailScreen from '../screens/BugReportDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -153,10 +155,25 @@ const MainNavigator = () => {
         }}
       />
       <Stack.Screen
-        name="Membership"
-        component={MembershipScreen}
+        name="NoticeDetail"
+        component={NoticeDetailScreen}
         options={{
-          presentation: 'modal',
+          presentation: 'card',
+        }}
+      />
+
+      <Stack.Screen
+        name="BugReport"
+        component={BugReportScreen}
+        options={{
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="BugReportDetail"
+        component={BugReportDetailScreen}
+        options={{
+          presentation: 'card',
         }}
       />
     </Stack.Navigator>

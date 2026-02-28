@@ -148,8 +148,9 @@ export const noticeService = {
           customer_id: reportData.customer_id || null,
           title: reportData.title,
           description: reportData.description,
-          report_type: reportData.report_type,
-          device_info: reportData.device_info,  // ⬅️ 이 줄 추가
+          report_type: reportData.report_type || '어플 버그',
+          screenshot: reportData.screenshot || null,
+          device_info: reportData.device_info || null,
           status: '접수',
         })
         .select()

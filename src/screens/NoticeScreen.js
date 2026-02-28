@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Platform } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { GradientBackground, LoadingSpinner, NoticeCard } from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { noticeService } from '../services/noticeService';
@@ -8,6 +9,8 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 import { CommonStyles } from '../styles/CommonStyles';
 
 const NoticeScreen = ({ isIntegrated = false }) => {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { customer } = useAuth();
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +52,7 @@ const NoticeScreen = ({ isIntegrated = false }) => {
       <FlatList
         data={notices}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <NoticeCard notice={item} />}
+        renderItem={({ item }) => <NoticeCard notice={item} onPress={(notice) => navigation.navigate('NoticeDetail', { notice })} />}
         ListHeaderComponent={!isIntegrated ? renderHeader : null}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
@@ -59,7 +62,7 @@ const NoticeScreen = ({ isIntegrated = false }) => {
         }
         contentContainerStyle={[
           styles.listArea,
-          { paddingTop: !isIntegrated ? (Platform.OS === 'ios' ? 60 : 40) : 10 }
+          { paddingTop: !isIntegrated ? (insets.top + 20) : 10 }
         ]}
         refreshControl={
           <RefreshControl

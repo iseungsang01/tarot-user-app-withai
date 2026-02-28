@@ -245,6 +245,34 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+
+  uploadButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.3)',
+    borderRadius: 8,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: 'rgba(212,175,55,0.08)'
+  },
+  uploadButtonText: {
+    color: DrawerTheme.goldBrass,
+    fontWeight: '700',
+    fontSize: 13
+  },
+  previewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  detailText: {
+    marginTop: 8,
+    color: DrawerTheme.goldBrass,
+    fontSize: 12,
+    fontWeight: '700'
+  },
+
   // 앱 버전 정보
   appInfo: {
     marginTop: 40,

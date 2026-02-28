@@ -106,28 +106,8 @@ const AIChatScreen = ({ navigation, route }) => {
         }
     }, [route.params?.session]);
 
-    const isPremium = !isGuest && (customer?.membership_type === 'Pro' || customer?.membership_type === 'Premium');
-    const membershipType = customer?.membership_type || 'Free';
-
-    // 남은 횟수 계산 로직
-    let usageInfo = '';
-    let hasRemaining = true;
-
-    if (customer && !isGuest) {
-        if (membershipType === 'Free') {
-            const remaining = Math.max(0, 100 - (customer.monthly_ai_count || 0));
-            usageInfo = `이번 달 남은 상담: ${remaining}회`;
-            hasRemaining = remaining > 0;
-        } else if (membershipType === 'Pro') {
-            const remaining = Math.max(0, 10 - (customer.daily_ai_count || 0));
-            usageInfo = `오늘 남은 상담: ${remaining}회`;
-            hasRemaining = remaining > 0;
-        } else if (membershipType === 'Premium') {
-            const remaining = Math.max(0, 50 - (customer.daily_ai_count || 0));
-            usageInfo = `오늘 남은 상담: ${remaining}회`;
-            hasRemaining = remaining > 0;
-        }
-    }
+    const usageInfo = isGuest ? '' : 'AI 상담은 언제든 자유롭게 이용할 수 있어요';
+    const hasRemaining = true;
 
     // 화면 진입 및 초기화 상태 복구
     useEffect(() => {
@@ -150,11 +130,8 @@ const AIChatScreen = ({ navigation, route }) => {
         if (!hasRemaining) {
             Alert.alert(
                 '상담 횟수 소진',
-                `${membershipType === 'Free' ? '이번 달' : '오늘'} 무료 상담 횟수가 모두 소진되었습니다. 더 많은 상담을 위해 업그레이드할까요?`,
-                [
-                    { text: '나중에', style: 'cancel' },
-                    { text: '업그레이드', onPress: () => navigation.navigate('Membership') }
-                ]
+                '일시적으로 상담을 진행할 수 없습니다. 잠시 후 다시 시도해주세요.',
+[{ text: '확인', style: 'cancel' }]
             );
             return;
         }
@@ -215,24 +192,8 @@ const AIChatScreen = ({ navigation, route }) => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
-                {/* 프리미엄 업그레이드 배너 */}
-                {!isPremium && (
-                    <TouchableOpacity
-                        style={[styles.premiumBanner, { paddingTop: insets.top }]}
-                        onPress={() => navigation.navigate('Membership')}
-                        activeOpacity={0.9}
-                    >
-                        <View style={styles.premiumBannerContent}>
-                            <Text style={styles.premiumBannerText}>✨ 무제한 AI 상담과 독점 타로 혜택을 누려보세요!</Text>
-                            <View style={styles.premiumBadgeMin}>
-                                <Text style={styles.premiumBadgeMinText}>UPGRADE</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                )}
-
                 {/* 헤더 */}
-                <View style={[styles.header, isPremium && { paddingTop: insets.top + 10 }]}>
+                <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                     <View style={styles.headerLeft}>
                         <TouchableOpacity
                             style={styles.historyTrigger}
@@ -246,11 +207,6 @@ const AIChatScreen = ({ navigation, route }) => {
                         <View>
                             <View style={styles.headerTitleRow}>
                                 <Text style={styles.headerTitle}>AI 타일러 상담소</Text>
-                                {isPremium && (
-                                    <View style={[styles.proBadge, { backgroundColor: membershipType === 'Premium' ? '#A06AF9' : DrawerTheme.goldBright }]}>
-                                        <Text style={styles.proBadgeText}>{membershipType.toUpperCase()}</Text>
-                                    </View>
-                                )}
                             </View>
                             <View style={styles.usageRow}>
                                 <View style={[styles.usageDot, { backgroundColor: hasRemaining ? '#4CAF50' : '#FF5252' }]} />
