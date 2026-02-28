@@ -4,7 +4,6 @@ import {
     analyzeVisitHistory,
     sendChatMessage,
     getWelcomeMessage,
-    incrementAIUsage,
 } from '../services/openaiService';
 import { useAuth } from './useAuth';
 import { storage } from '../utils/storage';
@@ -88,7 +87,7 @@ export const useAnalyzeHistory = () => {
  * 대화 히스토리 관리 및 메시지 전송
  */
 export const useAIChat = () => {
-    const { customer, refreshCustomer } = useAuth();
+    const { customer } = useAuth();
     const [messages, setMessages] = useState([]); // { id, role, content, timestamp }
     const [loading, setLoading] = useState(false);
     const [initialized, setInitialized] = useState(false);
@@ -156,26 +155,6 @@ export const useAIChat = () => {
         // 로컬 저장 (사용자 메시지 보낸 시점)
         await storage.saveAIChatHistory(customer.id, updatedMessagesWithUser);
 
-        // API 사용량 체크 및 차감
-        if (customer && !customer.isGuest) {
-            const usageResult = await incrementAIUsage(customer.id);
-            if (!usageResult.success) {
-                const limitMsg = {
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: usageResult.message || '상담 횟수가 초과되었습니다.',
-                    timestamp: new Date(),
-                    isError: true,
-                };
-                const finalMessagesWithLimit = [...updatedMessagesWithUser, limitMsg];
-                setMessages(finalMessagesWithLimit);
-                await storage.saveAIChatHistory(customer.id, finalMessagesWithLimit);
-                setLoading(false);
-                return;
-            }
-            refreshCustomer();
-        }
-
         // API 호출용 히스토리에 추가 (기존 히스토리 + 새 메시지)
         const updatedHistory = [...conversationRef.current, { role: 'user', content: userText.trim() }];
 
@@ -216,7 +195,7 @@ export const useAIChat = () => {
         }
 
         setLoading(false);
-    }, [loading, customer, messages, refreshCustomer]);
+    }, [loading, customer, messages]);
 
     /**
      * 특정 과거 세션 로드

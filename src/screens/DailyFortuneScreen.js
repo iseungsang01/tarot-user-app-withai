@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../components';
 import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
+import { CommonStyles } from '../styles/CommonStyles';
 import { useAuth } from '../hooks/useAuth';
-import { visitService } from '../services/visitService';
 import { getDailyFortune } from '../services/openaiService';
 import { storage } from '../utils/storage';
 
@@ -189,7 +189,7 @@ const DailyFortuneScreen = () => {
     };
 
     const todayFortune = allFortunes[todayStr];
-    const hasFortuneToday = !!todayFortune && !isErrorFortune(todayFortune);
+    const hasFortuneToday = !!todayFortune && !!todayFortune.fortune && !isErrorFortune(todayFortune);
     const isTodayError = !!todayFortune && isErrorFortune(todayFortune);
 
     return (
@@ -199,8 +199,9 @@ const DailyFortuneScreen = () => {
                 contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }}
             >
                 <View style={styles.header}>
-                    <Text style={styles.title}>오늘의 운세 & 출석</Text>
-                    <Text style={styles.subtitle}>{currentYear}년 {currentMonth + 1}월</Text>
+                    <View style={styles.titleRow}><Text style={styles.title}>FORTUNE BOARD</Text></View>
+                    <View style={styles.headerDivider} />
+                    <Text style={styles.subtitle}>{currentYear}년 {currentMonth + 1}월 오늘의 운세를 확인하세요</Text>
                 </View>
 
                 {isGuest ? (
@@ -270,15 +271,15 @@ const DailyFortuneScreen = () => {
                 {selectedFortune && (
                     <View style={styles.fortuneCard}>
                         <Text style={styles.fortuneTitle}>🔮 {selectedDate === todayStr ? '오늘' : selectedDate.split('-')[1] + '월 ' + selectedDate.split('-')[2] + '일'}의 운세</Text>
-                        <Text style={styles.fortuneContent}>{selectedFortune.fortune}</Text>
+                        <Text style={styles.fortuneContent}>{selectedFortune?.fortune || '운세 내용을 불러오지 못했습니다. 다시 시도해주세요.'}</Text>
                         <View style={styles.fortuneFooter}>
                             <View style={styles.fortuneInfo}>
                                 <Text style={styles.infoLabel}>행운의 색</Text>
-                                <Text style={styles.infoValue}>{selectedFortune.luckyColor}</Text>
+                                <Text style={styles.infoValue}>{selectedFortune?.luckyColor || '-'}</Text>
                             </View>
                             <View style={styles.fortuneInfo}>
                                 <Text style={styles.infoLabel}>행운의 아이템</Text>
-                                <Text style={styles.infoValue}>{selectedFortune.luckyItem}</Text>
+                                <Text style={styles.infoValue}>{selectedFortune?.luckyItem || '-'}</Text>
                             </View>
                         </View>
                     </View>
@@ -299,21 +300,11 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20,
     },
-    header: {
-        marginBottom: 20,
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: Colors.gold,
-        marginBottom: 5,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: Colors.lavender,
-        opacity: 0.8,
-    },
+    header: CommonStyles.headerBoard,
+    titleRow: CommonStyles.titleRow,
+    title: CommonStyles.title,
+    headerDivider: CommonStyles.headerDivider,
+    subtitle: CommonStyles.subtitle,
     card: {
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 20,
