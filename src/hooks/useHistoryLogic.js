@@ -238,6 +238,7 @@ export const useHistoryLogic = (navigation) => {
             refreshing,
             stats,
             couponCount,
+            visits: [...serverVisits, ...personalNotes],
             archiveMode,
             timeFilter,
             selectedYear,

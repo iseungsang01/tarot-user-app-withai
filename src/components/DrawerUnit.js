@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { DrawerTheme } from '../constants/DrawerTheme';
 
 /**
@@ -18,6 +18,10 @@ export const DrawerUnit = ({ visit, onSelectCard, onLongPress, selectionMode, is
 
   // 작성 여부 판단 (내용이나 이미지가 있으면 작성된 서랍)
   const isWritten = !!(visit.card_review && visit.card_review.trim()) || !!visit.card_image;
+  const title = visit.title || visit.drawer_title || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 24) || (isManualMode ? '개인 메모 서랍' : '상담 서랍');
+  const imageUri = visit.card_image
+    ? (visit.card_image.startsWith('data') ? visit.card_image : `data:image/jpeg;base64,${visit.card_image}`)
+    : null;
 
   // 테마 설정 분기
   const theme = {
@@ -61,6 +65,11 @@ export const DrawerUnit = ({ visit, onSelectCard, onLongPress, selectionMode, is
 
           {/* 날짜 표시: 모든 서랍의 공통 요소 */}
           <Text style={[styles.dateText, { color: DrawerTheme.goldBright }]}>{displayDate}</Text>
+
+          <View style={styles.titleRow}>
+            {imageUri ? <Image source={{ uri: imageUri }} style={styles.thumbnail} /> : <Text style={styles.folderEmoji}>{isManualMode ? '📁' : '🃏'}</Text>}
+            <Text numberOfLines={1} style={styles.titleText}>{title}</Text>
+          </View>
 
           {/* 인디케이터: 서버 기록(Wood)이면서 미작성일 때만 'EMPTY' 표시 */}
           {isOnMode && !isWritten && !selectionMode && (
@@ -135,6 +144,31 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2
+  },
+  titleRow: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    left: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  thumbnail: {
+    width: 34,
+    height: 34,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  folderEmoji: {
+    fontSize: 20,
+  },
+  titleText: {
+    color: '#FFF',
+    flex: 1,
+    fontWeight: '700',
+    fontSize: 13,
   },
   statusBadge: {
     position: 'absolute',

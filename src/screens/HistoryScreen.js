@@ -11,6 +11,7 @@ import { TarotCardModal } from '../components/TarotCardModal';
 import { HistoryHeader } from '../components/history/HistoryHeader';
 import { HistoryFilterBar } from '../components/history/HistoryFilterBar';
 import { DrawerTheme } from '../constants/DrawerTheme';
+import { AIHistoryAnalysisPanel } from '../components';
 
 // Hook
 import { useHistoryLogic } from '../hooks/useHistoryLogic';
@@ -28,6 +29,7 @@ const HistoryScreen = ({ navigation }) => {
     refreshing,
     stats,
     couponCount,
+    visits,
     archiveMode,
     timeFilter,
     selectedYear,
@@ -92,7 +94,7 @@ const HistoryScreen = ({ navigation }) => {
     const displayData = getDisplayData();
     return (
       <DrawerChest isManualMode={archiveMode === 'OFF'} selectionMode={selectionMode}>
-        {/* AI 종합 분석 패널 제거됨 */}
+        <AIHistoryAnalysisPanel visits={visits} />
 
         {archiveMode === 'OFF' && (
           <TouchableOpacity
