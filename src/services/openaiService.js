@@ -9,6 +9,20 @@ import { supabase } from './supabase';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
 
+const stringifyError = (errorValue) => {
+  if (!errorValue) return '';
+  if (typeof errorValue === 'string') return errorValue;
+  if (typeof errorValue === 'object') {
+    try {
+      return JSON.stringify(errorValue);
+    } catch {
+      return String(errorValue);
+    }
+  }
+  return String(errorValue);
+};
+
+
 const callAIProxy = async (messages, options = {}, task = 'chat') => {
   try {
     const { data, error } = await supabase.functions.invoke(EDGE_FUNCTION_NAME, {
@@ -32,7 +46,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
     if (!data || data.error) {
       return {
         data: null,
-        error: new Error(data?.error || 'AI 응답을 받지 못했습니다.'),
+        error: new Error(stringifyError(data?.error) || 'AI 응답을 받지 못했습니다.'),
       };
     }
 

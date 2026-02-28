@@ -3,6 +3,8 @@
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
 const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-27b-it';
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')?.trim() ?? '';
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
 
 const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'false').toLowerCase() === 'true';
 
@@ -60,6 +62,40 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) 
   };
 }
 
+async function callOpenAI(messages: any[], temperature = 0.7, maxTokens = 1000) {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY not configured');
+  }
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload?.error?.message || 'OpenAI request failed';
+    throw new Error(message);
+  }
+
+  const text = payload?.choices?.[0]?.message?.content || '';
+
+  return {
+    data: text,
+    usage: payload?.usage || null,
+    provider: 'openai',
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -73,7 +109,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { messages, options } = await req.json();
+    const { task, messages, options } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -85,27 +121,57 @@ Deno.serve(async (req) => {
     const temperature = Number(options?.temperature ?? 0.7);
     const maxTokens = Number(options?.maxTokens ?? 1000);
 
+    const shouldUseGoogleOnly = task === 'getDailyFortune';
+
+    if (shouldUseGoogleOnly) {
+      try {
+        const googleResult = await callGoogle(messages, temperature, maxTokens);
+        return new Response(JSON.stringify(googleResult), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (googleError) {
+        return new Response(JSON.stringify({
+          data: '',
+          usage: null,
+          provider: 'google-gemma',
+          error: googleError instanceof Error ? googleError.message : 'Google provider request failed',
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     try {
-      const result = await callGoogle(messages, temperature, maxTokens);
-      return new Response(JSON.stringify(result), {
+      const openAIResult = await callOpenAI(messages, temperature, maxTokens);
+      return new Response(JSON.stringify(openAIResult), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    } catch (providerError) {
-      return new Response(JSON.stringify({
-        data: '',
-        usage: null,
-        provider: 'google-gemma',
-        error: providerError instanceof Error ? providerError.message : 'Provider request failed',
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    } catch (openAIError) {
+      try {
+        const googleResult = await callGoogle(messages, temperature, maxTokens);
+        return new Response(JSON.stringify(googleResult), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (googleError) {
+        return new Response(JSON.stringify({
+          data: '',
+          usage: null,
+          provider: 'google-gemma',
+          error: {
+            openai: openAIError instanceof Error ? openAIError.message : 'OpenAI provider request failed',
+            google: googleError instanceof Error ? googleError.message : 'Google provider request failed',
+          },
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
     return new Response(
       JSON.stringify({ error: message }),
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unexpected error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
