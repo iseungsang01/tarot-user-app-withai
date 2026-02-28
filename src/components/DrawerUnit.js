@@ -18,7 +18,7 @@ export const DrawerUnit = ({ visit, onSelectCard, onLongPress, selectionMode, is
 
   // 작성 여부 판단 (내용이나 이미지가 있으면 작성된 서랍)
   const isWritten = !!(visit.card_review && visit.card_review.trim()) || !!visit.card_image;
-  const title = visit.title || visit.drawer_title || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 24) || (isManualMode ? '개인 메모 서랍' : '상담 서랍');
+  const title = visit.title || visit.drawer_title || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 24) || (isManualMode ? '개인 메모 제목 없음' : '상담 기록 제목 없음');
   const imageUri = visit.card_image
     ? (visit.card_image.startsWith('data') ? visit.card_image : `data:image/jpeg;base64,${visit.card_image}`)
     : null;

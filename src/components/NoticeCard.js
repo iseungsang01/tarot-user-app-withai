@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, Linking, Platform, TouchableOpacity } from 'react-native';
 import { DrawerTheme } from '../constants/DrawerTheme';
 
-export const NoticeCard = ({ notice }) => {
+export const NoticeCard = ({ notice, onPress }) => {
   // 날짜 포맷 함수: 25.01.01
   const formatShortDate = (dateString) => {
     if (!dateString) return '';
@@ -51,7 +51,11 @@ export const NoticeCard = ({ notice }) => {
   const contentParts = parseContent(notice.content);
 
   return (
-    <View style={[styles.card, notice.is_pinned && styles.cardPinned]}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      style={[styles.card, notice.is_pinned && styles.cardPinned]}
+      onPress={() => onPress?.(notice)}
+    >
       {/* 제목과 날짜가 한 줄에 있고, 날짜만 오른쪽 끝으로 */}
       <View style={styles.titleRow}>
         <View style={styles.leftContent}>
@@ -90,7 +94,8 @@ export const NoticeCard = ({ notice }) => {
           );
         })}
       </View>
-    </View>
+      <Text style={styles.detailHint}>자세히 보기 →</Text>
+    </TouchableOpacity>
   );
 };
 
@@ -105,6 +110,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 5,
+  },
+  detailHint: {
+    marginTop: 14,
+    color: DrawerTheme.goldBrass,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'right',
+    opacity: 0.9,
   },
   cardPinned: {
     backgroundColor: '#5D4333',
