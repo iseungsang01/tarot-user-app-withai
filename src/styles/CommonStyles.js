@@ -4,6 +4,9 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 export const CommonStyles = {
     // 고전풍 게시판/섹션 헤더 공통 스타일 (공지, 설정, 쿠폰, 투표 등에 적용)
     headerBoard: {
+        width: '100%',
+        maxWidth: 440,
+        alignSelf: 'center',
         backgroundColor: DrawerTheme.woodDark,
         borderRadius: 12,
         paddingVertical: 25,

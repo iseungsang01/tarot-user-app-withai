@@ -147,33 +147,6 @@ export const analyzeVisitHistory = async (visits) => {
 // 2. 대화형 AI 챗봇
 // ─────────────────────────────────────────────────────────────
 
-export const incrementAIUsage = async (customerId) => {
-  if (!customerId || customerId === 'guest') return { success: true };
-
-  try {
-    const { data, error } = await supabase.rpc('increment_ai_usage', {
-      p_customer_id: customerId,
-    });
-
-    if (error) {
-      return {
-        success: false,
-        message: `서버 연결 오류가 발생했습니다. (${error.message || 'Unknown'})`,
-      };
-    }
-
-    if (data && typeof data === 'object') {
-      return data;
-    }
-
-    return { success: false, message: '알 수 없는 오류가 발생했습니다.' };
-  } catch (error) {
-    return {
-      success: false,
-      message: `상담 횟수 확인 중 연동 오류가 발생했습니다. (${error.message})`,
-    };
-  }
-};
 
 const TAROT_SYSTEM_PROMPT = `당신은 'drawer'라는 타로 상담 앱의 AI 상담 어시스턴트입니다.
 따뜻하고 신비로운 타로 상담사의 페르소나를 가지고 있습니다.
@@ -249,7 +222,6 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
 export default {
   summarizeReview,
   analyzeVisitHistory,
-  incrementAIUsage,
   sendChatMessage,
   getWelcomeMessage,
   getDailyFortune,

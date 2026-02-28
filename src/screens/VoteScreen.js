@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, FlatList, RefreshControl, Platform, View } from 'react-native';
+import { StyleSheet, FlatList, RefreshControl, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Components
 import { GradientBackground } from '../components/GradientBackground';
@@ -12,6 +13,7 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 import { useVoteLogic } from '../hooks/useVoteLogic';
 
 const VoteScreen = ({ navigation, isIntegrated = false }) => {
+  const insets = useSafeAreaInsets();
   const {
     state,
     actions,
@@ -97,9 +99,10 @@ const VoteScreen = ({ navigation, isIntegrated = false }) => {
         data={[{ id: 1 }]}
         renderItem={renderContent}
         keyExtractor={item => item.id.toString()}
+        ListHeaderComponent={null}
         contentContainerStyle={[
           styles.listArea,
-          { paddingTop: !isIntegrated ? (Platform.OS === 'ios' ? 60 : 40) : 10 }
+          { paddingTop: !isIntegrated ? (insets.top + 20) : 10 }
         ]}
         refreshControl={
           <RefreshControl

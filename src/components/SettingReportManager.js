@@ -1,61 +1,85 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { CustomButton } from './CustomButton';
 import { styles } from '../styles/SettingsStyles';
+import { compressImage } from '../utils/imageOptimizer';
 
-export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing }) => {
-  const [reportData, setReportData] = useState({ 
-    title: '', description: '', report_type: '어플 버그', category: 'app' 
+export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing, onOpenDetail }) => {
+  const [reportData, setReportData] = useState({
+    title: '', description: '', report_type: '어플 버그', screenshot: null
   });
-
-  const handleCategoryChange = useCallback((category) => {
-    setReportData(prev => ({ 
-      ...prev, 
-      category, 
-      report_type: category === 'app' ? '어플 버그' : '가게 불편사항' 
-    }));
-  }, []);
 
   const handleFieldChange = (field, value) => {
     setReportData(prev => ({ ...prev, [field]: value }));
   };
 
+  const pickImageFromLibrary = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== 'granted') return;
+
+    const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.7 });
+    if (!res.canceled && res.assets?.[0]?.uri) {
+      const comp = await compressImage(res.assets[0].uri, { maxWidth: 1000, quality: 0.6 });
+      setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
+    }
+  };
+
+  const pickImageFromCamera = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (perm.status !== 'granted') return;
+
+    const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.7 });
+    if (!res.canceled && res.assets?.[0]?.uri) {
+      const comp = await compressImage(res.assets[0].uri, { maxWidth: 1000, quality: 0.6 });
+      setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
+    }
+  };
+
+  const pickImage = () => {
+    Alert.alert('스크린샷 첨부', '이미지 가져오기 방식을 선택하세요.', [
+      { text: '취소', style: 'cancel' },
+      { text: '카메라 촬영', onPress: pickImageFromCamera },
+      { text: '앨범에서 선택', onPress: pickImageFromLibrary },
+    ]);
+  };
+
+  const handleSubmit = async () => {
+    await onSubmit(reportData);
+    setReportData({ title: '', description: '', report_type: '어플 버그', screenshot: null });
+  };
+
   return (
     <View style={styles.formCard}>
-      <Text style={styles.innerTitle}>📝 새로운 문의 접수</Text>
-      <View style={styles.categoryRow}>
-        {['app', 'store'].map(cat => (
-          <TouchableOpacity 
-            key={cat} 
-            style={[styles.categoryButton, reportData.category === cat && styles.categoryButtonActive]} 
-            onPress={() => handleCategoryChange(cat)}
-          >
-            <Text style={[styles.categoryButtonText, reportData.category === cat && styles.categoryButtonTextActive]}>
-              {cat === 'app' ? '📱 어플 버그' : '🏪 가게 불편'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <TextInput 
-        style={styles.input} 
-        value={reportData.title} 
-        onChangeText={(t) => handleFieldChange('title', t)} 
-        placeholder="제목" 
-        placeholderTextColor="rgba(166, 137, 102, 0.5)" 
-      />
-      <TextInput 
-        style={[styles.input, styles.textArea]} 
-        value={reportData.description} 
-        onChangeText={(t) => handleFieldChange('description', t)} 
-        placeholder="내용을 입력하세요" 
+      <Text style={styles.innerTitle}>📝 앱 버그 접수</Text>
+      <TextInput
+        style={styles.input}
+        value={reportData.title}
+        onChangeText={(t) => handleFieldChange('title', t)}
+        placeholder="제목"
         placeholderTextColor="rgba(166, 137, 102, 0.5)"
-        multiline 
       />
-      <CustomButton 
-        title="접수하기" 
-        onPress={() => onSubmit(reportData)} 
-        loading={processing} 
-        style={{marginTop: 10}} 
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        value={reportData.description}
+        onChangeText={(t) => handleFieldChange('description', t)}
+        placeholder="버그 상황을 자세히 적어주세요"
+        placeholderTextColor="rgba(166, 137, 102, 0.5)"
+        multiline
+      />
+
+      <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+        <Text style={styles.uploadButtonText}>📎 스크린샷 첨부 (카메라/앨범)</Text>
+      </TouchableOpacity>
+      {!!reportData.screenshot && (
+        <Image source={{ uri: `data:image/jpeg;base64,${reportData.screenshot}` }} style={styles.previewImage} />
+      )}
+
+      <CustomButton
+        title="접수하기"
+        onPress={handleSubmit}
+        loading={processing}
+        style={{ marginTop: 10 }}
       />
 
       <View style={styles.sectionDivider} />
@@ -64,24 +88,24 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         <Text style={styles.emptyText}>접수 내역이 없습니다.</Text>
       ) : (
         myReports.map(item => (
-          <View key={item.id} style={styles.historyCard}>
+          <TouchableOpacity key={item.id} style={styles.historyCard} activeOpacity={0.8} onPress={() => onOpenDetail?.(item)}>
             <View style={styles.historyHeader}>
-              <Text style={styles.historyType}>{item.report_type}</Text>
-              <View style={[styles.statusBadge, {borderColor: getStatusColor(item.status)}]}>
-                <Text style={[styles.statusText, {color: getStatusColor(item.status)}]}>{item.status}</Text>
+              <Text style={styles.historyType}>{item.report_type || '어플 버그'}</Text>
+              <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
               </View>
             </View>
             <Text style={styles.historyTitle} numberOfLines={1}>{item.title}</Text>
             <Text style={styles.historyDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
-            
-            {/* ✅ 관리자 답변 표시 */}
+            <Text style={styles.detailText}>상세 보기 →</Text>
+
             {item.admin_response && item.admin_response.trim() !== '' && (
               <View style={styles.adminResponseBox}>
                 <Text style={styles.adminResponseLabel}>💬 관리자 답변</Text>
                 <Text style={styles.adminResponseText}>{item.admin_response}</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         ))
       )}
     </View>
