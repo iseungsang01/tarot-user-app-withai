@@ -7,7 +7,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "clear": "expo start -c"
+    "clear": "expo start -c",
+    "security-check": "bash scripts/security-check.sh",
+    "typecheck:app": "tsc --noEmit -p tsconfig.app.json",
+    "typecheck:edge": "tsc --noEmit -p tsconfig.edge.json",
+    "typecheck": "npm run typecheck:app && npm run typecheck:edge",
+    "test": "npm run security-check"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -1,8 +1,10 @@
 // Supabase Edge Function: ai-proxy
-// Deploy example: supabase functions deploy ai-proxy --no-verify-jwt
+// Deploy example: supabase functions deploy ai-proxy
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
 const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-27b-it';
+
+const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'false').toLowerCase() === 'true';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,6 +66,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (REQUIRE_AUTH && !req.headers.get('authorization')) {
+      return new Response(
+        JSON.stringify({ error: '인증 정보가 필요합니다.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const { messages, options } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -93,7 +102,9 @@ Deno.serve(async (req) => {
       });
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
     return new Response(
+      JSON.stringify({ error: message }),
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unexpected error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
