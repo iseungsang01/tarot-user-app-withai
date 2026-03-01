@@ -19,15 +19,11 @@
 export const formatPhoneNumber = (value) => {
   // 1. 숫자만 추출
   const numbers = value.replace(/[^0-9]/g, '');
-  
+
   // 2. 길이에 따라 포맷팅
-  if (numbers.length <= 3) {
-    return numbers;
-  } else if (numbers.length <= 7) {
-    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
-  } else {
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
-  }
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
 };
 
 /**
@@ -61,7 +57,5 @@ export const formatDateOnly = (dateStr) => {
  */
 export const formatDateShort = (dateStr) => {
   const date = new Date(dateStr);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  return `${month}월${day}일`;
+  return `${date.getMonth() + 1}월${date.getDate()}일`;
 };

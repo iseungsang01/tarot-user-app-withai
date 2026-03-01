@@ -15,9 +15,7 @@
  * validatePhoneNumber('010-123-4567')  // false
  * validatePhoneNumber('01012345678')   // false (하이픈 필수)
  */
-export const validatePhoneNumber = (phone) => {
-  return /^010-\d{4}-\d{4}$/.test(phone);
-};
+export const validatePhoneNumber = (phone) => /^010-\d{4}-\d{4}$/.test(phone);
 
 /**
  * 빈 문자열 검증
@@ -31,6 +29,4 @@ export const validatePhoneNumber = (phone) => {
  * isEmpty('   ') // true
  * isEmpty('text') // false
  */
-export const isEmpty = (text) => {
-  return !text || text.trim().length === 0;
-};
+export const isEmpty = (text) => !text || text.trim().length === 0;
