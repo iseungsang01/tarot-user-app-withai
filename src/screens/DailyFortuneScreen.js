@@ -28,6 +28,7 @@ const DailyFortuneScreen = () => {
     const [selectedFortune, setSelectedFortune] = useState(null);
     const [selectedDate, setSelectedDate] = useState(null);
     const [todayCheckedIn, setTodayCheckedIn] = useState(false);
+    const [cardRevealed, setCardRevealed] = useState(false);
 
     const getLocalDateString = (date = new Date()) => {
         const year = date.getFullYear();
@@ -64,8 +65,10 @@ const DailyFortuneScreen = () => {
             if (fortunes && fortunes[todayStr]) {
                 setSelectedFortune(fortunes[todayStr]);
                 setSelectedDate(todayStr);
+                setCardRevealed(true);
             } else {
                 setSelectedDate(todayStr);
+                setCardRevealed(false);
             }
         } catch (error) {
             console.error('Local data load error:', error);
@@ -97,6 +100,7 @@ const DailyFortuneScreen = () => {
             setCheckInLoading(true);
             setSelectedFortune(null);
         }
+        setCardRevealed(false);
 
         try {
             if (isRepick) {
@@ -123,11 +127,15 @@ const DailyFortuneScreen = () => {
             setAllFortunes(prev => ({ ...prev, [todayStr]: data }));
             setSelectedFortune(data);
             setSelectedDate(todayStr);
+            setCardRevealed(true);
         } catch (error) {
             console.error('Check-in error:', error);
             Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
             // 실패 시 기존 운세 복구 (선택 사항)
-            if (isRepick && currentFortune) setSelectedFortune(currentFortune);
+            if (isRepick && currentFortune) {
+                setSelectedFortune(currentFortune);
+                setCardRevealed(true);
+            }
         } finally {
             setDrawing(false);
             setCheckInLoading(false);
@@ -138,6 +146,7 @@ const DailyFortuneScreen = () => {
         const fortuneForDay = allFortunes[dateStr];
         setSelectedFortune(fortuneForDay || null);
         setSelectedDate(dateStr);
+        setCardRevealed(!!fortuneForDay);
     };
 
     const calendarGrid = React.useMemo(() => {
@@ -222,43 +231,51 @@ const DailyFortuneScreen = () => {
                 <View style={styles.actionSection}>
                     {selectedDate === todayStr ? (
                         <View style={{ gap: 12 }}>
-                            {hasFortuneToday && !isTodayError && (
+                            {!hasFortuneToday && !isTodayError && (
                                 <View style={styles.doneBanner}>
-                                    <Text style={styles.doneText}>오늘의 운세 확인 완료! ✨</Text>
+                                    <Text style={styles.doneText}>카드를 뽑아 오늘의 운세를 확인해보세요 ✨</Text>
                                 </View>
                             )}
 
                             <TouchableOpacity
                                 style={[
-                                    styles.checkInButton,
+                                    styles.drawCard,
                                     (hasFortuneToday && !isTodayError) && {
-                                        backgroundColor: 'transparent',
-                                        borderWidth: 1,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                                        borderWidth: 1.5,
                                         borderColor: Colors.gold,
-                                        elevation: 0,
-                                        shadowOpacity: 0
                                     },
                                     isTodayError && { backgroundColor: Colors.lavender }
                                 ]}
                                 onPress={() => handleCheckIn(hasFortuneToday && !isTodayError)}
                                 disabled={drawing}
+                                activeOpacity={0.8}
                             >
                                 {checkInLoading ? (
                                     <ActivityIndicator color={hasFortuneToday && !isTodayError ? Colors.gold : "#000"} />
                                 ) : (
-                                    <Text style={[
-                                        styles.checkInButtonText,
-                                        (hasFortuneToday && !isTodayError) && { color: Colors.gold, fontSize: 16 }
-                                    ]}>
-                                        {isTodayError
-                                            ? '운세 다시 받기 🔄'
-                                            : (hasFortuneToday && !isTodayError
-                                                ? '광고 보고 운세 다시 뽑기 🔄'
-                                                : (todayCheckedIn ? '광고 보고 오늘의 운세 확인' : '광고 보고 운세 확인하기'))
-                                        }
-                                    </Text>
+                                    <>
+                                        <Text style={styles.cardIcon}>{(hasFortuneToday && !isTodayError) ? '✨' : '🃏'}</Text>
+                                        <Text style={[
+                                            styles.checkInButtonText,
+                                            (hasFortuneToday && !isTodayError) && { color: Colors.gold, fontSize: 16 }
+                                        ]}>
+                                            {isTodayError
+                                                ? '운세 카드 다시 뽑기'
+                                                : (hasFortuneToday && !isTodayError
+                                                    ? '카드 다시 뽑기'
+                                                    : (todayCheckedIn ? '오늘의 운세 카드 열기' : '오늘의 운세 카드 뽑기'))
+                                            }
+                                        </Text>
+                                    </>
                                 )}
                             </TouchableOpacity>
+
+                            {hasFortuneToday && !isTodayError && cardRevealed && (
+                                <View style={styles.doneBanner}>
+                                    <Text style={styles.doneText}>카드 확인 완료! 아래에서 오늘의 운세를 확인하세요.</Text>
+                                </View>
+                            )}
                         </View>
                     ) : selectedDate && selectedDate !== todayStr ? (
                         <View style={styles.doneBanner}>
@@ -267,7 +284,7 @@ const DailyFortuneScreen = () => {
                     ) : null}
                 </View>
 
-                {selectedFortune && (
+                {selectedFortune && cardRevealed && (
                     <View style={styles.fortuneCard}>
                         <Text style={styles.fortuneTitle}>🔮 {selectedDate === todayStr ? '오늘' : selectedDate.split('-')[1] + '월 ' + selectedDate.split('-')[2] + '일'}의 운세</Text>
                         <Text style={styles.fortuneContent}>{selectedFortune?.fortune || '운세 내용을 불러오지 못했습니다. 다시 시도해주세요.'}</Text>
@@ -371,11 +388,15 @@ const styles = StyleSheet.create({
         marginTop: 25,
         marginBottom: 20,
     },
-    checkInButton: {
+    drawCard: {
         backgroundColor: Colors.gold,
-        borderRadius: 15,
+        borderRadius: 18,
         paddingVertical: 18,
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 0, 0, 0.2)',
         shadowColor: Colors.gold,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -386,6 +407,9 @@ const styles = StyleSheet.create({
         color: '#000',
         fontSize: 18,
         fontWeight: '800',
+    },
+    cardIcon: {
+        fontSize: 26,
     },
     doneBanner: {
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
