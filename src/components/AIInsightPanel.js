@@ -138,7 +138,7 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
             )}
         </View>
     );
-};
+});
 
 // ─────────────────────────────────────────────────────────────
 // 전체 방문 기록 종합 분석 패널
@@ -253,7 +253,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
             )}
         </View>
     );
-};
+});
 
 // ─────────────────────────────────────────────────────────────
 // 스타일

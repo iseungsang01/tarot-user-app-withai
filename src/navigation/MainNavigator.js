@@ -13,9 +13,11 @@ import VisitDetailScreen from '../screens/VisitDetailScreen';
 import DailyFortuneScreen from '../screens/DailyFortuneScreen';
 import AIChatHistoryScreen from '../screens/AIChatHistoryScreen';
 import CouponScreen from '../screens/CouponScreen';
-import NoticeScreen, { NoticeDetailScreen } from '../screens/NoticeScreen';
+import NoticeScreen from '../screens/NoticeScreen';
+import NoticeDetailScreen from '../screens/NoticeDetailScreen';
 import VoteScreen from '../screens/VoteScreen';
-import BugReportScreen, { BugReportDetailScreen } from '../screens/BugReportScreen';
+import BugReportScreen from '../screens/BugReportScreen';
+import BugReportDetailScreen from '../screens/BugReportDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();

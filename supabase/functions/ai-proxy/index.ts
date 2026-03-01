@@ -121,52 +121,29 @@ Deno.serve(async (req) => {
     const temperature = Number(options?.temperature ?? 0.7);
     const maxTokens = Number(options?.maxTokens ?? 1000);
 
-    const shouldUseGoogleOnly = task === 'getDailyFortune';
-
-    if (shouldUseGoogleOnly) {
-      try {
-        const googleResult = await callGoogle(messages, temperature, maxTokens);
-        return new Response(JSON.stringify(googleResult), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (googleError) {
-        return new Response(JSON.stringify({
-          data: '',
-          usage: null,
-          provider: 'google-gemma',
-          error: googleError instanceof Error ? googleError.message : 'Google provider request failed',
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
+    // 사용자의 요청대로 Google API를 유일한 AI 제공자로 사용합니다.
     try {
-      const openAIResult = await callOpenAI(messages, temperature, maxTokens);
-      return new Response(JSON.stringify(openAIResult), {
+      if (!GOOGLE_API_KEY) {
+        throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다. Supabase Secrets를 확인해주세요.');
+      }
+
+      const googleResult = await callGoogle(messages, temperature, maxTokens);
+      return new Response(JSON.stringify(googleResult), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    } catch (openAIError) {
-      try {
-        const googleResult = await callGoogle(messages, temperature, maxTokens);
-        return new Response(JSON.stringify(googleResult), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (googleError) {
-        return new Response(JSON.stringify({
-          data: '',
-          usage: null,
-          provider: 'google-gemma',
-          error: {
-            openai: openAIError instanceof Error ? openAIError.message : 'OpenAI provider request failed',
-            google: googleError instanceof Error ? googleError.message : 'Google provider request failed',
-          },
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    } catch (googleError) {
+      console.error('AI Proxy Error:', googleError);
+
+      // 최종 실패 응답
+      return new Response(JSON.stringify({
+        data: '',
+        usage: null,
+        provider: 'google-gemma',
+        error: googleError instanceof Error ? googleError.message : 'AI 서비스 호출에 실패했습니다.',
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
