@@ -4,8 +4,6 @@
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
 // 사용자 요청에 따라 'gemma-3-12b-it'을 기본 모델로 설정합니다.
 const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-12b-it';
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')?.trim() ?? '';
-const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
 
 const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'false').toLowerCase() === 'true';
 
@@ -68,40 +66,8 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) 
   };
 }
 
-// OpenAI 호출 기능은 유지하되 현재는 Google API를 기본으로 사용합니다.
-async function callOpenAI(messages: any[], temperature = 0.7, maxTokens = 1000) {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
-  }
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = payload?.error?.message || 'OpenAI request failed';
-    throw new Error(message);
-  }
-
-  const text = payload?.choices?.[0]?.message?.content || '';
-
-  return {
-    data: text,
-    usage: payload?.usage || null,
-    provider: 'openai',
-  };
-}
+// OpenAI 호출 기능은 제거하였습니다 (Google API만 사용하도록 통일)
+// (기존 callOpenAI 함수 삭제됨)
 
 Deno.serve(async (req) => {
   // CORS Preflight 처리

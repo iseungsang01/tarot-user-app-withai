@@ -6,10 +6,10 @@
 
 현재 앱은 OpenAI/Google API 키를 `EXPO_PUBLIC_*` 환경변수로 읽어서 모바일 앱에서 직접 호출합니다.
 
-- 위치: `src/services/openaiService.js`
+- 위치: `src/services/aiService.js` (기존 `openaiService.js`는 삭제됨)
 - 문제:
-  - 앱 번들/네트워크 분석으로 키 노출 위험
-  - 키 탈취 시 비용 폭증 및 악성 사용 가능
+  - (해결됨) 현재 Google API 키 등 모든 AI 호출은 Edge Function 프록시를 통해서만 이루어집니다.
+  - 앱에서 직접 키를 사용하지 않도록 구조를 변경했습니다.
 
 ### 변경 방향
 
@@ -17,8 +17,8 @@
 
 ### 코드 변경 포인트
 
-1. `src/services/openaiService.js`
-   - 제거/축소: `EXPO_PUBLIC_OPENAI_API_KEY`, `EXPO_PUBLIC_GOOGLE_API_KEY` 직접 사용
+1. `src/services/aiService.js` (구글 전용으로 전환)
+   - 제거됨: `EXPO_PUBLIC_OPENAI_API_KEY`, `EXPO_PUBLIC_GOOGLE_API_KEY` 직접 사용 로직 삭제
    - 추가: `supabase.functions.invoke('ai-chat', { body: ... })` 형태 호출
 
 2. 백엔드(Edge Function)
@@ -102,7 +102,7 @@
 
 ### P0 (즉시)
 
-- [ ] AI 키를 클라이언트에서 제거하고 Edge Function 프록시로 이전
+- [x] AI 키를 클라이언트에서 제거하고 Edge Function 프록시로 이전 (OpenAI 제거 및 Google 전용 전환 완료)
 - [ ] 로그인 화면의 “초기 비밀번호 1234” 문구 제거
 - [ ] 운영 로그에서 민감한 디버그 출력 제거
 
@@ -121,9 +121,8 @@
 
 ## 6) 파일별 변경 가이드 요약
 
-- `src/services/openaiService.js`
-  - 외부 AI 직접 호출 삭제/축소
-  - 백엔드 함수 호출 방식으로 대체
+- `src/services/aiService.js` (기존 `openaiService.js` 대체)
+  - OpenAI 호출 코드 완전 제거 및 Google 전용 프록시 호출 방식 적용 완료
 - `src/screens/LoginScreen.js`
   - 초기 비밀번호 고정 문구 제거
 - `src/services/authService.js`
