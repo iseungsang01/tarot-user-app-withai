@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../components';
-import { useAIChat } from '../hooks/useOpenAI';
+import { useAIChat } from '../hooks/useAI';
 import { useAuth } from '../hooks/useAuth';
 import { DrawerTheme } from '../constants/DrawerTheme';
 

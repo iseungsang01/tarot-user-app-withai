@@ -2,8 +2,8 @@
 // Deploy example: supabase functions deploy ai-proxy
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
-// 사용자 요청에 따라 'gemma-3-27b-it'을 기본 모델로 설정합니다.
-const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-27b-it';
+// 사용자 요청에 따라 'gemma-3-12b-it'을 기본 모델로 설정합니다.
+const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-12b-it';
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')?.trim() ?? '';
 const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
 

@@ -14,7 +14,7 @@ import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { CommonStyles } from '../styles/CommonStyles';
 import { useAuth } from '../hooks/useAuth';
-import { getDailyFortune } from '../services/openaiService';
+import { getDailyFortune } from '../services/aiService';
 import { storage } from '../utils/storage';
 
 const DailyFortuneScreen = () => {
@@ -22,6 +22,7 @@ const DailyFortuneScreen = () => {
     const { customer } = useAuth();
     const [loading, setLoading] = useState(true);
     const [checkInLoading, setCheckInLoading] = useState(false);
+    const [drawing, setDrawing] = useState(false);
     const [attendanceHistory, setAttendanceHistory] = useState([]);
     const [allFortunes, setAllFortunes] = useState({});
     const [selectedFortune, setSelectedFortune] = useState(null);
@@ -80,23 +81,28 @@ const DailyFortuneScreen = () => {
     };
 
     const handleCheckIn = async (isRepick = false) => {
-        if (isGuest) {
-            Alert.alert('로그인 필요', '회원만 이용 가능합니다.', [{ text: '확인' }]);
-            return;
-        }
+        // 게스트도 이용 가능하도록 수정
+        // if (isGuest) {
+        //     Alert.alert('로그인 필요', '회원만 이용 가능합니다.', [{ text: '확인' }]);
+        //     return;
+        // }
 
         // 이미 정상적인 운세가 있으면 중단 (isRepick이 아니거나 오류가 아닌 경우만)
         const currentFortune = allFortunes[todayStr];
         if (!isRepick && currentFortune && !isErrorFortune(currentFortune)) {
             return;
         }
-
-        setCheckInLoading(true);
-        if (isRepick) setSelectedFortune(null);
+        setDrawing(true);
+        if (isRepick) {
+            setCheckInLoading(true);
+            setSelectedFortune(null);
+        }
 
         try {
-            // 광고 보기 시뮬레이션 (2초 대기)
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            if (isRepick) {
+                // 광고 보기 시뮬레이션 (2초 대기)
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
 
             // 1. 출석 기록 저장 (이미 했으면 건너뜀)
             if (!todayCheckedIn) {
@@ -123,6 +129,7 @@ const DailyFortuneScreen = () => {
             // 실패 시 기존 운세 복구 (선택 사항)
             if (isRepick && currentFortune) setSelectedFortune(currentFortune);
         } finally {
+            setDrawing(false);
             setCheckInLoading(false);
         }
     };
@@ -204,24 +211,16 @@ const DailyFortuneScreen = () => {
                     <Text style={styles.subtitle}>{currentYear}년 {currentMonth + 1}월 오늘의 운세를 확인하세요</Text>
                 </View>
 
-                {isGuest ? (
-                    <View style={styles.guestCard}>
-                        <Text style={styles.guestEmoji}>🔐</Text>
-                        <Text style={styles.guestTitle}>회원 전용 기능입니다</Text>
-                        <Text style={styles.guestSubtitle}>로그인하시면 매일의 출석을 기록하고{'\n'}특별한 운세를 확인하실 수 있습니다.</Text>
-                    </View>
-                ) : (
-                    <View style={styles.card}>
-                        {loading ? (
-                            <ActivityIndicator color={Colors.gold} size="large" style={{ marginVertical: 40 }} />
-                        ) : (
-                            calendarGrid
-                        )}
-                    </View>
-                )}
+                <View style={styles.card}>
+                    {loading ? (
+                        <ActivityIndicator color={Colors.gold} size="large" style={{ marginVertical: 40 }} />
+                    ) : (
+                        calendarGrid
+                    )}
+                </View>
 
                 <View style={styles.actionSection}>
-                    {!isGuest && selectedDate === todayStr ? (
+                    {selectedDate === todayStr ? (
                         <View style={{ gap: 12 }}>
                             {hasFortuneToday && !isTodayError && (
                                 <View style={styles.doneBanner}>
@@ -242,7 +241,7 @@ const DailyFortuneScreen = () => {
                                     isTodayError && { backgroundColor: Colors.lavender }
                                 ]}
                                 onPress={() => handleCheckIn(hasFortuneToday && !isTodayError)}
-                                disabled={checkInLoading}
+                                disabled={drawing}
                             >
                                 {checkInLoading ? (
                                     <ActivityIndicator color={hasFortuneToday && !isTodayError ? Colors.gold : "#000"} />
