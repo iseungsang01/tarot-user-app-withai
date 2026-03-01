@@ -2,6 +2,7 @@
 // Deploy example: supabase functions deploy ai-proxy
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
+// 사용자 요청에 따라 'gemma-3-27b-it'을 기본 모델로 설정합니다.
 const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-27b-it';
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')?.trim() ?? '';
 const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
@@ -11,6 +12,7 @@ const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'false').toLowerC
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) {
@@ -35,6 +37,9 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) 
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent?key=${GOOGLE_API_KEY}`;
+
+  console.log(`[AI Proxy] Calling Google API: ${GOOGLE_MODEL}`);
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -49,7 +54,8 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) 
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error?.message || 'Google AI request failed';
+    console.error('[AI Proxy] Google API Error:', payload);
+    const message = payload?.error?.message || `Google AI request failed with status ${response.status}`;
     throw new Error(message);
   }
 
@@ -62,6 +68,7 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) 
   };
 }
 
+// OpenAI 호출 기능은 유지하되 현재는 Google API를 기본으로 사용합니다.
 async function callOpenAI(messages: any[], temperature = 0.7, maxTokens = 1000) {
   if (!OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY not configured');
@@ -97,19 +104,34 @@ async function callOpenAI(messages: any[], temperature = 0.7, maxTokens = 1000) 
 }
 
 Deno.serve(async (req) => {
+  // CORS Preflight 처리
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    // 인증 체크
     if (REQUIRE_AUTH && !req.headers.get('authorization')) {
+      console.warn('[AI Proxy] Unauthorized request: Missing authorization header');
       return new Response(
         JSON.stringify({ error: '인증 정보가 필요합니다.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    const { task, messages, options } = await req.json();
+    // 요청 파싱 확인
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error('[AI Proxy] JSON parse error:', e);
+      return new Response(
+        JSON.stringify({ error: '잘못된 요청 형식입니다. JSON 데이터가 필요합니다.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const { task, messages, options } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -121,7 +143,7 @@ Deno.serve(async (req) => {
     const temperature = Number(options?.temperature ?? 0.7);
     const maxTokens = Number(options?.maxTokens ?? 1000);
 
-    // 사용자의 요청대로 Google API를 유일한 AI 제공자로 사용합니다.
+    // Google API를 유일한 AI 제공자로 사용합니다.
     try {
       if (!GOOGLE_API_KEY) {
         throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다. Supabase Secrets를 확인해주세요.');
@@ -132,9 +154,11 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (googleError) {
-      console.error('AI Proxy Error:', googleError);
+      console.error('[AI Proxy] Business Logic Error:', googleError);
 
-      // 최종 실패 응답
+      // 클라이언트가 'non-2xx' 에러로 인식하지 않도록 에러 발생 시에도 200을 반환할 수 있으나,
+      // 실제 애플리케이션의 에러 핸들링 로직에 맞춰 200 또는 적절한 에러 코드를 선택합니다.
+      // 여기서는 기존 로직대로 200을 반환하여 상세 에러 메시지를 전달합니다.
       return new Response(JSON.stringify({
         data: '',
         usage: null,
@@ -146,6 +170,7 @@ Deno.serve(async (req) => {
       });
     }
   } catch (error) {
+    console.error('[AI Proxy] Unexpected Global Error:', error);
     const message = error instanceof Error ? error.message : 'Unexpected error';
     return new Response(
       JSON.stringify({ error: message }),
