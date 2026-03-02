@@ -13,7 +13,7 @@ export const DrawerTheme = {
   // 🟦 [NAVY THEME] - 일반 메모만 있는 서랍 (OFF 상태)
   navyLight: '#5A6A8E',  // 네이비 서랍 하이라이트
   navyMid: '#3C4E60',   // 네이비 서랍 전면 메인색
-  navyDark: '#2A3540',  // 네이비 서랍 깊은 음영
+  navyDark: '#1E2836',  // 네이비 서랍 깊은 음영
 
   // ⚜️ [METALIC POINT] - 공통 금속 장식 (손잡이 및 명판)
   goldBrass: '#D4AF37',  // 앤틱 황동 손잡이 메인색

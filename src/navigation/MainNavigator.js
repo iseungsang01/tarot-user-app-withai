@@ -27,9 +27,14 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const COACH_STEPS = [
-  { key: 'tab-home', title: '홈 탭', description: '서랍 기록과 스탬프 현황을 홈에서 확인할 수 있어요.' },
+  { key: 'tab-home', title: '홈 탭', description: '홈에서 스탬프, 방문 횟수, 보유 쿠폰을 한 번에 확인할 수 있어요.' },
+  { key: 'tab-home', title: '스탬프 & 보유 쿠폰', description: '상단 요약에서 스탬프/보유 쿠폰을 누르면 상세 화면으로 이동해요.' },
+  { key: 'tab-home', title: 'ALL · ON · OFF', description: '서랍 표시를 전체/ON/OFF로 전환해서 원하는 기록만 볼 수 있어요.' },
+  { key: 'tab-home', title: '전체 · 연도별 · 월별', description: '필터에서 기간을 전체/연도별/월별로 바꿔 기록을 빠르게 찾아보세요.' },
+  { key: 'tab-home', title: 'AI 종합 분석', description: '홈 상단 AI 종합 분석 카드에서 최근 상담 흐름을 요약해줘요.' },
   { key: 'tab-notice', title: '공지 탭', description: '새 공지/알림은 공지 탭에서 빠르게 확인하세요.' },
-  { key: 'tab-settings', title: '설정 탭', description: '설정 탭에서 계정/앱 설정을 관리할 수 있어요.' },
+  { key: 'tab-settings', title: '설정 탭', description: '설정 탭에서 계정, 쿠폰함, 스탬프 보드 등 앱 설정을 관리해요.' },
+  { key: 'tab-home', title: '하단 네비게이터', description: '하단 버튼은 홈 · 운세 · 공지 · 투표 · 설정 순서로 이동합니다.' },
 ];
 
 const TabIcon = ({ emoji, hasNotification }) => (
