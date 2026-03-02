@@ -263,6 +263,8 @@ export const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     maxHeight: 260,
+    aspectRatio: 16 / 9,
+    maxHeight: 280,
     borderRadius: 10,
     marginTop: 10,
   },

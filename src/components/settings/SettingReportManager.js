@@ -89,6 +89,8 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         <Image
           source={{ uri: toDisplayImageUri(reportData.screenshot) }}
           style={[styles.previewImage, { aspectRatio: previewAspectRatio }]}
+          style={styles.previewImage}
+          resizeMode='contain'
         />
       )}
 
