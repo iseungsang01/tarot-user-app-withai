@@ -115,7 +115,14 @@ const SettingsScreen = ({ navigation }) => {
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>💡 가이드</Text>
-                    <TouchableOpacity style={styles.menuButton} onPress={triggerCoachMarks}>
+                    <TouchableOpacity
+                        style={styles.menuButton}
+                        onPress={() => {
+                            navigation.navigate('Home');
+                            navigation.getParent()?.navigate('Home');
+                            triggerCoachMarks();
+                        }}
+                    >
                         <Text style={styles.menuButtonText}>🏠 앱 이용 가이드 다시보기</Text>
                     </TouchableOpacity>
                 </View>

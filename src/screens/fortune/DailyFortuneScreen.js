@@ -21,6 +21,8 @@ import { getDailyFortune } from '../../services/aiService';
 import { storage } from '../../utils/storage';
 import { MAJOR_ARCANA } from '../../constants/TarotCards';
 
+const FORTUNE_SCROLL_AFTER_REPICK_KEY = 'fortune_scroll_after_repick_once';
+
 const DailyFortuneScreen = () => {
     const insets = useSafeAreaInsets();
     const { customer } = useAuth();
@@ -66,19 +68,14 @@ const DailyFortuneScreen = () => {
         });
     }, []);
 
-    useEffect(() => {
-        if (!isPickingCard && cardRevealed && selectedFortune) {
-            const scrollTimer = setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-            }, 200);
-
-            return () => clearTimeout(scrollTimer);
-        }
-    }, [isPickingCard, cardRevealed, selectedFortune]);
-
     const loadLocalData = async () => {
         setLoading(true);
         try {
+            const shouldScrollAfterRepick = await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
+            if (shouldScrollAfterRepick) {
+                await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
+            }
+
             // 1. 로컬 운세 데이터 로드
             const fortunes = await storage.getAllFortunes();
             setAllFortunes(fortunes || {});
@@ -95,6 +92,12 @@ const DailyFortuneScreen = () => {
                 setSelectedFortune(fortunes[todayStr]);
                 setSelectedDate(todayStr);
                 setCardRevealed(true);
+
+                if (shouldScrollAfterRepick) {
+                    setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 200);
+                }
             } else {
                 setSelectedDate(todayStr);
                 setCardRevealed(false);
@@ -137,6 +140,7 @@ const DailyFortuneScreen = () => {
         });
 
         if (isRepick) {
+            await storage.save(FORTUNE_SCROLL_AFTER_REPICK_KEY, true);
             setSelectedFortune(null);
             setCardRevealed(false);
             setPickedCardData(null);
