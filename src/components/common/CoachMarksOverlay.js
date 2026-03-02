@@ -19,6 +19,12 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
         width: width + holePadding * 2,
         height: height + holePadding * 2,
     };
+    const holeStyle = {
+        left: hole.x,
+        top: hole.y,
+        width: hole.width,
+        height: hole.height,
+    };
 
     const screenHeight = Dimensions.get('window').height;
     const tooltipHeight = 170;
@@ -40,11 +46,11 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
             <View style={[styles.overlayBlock, { left: 0, right: 0, top: hole.y + hole.height, bottom: 0 }]} />
 
             <Pressable
-                style={[styles.targetTapArea, hole]}
+                style={[styles.targetTapArea, holeStyle]}
                 onPress={onTargetPress || onNext}
             />
 
-            <View pointerEvents="none" style={[styles.highlight, hole]} />
+            <View pointerEvents="none" style={[styles.highlight, holeStyle]} />
 
             <View style={[styles.tooltip, { top: tooltipTop, left: 20, right: 20 }]}>
                 <Text style={styles.title}>{step.title}</Text>
