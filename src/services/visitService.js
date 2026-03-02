@@ -1,3 +1,4 @@
+import { supabaseClient } from './supabaseClient';
 import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
 import { storage } from '../utils/storage';
 
@@ -33,6 +34,7 @@ export const visitService = {
     if (customerId === 'guest') return { data: [], error: null };
 
     try {
+      const { data, error } = await supabaseClient.getVisits(customerId);
       const authError = await requireSession();
       if (authError) return { data: [], error: authError };
 
@@ -64,12 +66,7 @@ export const visitService = {
 
       let updatedServerData = {};
       if (Object.keys(serverPayload).length > 0) {
-        const { data, error } = await supabase
-          .from('visit_history')
-          .update(serverPayload)
-          .eq('id', visitId)
-          .select()
-          .single();
+        const { data, error } = await supabaseClient.updateVisit(visitId, serverPayload);
 
         if (error) throw withAuthErrorHandling(error, authError.message);
         updatedServerData = data;
@@ -93,6 +90,7 @@ export const visitService = {
         return { data: null, error: 'Guest cannot save to server' };
       }
 
+      const { data, error } = await supabaseClient.createVisit(serverPayload);
       const authError = await requireSession();
       if (authError) return { data: null, error: authError };
 
@@ -117,6 +115,7 @@ export const visitService = {
   },
 
   async getVisit(visitId) {
+    const { data, error } = await supabaseClient.getVisit(visitId);
     const authError = await requireSession();
     if (authError) return { data: null, error: authError };
 
@@ -144,6 +143,7 @@ export const visitService = {
 
   async deleteVisit(visitId) {
     try {
+      const { error } = await supabaseClient.softDeleteVisit(visitId);
       const authError = await requireSession();
       if (authError) return { error: authError };
 
@@ -172,6 +172,7 @@ export const visitService = {
     }
 
     try {
+      const { data, error } = await supabaseClient.getCustomerStats(customerId);
       const authError = await requireSession();
       if (authError) return { data: null, error: authError };
 
