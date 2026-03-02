@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GradientBackground } from '../components/GradientBackground';
-import { CustomButton } from '../components/CustomButton';
+import { GradientBackground, CustomButton } from '../components';
 import { DrawerTheme } from '../constants/DrawerTheme';
 
 const guides = [

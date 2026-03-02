@@ -4,15 +4,17 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { GradientBackground } from '../components/GradientBackground';
-import { CustomButton } from '../components/CustomButton';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import {
+  GradientBackground,
+  CustomButton,
+  LoadingSpinner,
+  AISummaryPanel
+} from '../components';
 import { useAuth } from '../hooks/useAuth';
 import { visitService } from '../services/visitService';
 import { compressImage } from '../utils/imageOptimizer';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../utils/errorHandler';
-import { AISummaryPanel } from '../components';
 
 const LOCAL_STORAGE_KEY = 'offline_visit_history';
 

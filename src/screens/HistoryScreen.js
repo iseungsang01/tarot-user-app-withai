@@ -3,15 +3,17 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, Platform, TouchableOp
 import { useFocusEffect } from '@react-navigation/native';
 
 // Components
-import { GradientBackground } from '../components/GradientBackground';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { DrawerChest } from '../components/DrawerChest';
-import { DrawerUnit } from '../components/DrawerUnit';
-import { TarotCardModal } from '../components/TarotCardModal';
-import { HistoryHeader } from '../components/history/HistoryHeader';
-import { HistoryFilterBar } from '../components/history/HistoryFilterBar';
+import {
+  GradientBackground,
+  LoadingSpinner,
+  DrawerChest,
+  DrawerUnit,
+  TarotCardModal,
+  HistoryHeader,
+  HistoryFilterBar,
+  AIHistoryAnalysisPanel
+} from '../components';
 import { DrawerTheme } from '../constants/DrawerTheme';
-import { AIHistoryAnalysisPanel } from '../components';
 
 // Hook
 import { useHistoryLogic } from '../hooks/useHistoryLogic';

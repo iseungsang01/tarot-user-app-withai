@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { GradientBackground } from '../components/GradientBackground';
+import { GradientBackground } from '../components';
 import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
 

@@ -3,10 +3,7 @@ import { StyleSheet, FlatList, RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Components
-import { GradientBackground } from '../components/GradientBackground';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { VoteList } from '../components/vote/VoteList';
-import { VoteDetail } from '../components/vote/VoteDetail';
+import { GradientBackground, LoadingSpinner, VoteList, VoteDetail } from '../components';
 import { DrawerTheme } from '../constants/DrawerTheme';
 
 // Hook
