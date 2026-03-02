@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../../components';
 import { CommonStyles } from '../../styles/CommonStyles';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { toDisplayImageUri } from '../../utils/imageUri';
+import ResponsiveImage from '../../components/common/ResponsiveImage';
 
 const BugReportDetailScreen = ({ route }) => {
     const insets = useSafeAreaInsets();
@@ -29,7 +30,7 @@ const BugReportDetailScreen = ({ route }) => {
                     <Text style={styles.meta}>상태: {report.status}</Text>
                     <Text style={styles.meta}>접수일: {new Date(report.created_at).toLocaleString()}</Text>
                     <Text style={styles.desc}>{report.description}</Text>
-                    {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+                    <ResponsiveImage uri={imageUri} style={styles.image} />
                 </View>
             </ScrollView>
         </GradientBackground>
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
     titleText: { color: '#fff', fontWeight: '800', fontSize: 20, marginBottom: 12 },
     meta: { color: DrawerTheme.woodLight, marginBottom: 6 },
     desc: { color: '#ddd', lineHeight: 24, marginTop: 8 },
-    image: { width: '100%', height: 220, marginTop: 14, borderRadius: 10 },
+    image: { marginTop: 14, borderRadius: 10 },
     emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     empty: { color: '#fff' }
 });

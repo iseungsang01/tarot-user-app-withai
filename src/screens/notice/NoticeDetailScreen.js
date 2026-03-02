@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../../components';
 import { CommonStyles } from '../../styles/CommonStyles';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import ResponsiveImage from '../../components/common/ResponsiveImage';
 
 const NoticeDetailScreen = ({ route, navigation }) => {
     const insets = useSafeAreaInsets();
@@ -60,7 +61,7 @@ const NoticeDetailScreen = ({ route, navigation }) => {
                     <Text style={styles.noticeTitle}>{notice.title}</Text>
                     <Text style={styles.date}>{new Date(notice.created_at).toLocaleDateString()}</Text>
 
-                    {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+                    <ResponsiveImage uri={imageUri} style={styles.image} />
 
                     <View style={styles.contentWrap}>
                         {parts.map((part, idx) => (
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
     back: { color: DrawerTheme.goldBrass, fontWeight: '700', marginBottom: 14 },
     noticeTitle: { color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 6 },
     date: { color: DrawerTheme.woodLight, marginBottom: 16 },
-    image: { width: '100%', height: 220, borderRadius: 10, marginBottom: 14 },
+    image: { borderRadius: 10, marginBottom: 14 },
     contentWrap: { gap: 8 },
     content: { color: '#ddd', lineHeight: 24, fontSize: 15 },
     link: { color: DrawerTheme.goldBrass, textDecorationLine: 'underline', lineHeight: 24, fontSize: 15 },
