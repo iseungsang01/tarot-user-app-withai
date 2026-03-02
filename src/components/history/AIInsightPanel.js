@@ -4,7 +4,7 @@
  * VisitDetailScreen 또는 HistoryScreen에서 사용
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -26,9 +26,15 @@ import { useSummarizeReview, useAnalyzeHistory } from '../../hooks/useAI';
  * @param {string} reviewText - 상담 기록 텍스트
  * @param {string} visitDate - 방문 날짜
  */
-export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
+export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult = null, onResult, onClear }) => {
     const { result, loading, error, summarize, reset } = useSummarizeReview();
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(!!initialResult);
+
+    useEffect(() => {
+        if (initialResult) {
+            setExpanded(true);
+        }
+    }, [initialResult]);
 
     const handleAnalyze = async () => {
         setExpanded(true);
@@ -38,7 +44,14 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
     const handleReset = () => {
         reset();
         setExpanded(false);
+        onClear?.();
     };
+
+    useEffect(() => {
+        if (result) {
+            onResult?.(result);
+        }
+    }, [result, onResult]);
 
     const moodColorMap = {
         '긍정적': '#4CAF50',
@@ -87,20 +100,20 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
                     )}
 
                     {/* 결과 */}
-                    {result && !loading && (
+                    {(result || initialResult) && !loading && (
                         <View style={styles.resultArea}>
                             {/* 분위기 배지 */}
                             <View style={styles.moodRow}>
-                                <Text style={styles.moodEmoji}>{result.moodEmoji}</Text>
+                                <Text style={styles.moodEmoji}>{(result || initialResult).moodEmoji}</Text>
                                 <View style={[
                                     styles.moodBadge,
-                                    { backgroundColor: (moodColorMap[result.mood] || DrawerTheme.goldBright) + '22' }
+                                    { backgroundColor: (moodColorMap[(result || initialResult).mood] || DrawerTheme.goldBright) + '22' }
                                 ]}>
                                     <Text style={[
                                         styles.moodText,
-                                        { color: moodColorMap[result.mood] || DrawerTheme.goldBright }
+                                        { color: moodColorMap[(result || initialResult).mood] || DrawerTheme.goldBright }
                                     ]}>
-                                        {result.mood}
+                                        {(result || initialResult).mood}
                                     </Text>
                                 </View>
                             </View>
@@ -108,15 +121,15 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
                             {/* 요약 */}
                             <View style={styles.section}>
                                 <Text style={styles.sectionLabel}>📋 요약</Text>
-                                <Text style={styles.sectionContent}>{result.summary}</Text>
+                                <Text style={styles.sectionContent}>{(result || initialResult).summary}</Text>
                             </View>
 
                             {/* 키워드 */}
-                            {result.keywords?.length > 0 && (
+                            {(result || initialResult).keywords?.length > 0 && (
                                 <View style={styles.section}>
                                     <Text style={styles.sectionLabel}>🏷️ 키워드</Text>
                                     <View style={styles.keywordsRow}>
-                                        {result.keywords.map((kw, i) => (
+                                        {(result || initialResult).keywords.map((kw, i) => (
                                             <View key={i} style={styles.keywordChip}>
                                                 <Text style={styles.keywordText}>{kw}</Text>
                                             </View>
@@ -126,10 +139,10 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate }) => {
                             )}
 
                             {/* 다음 상담 제안 */}
-                            {result.advice && (
+                            {(result || initialResult).advice && (
                                 <View style={[styles.section, styles.adviceSection]}>
                                     <Text style={styles.sectionLabel}>💡 다음 상담 제안</Text>
-                                    <Text style={styles.adviceText}>{result.advice}</Text>
+                                    <Text style={styles.adviceText}>{(result || initialResult).advice}</Text>
                                 </View>
                             )}
                         </View>

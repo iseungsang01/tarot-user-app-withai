@@ -22,6 +22,8 @@ export const STORAGE_KEYS = {
   REMEMBER_ME: 'remember_me',
   SELECTED_CARDS: 'selected_cards',
   CARD_REVIEWS: 'card_reviews',
+  CARD_TITLES: 'card_titles',
+  CARD_AI_INSIGHTS: 'card_ai_insights',
   CARD_IMAGES: 'card_images',
   IMAGE_CACHE: 'image_cache',
   READ_NOTICES: 'read_notices',
@@ -176,6 +178,42 @@ export const storage = {
 
   async getAllCardReviews() {
     return await this.get(STORAGE_KEYS.CARD_REVIEWS) || {};
+  },
+
+  // 카드 제목 관련
+  async saveCardTitle(visitId, title) {
+    await this._updateMap(STORAGE_KEYS.CARD_TITLES, visitId, title);
+  },
+
+  async getCardTitle(visitId) {
+    const titles = await this.get(STORAGE_KEYS.CARD_TITLES) || {};
+    return titles[visitId] || null;
+  },
+
+  async getAllCardTitles() {
+    return await this.get(STORAGE_KEYS.CARD_TITLES) || {};
+  },
+
+  async deleteCardTitle(visitId) {
+    await this._updateMap(STORAGE_KEYS.CARD_TITLES, visitId, null, true);
+  },
+
+  // 카드 AI 인사이트 관련
+  async saveCardAIInsight(visitId, insight) {
+    await this._updateMap(STORAGE_KEYS.CARD_AI_INSIGHTS, visitId, insight);
+  },
+
+  async getCardAIInsight(visitId) {
+    const insights = await this.get(STORAGE_KEYS.CARD_AI_INSIGHTS) || {};
+    return insights[visitId] || null;
+  },
+
+  async getAllCardAIInsights() {
+    return await this.get(STORAGE_KEYS.CARD_AI_INSIGHTS) || {};
+  },
+
+  async deleteCardAIInsight(visitId) {
+    await this._updateMap(STORAGE_KEYS.CARD_AI_INSIGHTS, visitId, null, true);
   },
 
   async deleteCardReview(visitId) {
@@ -533,6 +571,14 @@ export const storage = {
 
   async cleanupOrphanedReviews(ids) {
     return await this._cleanup(STORAGE_KEYS.CARD_REVIEWS, ids);
+  },
+
+  async cleanupOrphanedTitles(ids) {
+    return await this._cleanup(STORAGE_KEYS.CARD_TITLES, ids);
+  },
+
+  async cleanupOrphanedAIInsights(ids) {
+    return await this._cleanup(STORAGE_KEYS.CARD_AI_INSIGHTS, ids);
   },
 
   async cleanupOrphanedImages(ids) {
