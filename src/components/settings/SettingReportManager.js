@@ -80,7 +80,11 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         <Text style={styles.uploadButtonText}>📎 스크린샷 첨부 (카메라/앨범)</Text>
       </TouchableOpacity>
       {!!reportData.screenshot && (
-        <Image source={{ uri: toDisplayImageUri(reportData.screenshot) }} style={styles.previewImage} />
+        <Image
+          source={{ uri: toDisplayImageUri(reportData.screenshot) }}
+          style={styles.previewImage}
+          resizeMode='contain'
+        />
       )}
 
       <CustomButton
