@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../components';
 import { CommonStyles } from '../styles/CommonStyles';
 import { DrawerTheme } from '../constants/DrawerTheme';
+import { toDisplayImageUri } from '../utils/imageUri';
 
 const BugReportDetailScreen = ({ route }) => {
   const insets = useSafeAreaInsets();
@@ -13,9 +14,7 @@ const BugReportDetailScreen = ({ route }) => {
     return <GradientBackground><View style={styles.emptyWrap}><Text style={styles.empty}>상세 정보를 찾을 수 없습니다.</Text></View></GradientBackground>;
   }
 
-  const imageUri = report.screenshot || report.image_base64
-    ? `data:image/jpeg;base64,${report.screenshot || report.image_base64}`
-    : (report.image_url || null);
+  const imageUri = toDisplayImageUri(report.screenshot || report.image_base64 || report.image_url || null);
 
   return (
     <GradientBackground>

@@ -4,6 +4,7 @@ import {
   ScrollView, Dimensions, Alert, Platform,
 } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { toDisplayImageUri } from '../../utils/imageUri';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -14,9 +15,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
 
   const displayDate = visit.visit_date ?
     visit.visit_date.split('T')[0].split('-').map(Number).join('.') : '';
-  const imageUri = visit.card_image
-    ? ((visit.card_image.startsWith('data') || visit.card_image.startsWith('http')) ? visit.card_image : `data:image/jpeg;base64,${visit.card_image}`)
-    : null;
+  const imageUri = toDisplayImageUri(visit.card_image);
 
   /**
    * ✅ 삭제 처리 수정: visitId만 전달

@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { CustomButton } from '../common/CustomButton';
 import { styles } from '../../styles/SettingsStyles';
 import { compressImage } from '../../utils/imageOptimizer';
+import { toDisplayImageUri } from '../../utils/imageUri';
 
 export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing, onOpenDetail }) => {
   const [reportData, setReportData] = useState({
@@ -72,7 +73,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         <Text style={styles.uploadButtonText}>📎 스크린샷 첨부 (카메라/앨범)</Text>
       </TouchableOpacity>
       {!!reportData.screenshot && (
-        <Image source={{ uri: `data:image/jpeg;base64,${reportData.screenshot}` }} style={styles.previewImage} />
+        <Image source={{ uri: toDisplayImageUri(reportData.screenshot) }} style={styles.previewImage} />
       )}
 
       <CustomButton
