@@ -7,6 +7,8 @@ export const HistoryFilterBar = ({
     onSetArchiveMode,
     timeFilter,
     setTimeFilter,
+    currentCoachStepKey,
+    advanceCoachStep,
     selectedYear,
     setSelectedYear,
     selectedMonth,
@@ -52,6 +54,9 @@ export const HistoryFilterBar = ({
                             key={tab.id}
                             onPress={() => {
                                 onSetArchiveMode(tab.id);
+                                if (currentCoachStepKey === 'home-archive-mode') {
+                                    advanceCoachStep?.('home-archive-mode');
+                                }
                                 captureRefFrame(archiveRef, onCaptureArchiveFrame);
                             }}
                             style={[
@@ -75,6 +80,9 @@ export const HistoryFilterBar = ({
                             style={[styles.filterButton, timeFilter === type && styles.filterButtonActive]}
                             onPress={() => {
                                 setTimeFilter(type);
+                                if (currentCoachStepKey === 'home-time-filter') {
+                                    advanceCoachStep?.('home-time-filter');
+                                }
                                 captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame);
                             }}
                         >

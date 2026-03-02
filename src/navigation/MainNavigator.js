@@ -49,6 +49,8 @@ const STEP_ROUTE_MAP = {
   'tab-settings': 'Settings',
 };
 
+const TARGET_TAP_ADVANCE_KEYS = new Set(['tab-home', 'tab-notice', 'tab-settings']);
+
 const TabIcon = ({ emoji, hasNotification }) => (
   <View style={styles.iconContainer}>
     <Text style={styles.iconEmoji}>{emoji}</Text>
@@ -126,6 +128,25 @@ const TabNavigator = () => {
     setStepIndex(0);
   };
 
+  const advanceStep = useCallback((expectedStepKey) => {
+    const currentStep = stepsWithFrame[stepIndex];
+    if (!currentStep) return;
+    if (expectedStepKey && currentStep.key !== expectedStepKey) return;
+
+    if (stepIndex >= stepsWithFrame.length - 1) {
+      finishCoach();
+      return;
+    }
+
+    setStepIndex((prev) => {
+      const nextIndex = Math.min(prev + 1, stepsWithFrame.length - 1);
+      const nextStep = stepsWithFrame[nextIndex];
+      const nextRouteName = STEP_ROUTE_MAP[nextStep?.key];
+      if (nextRouteName) navRef.current?.navigate(nextRouteName);
+      return nextIndex;
+    });
+  }, [stepIndex, stepsWithFrame]);
+
   const onCoachTargetPress = () => {
     const currentStep = stepsWithFrame[stepIndex];
     if (!currentStep) return;
@@ -133,16 +154,9 @@ const TabNavigator = () => {
     const routeName = STEP_ROUTE_MAP[currentStep.key];
     if (routeName) navRef.current?.navigate(routeName);
 
-    if (stepIndex >= stepsWithFrame.length - 1) {
-      finishCoach();
-      return;
+    if (TARGET_TAP_ADVANCE_KEYS.has(currentStep.key)) {
+      advanceStep(currentStep.key);
     }
-
-    const nextIndex = stepIndex + 1;
-    const nextStep = stepsWithFrame[nextIndex];
-    const nextRouteName = STEP_ROUTE_MAP[nextStep.key];
-    if (nextRouteName) navRef.current?.navigate(nextRouteName);
-    setStepIndex(nextIndex);
   };
 
   return (
@@ -184,7 +198,14 @@ const TabNavigator = () => {
             tabBarButton: (props) => <CoachableTabButton {...props} onCaptureFrame={(frame) => registerFrame('tab-home', frame)} />,
           }}
         >
-          {(props) => <HistoryScreen {...props} onCaptureCoachFrame={registerFrame} />}
+          {(props) => (
+            <HistoryScreen
+              {...props}
+              onCaptureCoachFrame={registerFrame}
+              currentCoachStepKey={stepsWithFrame[stepIndex]?.key}
+              advanceCoachStep={advanceStep}
+            />
+          )}
         </Tab.Screen>
         <Tab.Screen
           name="DailyFortune"

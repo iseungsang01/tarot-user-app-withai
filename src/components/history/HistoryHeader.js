@@ -8,6 +8,8 @@ export const HistoryHeader = ({
     couponCount,
     onNavigateCoupon,
     onNavigateStamp,
+    onCoachAdvanceCoupon,
+    onCoachAdvanceStamp,
     onCaptureStampFrame,
     onCaptureCouponFrame
 }) => {
@@ -34,7 +36,10 @@ export const HistoryHeader = ({
                     <TouchableOpacity
                         ref={stampRef}
                         style={styles.statUnit}
-                        onPress={onNavigateStamp}
+                        onPress={() => {
+                            onNavigateStamp?.();
+                            onCoachAdvanceStamp?.();
+                        }}
                         onLayout={() => captureRefFrame(stampRef, onCaptureStampFrame)}
                         onPressIn={() => captureRefFrame(stampRef, onCaptureStampFrame)}
                     >
@@ -50,7 +55,10 @@ export const HistoryHeader = ({
                     <TouchableOpacity
                         ref={couponRef}
                         style={styles.statUnit}
-                        onPress={onNavigateCoupon}
+                        onPress={() => {
+                            onNavigateCoupon?.();
+                            onCoachAdvanceCoupon?.();
+                        }}
                         onLayout={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
                         onPressIn={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
                     >
