@@ -19,7 +19,7 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 // Hook
 import { useHistoryLogic } from '../../hooks/useHistoryLogic';
 
-const HistoryScreen = ({ onCaptureCoachFrame }) => {
+const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachStep }) => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const {
@@ -77,6 +77,8 @@ const HistoryScreen = ({ onCaptureCoachFrame }) => {
                 couponCount={couponCount}
                 onNavigateCoupon={() => navigation.navigate('Coupon')}
                 onNavigateStamp={() => navigation.navigate('Stamp')}
+                onCoachAdvanceCoupon={() => advanceCoachStep?.('home-coupon')}
+                onCoachAdvanceStamp={() => advanceCoachStep?.('home-stamp')}
                 onCaptureStampFrame={(frame) => onCaptureCoachFrame?.('home-stamp', frame)}
                 onCaptureCouponFrame={(frame) => onCaptureCoachFrame?.('home-coupon', frame)}
             />
@@ -85,6 +87,8 @@ const HistoryScreen = ({ onCaptureCoachFrame }) => {
                 onSetArchiveMode={setArchiveMode}
                 timeFilter={timeFilter}
                 setTimeFilter={setTimeFilter}
+                currentCoachStepKey={currentCoachStepKey}
+                advanceCoachStep={advanceCoachStep}
                 selectedYear={selectedYear}
                 setSelectedYear={setSelectedYear}
                 selectedMonth={selectedMonth}
