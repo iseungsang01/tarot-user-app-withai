@@ -24,7 +24,7 @@ export const DrawerTheme = {
   shadow: 'rgba(0,0,0,0.6)',
   overlay: 'rgba(0,0,0,0.85)',
   glass: 'rgba(255,255,255,0.1)', // 유리 질감 효과
-  
+
   // 텍스트 색상
   textMain: '#FFFFFF',
   textMuted: '#A0A0A0',

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { useNotifications } from '../hooks/useNotifications';
 import { CoachMarksOverlay } from '../components';
+import { useUI } from '../context/UIContext';
 
 // Screens
 import {
@@ -66,9 +67,10 @@ const tabIcon = (emoji, hasNotification = false) => () => (
   <TabIcon emoji={emoji} hasNotification={hasNotification} />
 );
 
-const TabNavigator = ({ shouldShowCoachMarks, onCompleteCoachMarks }) => {
+const TabNavigator = () => {
   const { hasAnyUnread } = useNotifications();
   const insets = useSafeAreaInsets();
+  const { showCoachMarks, completeCoachMarks } = useUI();
   const [stepIndex, setStepIndex] = useState(0);
   const [frames, setFrames] = useState({});
 
@@ -80,11 +82,12 @@ const TabNavigator = ({ shouldShowCoachMarks, onCompleteCoachMarks }) => {
     COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] }))
   ), [frames]);
 
-  const isCoachVisible = shouldShowCoachMarks && !!stepsWithFrame[stepIndex]?.frame;
+  const isCoachVisible = showCoachMarks && !!stepsWithFrame[stepIndex]?.frame;
 
   const nextStep = () => {
     if (stepIndex >= stepsWithFrame.length - 1) {
-      onCompleteCoachMarks();
+      completeCoachMarks();
+      setStepIndex(0);
       return;
     }
     setStepIndex((prev) => prev + 1);
@@ -166,23 +169,24 @@ const TabNavigator = ({ shouldShowCoachMarks, onCompleteCoachMarks }) => {
           steps={stepsWithFrame}
           stepIndex={stepIndex}
           onNext={nextStep}
-          onClose={onCompleteCoachMarks}
+          onClose={() => {
+            completeCoachMarks();
+            setStepIndex(0);
+          }}
         />
       )}
     </View>
   );
 };
 
-const MainNavigator = ({ shouldShowCoachMarks, onCompleteCoachMarks }) => {
+const MainNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
       }}
     >
-      <Stack.Screen name="MainTabs">
-        {() => <TabNavigator shouldShowCoachMarks={shouldShowCoachMarks} onCompleteCoachMarks={onCompleteCoachMarks} />}
-      </Stack.Screen>
+      <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Coupon" component={CouponScreen} options={{ presentation: 'card' }} />

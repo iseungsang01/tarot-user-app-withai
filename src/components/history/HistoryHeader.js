@@ -40,12 +40,15 @@ export const HistoryHeader = ({
 };
 
 const styles = StyleSheet.create({
-    header: CommonStyles.headerBoard,
+    header: {
+        ...CommonStyles.headerBoard,
+        paddingBottom: 10,
+    },
     titleRow: CommonStyles.titleRow,
     title: CommonStyles.title,
     headerDivider: {
         ...CommonStyles.headerDivider,
-        marginBottom: 15, // 아래 스탯과의 간격 확보
+        marginBottom: 5, // 아래 스탯과의 간격 확보
     },
     statsContainer: {
         flexDirection: 'row',
@@ -62,7 +65,7 @@ const styles = StyleSheet.create({
     statUnit: {
         alignItems: 'center',
         flex: 1,
-        paddingVertical: 2,
+        paddingVertical: 1,
     },
     statLabel: { fontSize: 9, marginBottom: 2, fontWeight: 'bold', color: DrawerTheme.woodLight, opacity: 0.95 },
     statValue: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },

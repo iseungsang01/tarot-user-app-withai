@@ -10,6 +10,7 @@ import {
 } from '../../components';
 
 import { useAuth } from '../../hooks/useAuth';
+import { useUI } from '../../context/UIContext';
 import { customerService } from '../../services/customerService';
 import { supabase } from '../../services/supabase';
 import {
@@ -24,6 +25,7 @@ import { styles } from '../../styles/SettingsStyles';
 const SettingsScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { customer, logout } = useAuth();
+    const { triggerCoachMarks } = useUI();
     const [activeSection, setActiveSection] = useState(null);
     const [processing, setProcessing] = useState(false);
 
@@ -108,6 +110,13 @@ const SettingsScreen = ({ navigation }) => {
                         <View style={styles.divider} />
                         <View style={styles.infoRow}><Text style={styles.infoLabel}>연락처</Text><Text style={styles.infoValue}>{customer?.isGuest ? '게스트' : customer?.phone_number}</Text></View>
                     </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>💡 가이드</Text>
+                    <TouchableOpacity style={styles.menuButton} onPress={triggerCoachMarks}>
+                        <Text style={styles.menuButtonText}>🏠 앱 이용 가이드 다시보기</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {!customer?.isGuest && (
