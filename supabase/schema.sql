@@ -28,7 +28,8 @@ CREATE TABLE public.customers (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     phone_number varchar(13) NOT NULL,
     nickname varchar(20),
-    password text NOT NULL DEFAULT crypt('1234', gen_salt('bf')),
+    password text NOT NULL,
+    must_change_password boolean NOT NULL DEFAULT false,
     birthday date,
 
     current_stamps integer DEFAULT 0 CHECK (current_stamps >= 0),
@@ -128,6 +129,16 @@ CREATE TABLE public.app_configs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- [비밀번호 변경 감사 로그]
+CREATE TABLE public.customer_password_audit_logs (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    changed_at timestamptz NOT NULL DEFAULT NOW(),
+    changed_by text NOT NULL DEFAULT 'customer',
+    reason text,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+
 -- ==========================================
 -- 3. 인덱스 설정 (최적화)
 -- ==========================================
@@ -136,6 +147,7 @@ CREATE INDEX idx_coupon_history_customer ON coupon_history(customer_id);
 CREATE INDEX idx_bug_reports_customer ON bug_reports(customer_id);
 CREATE INDEX idx_vote_responses_customer ON vote_responses(customer_id);
 CREATE INDEX idx_notices_pinned_published ON notices(is_pinned, is_published) WHERE is_published = true;
+CREATE INDEX idx_customer_password_audit_customer ON customer_password_audit_logs(customer_id, changed_at DESC);
 
 -- ==========================================
 -- 4. RLS (Row Level Security) 설정
@@ -148,6 +160,7 @@ ALTER TABLE bug_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vote_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_password_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 공통 RLS 정책 (데모용으로 모두 허용되어 있으나 실제 운영 시 보안 강화 필요)
 CREATE POLICY "Allow All Select" ON customers FOR SELECT USING (true);
@@ -185,6 +198,31 @@ CREATE POLICY "Allow All Update" ON vote_responses FOR UPDATE USING (true);
 CREATE POLICY "Allow All Delete" ON vote_responses FOR DELETE USING (true);
 
 CREATE POLICY "Allow Read Configs" ON app_configs FOR SELECT USING (true);
+CREATE POLICY "Allow All Select" ON customer_password_audit_logs FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON customer_password_audit_logs FOR INSERT WITH CHECK (true);
+
+-- ==========================================
+-- 4.1 비밀번호 정책 함수
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.validate_password_complexity(p_password text)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+BEGIN
+  IF p_password IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN (
+    char_length(p_password) >= 8
+    AND p_password ~ '[A-Z]'
+    AND p_password ~ '[a-z]'
+    AND p_password ~ '[0-9]'
+    AND p_password ~ '[^A-Za-z0-9]'
+  );
+END;
+$$;
 
 -- ==========================================
 -- 5. RPC 함수 (Security Definer)
@@ -311,11 +349,15 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', '이미 가입된 전화번호입니다.');
     END IF;
 
+    IF NOT public.validate_password_complexity(p_password) THEN
+        RETURN jsonb_build_object('success', false, 'message', '비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.');
+    END IF;
+
     v_nickname := COALESCE(NULLIF(p_nickname, ''), '유저_' || right(p_phone, 4));
 
     -- 데이터 삽입
-    INSERT INTO public.customers (phone_number, password, nickname)
-    VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname)
+    INSERT INTO public.customers (phone_number, password, nickname, must_change_password)
+    VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname, false)
     RETURNING id INTO v_customer_id;
 
     RETURN jsonb_build_object('success', true, 'id', v_customer_id);
@@ -346,25 +388,97 @@ BEGIN
     END IF;
 
     IF v_customer.password = extensions.crypt(p_password, v_customer.password) THEN
-        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
+        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname, 'must_change_password', v_customer.must_change_password);
     ELSE
         RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
     END IF;
 END;
 $$;
 
+-- [기능] 비밀번호 일치 여부 확인
+CREATE OR REPLACE FUNCTION public.verify_password(customer_uuid uuid, input_password text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+  v_hashed_password text;
+BEGIN
+  SELECT password INTO v_hashed_password
+  FROM public.customers
+  WHERE id = customer_uuid
+    AND deleted_at IS NULL;
+
+  IF v_hashed_password IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN v_hashed_password = extensions.crypt(input_password, v_hashed_password);
+END;
+$$;
+
+-- [기능] 고객 비밀번호 변경 + 변경 이력 적재
+CREATE OR REPLACE FUNCTION public.update_customer_password(
+  customer_uuid uuid,
+  new_password text,
+  p_reason text DEFAULT 'user_change'
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+BEGIN
+  IF NOT public.validate_password_complexity(new_password) THEN
+    RAISE EXCEPTION '비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.';
+  END IF;
+
+  UPDATE public.customers
+  SET password = extensions.crypt(new_password, extensions.gen_salt('bf')),
+      must_change_password = false
+  WHERE id = customer_uuid
+    AND deleted_at IS NULL;
+
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO public.customer_password_audit_logs (customer_id, changed_by, reason, metadata)
+  VALUES (customer_uuid, 'customer', p_reason, jsonb_build_object('source', 'update_customer_password'));
+
+  RETURN true;
+END;
+$$;
+
 -- 실행 권한 부여
 GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
 
 -- ==========================================
 -- 6. 초기 데이터 삽입
 -- ==========================================
 
--- 초기 관리자 설정 (로그인 시 필요)
--- 초기 아이디: admin, 초기 비밀번호: p1o2m3n4 (보안을 위해 첫 로그인 후 변경 권장)
+-- 초기 관리자 설정 (배포 시크릿 주입)
+-- app.settings.admin_id / app.settings.admin_password 에 값을 주입한 경우에만 생성
+WITH injected_admin AS (
+  SELECT
+    NULLIF(current_setting('app.settings.admin_id', true), '') AS admin_id,
+    NULLIF(current_setting('app.settings.admin_password', true), '') AS admin_password
+)
 INSERT INTO public.app_configs (key, value, description)
-VALUES 
-  ('admin_id', 'admin', '관리자 로그인 아이디'),
-  ('admin_password', extensions.crypt('p1o2m3n4', extensions.gen_salt('bf')), '관리자 인증용 비밀번호 (해시저장)')
+SELECT 'admin_id', admin_id, '관리자 로그인 아이디(배포 시크릿 주입)'
+FROM injected_admin
+WHERE admin_id IS NOT NULL
+ON CONFLICT (key) DO NOTHING;
+
+WITH injected_admin AS (
+  SELECT NULLIF(current_setting('app.settings.admin_password', true), '') AS admin_password
+)
+INSERT INTO public.app_configs (key, value, description)
+SELECT 'admin_password', extensions.crypt(admin_password, extensions.gen_salt('bf')), '관리자 인증용 비밀번호(배포 시크릿 해시 저장)'
+FROM injected_admin
+WHERE admin_password IS NOT NULL
 ON CONFLICT (key) DO NOTHING;

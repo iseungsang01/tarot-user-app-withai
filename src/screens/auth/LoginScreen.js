@@ -50,7 +50,7 @@ const LoginScreen = ({ navigation }) => {
 
             if (data) {
                 if (data.must_change_password) {
-                    setMessage({ text: '보안을 위해 비밀번호를 먼저 변경해주세요. 설정에서 변경할 수 있습니다.', type: 'info' });
+                    setMessage({ text: '임시 비밀번호 계정입니다. 다음 화면에서 비밀번호 변경을 완료해주세요.', type: 'info' });
                 } else {
                     setMessage({ text: '환영합니다!', type: 'success' });
                 }
