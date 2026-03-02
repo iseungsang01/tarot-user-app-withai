@@ -4,22 +4,11 @@ import { LoginScreen, RegisterScreen } from '../screens';
 
 const Stack = createStackNavigator();
 
-/**
- * 인증 네비게이터
- * 로그인 전 화면들을 관리
- * 현재는 LoginScreen만 있음
- */
-const AuthNavigator = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false, // 헤더 숨김
-      }}
-    >
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-    </Stack.Navigator>
-  );
-};
+const AuthNavigator = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Register" component={RegisterScreen} />
+  </Stack.Navigator>
+);
 
 export default AuthNavigator;
