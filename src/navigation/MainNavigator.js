@@ -11,6 +11,7 @@ import { useUI } from '../context/UIContext';
 import {
   HistoryScreen,
   SettingsScreen,
+  ForcedPasswordChangeScreen,
   VisitDetailScreen,
   DailyFortuneScreen,
   AIChatHistoryScreen,
@@ -22,6 +23,7 @@ import {
   BugReportScreen,
   BugReportDetailScreen,
 } from '../screens';
+import { useAuth } from '../hooks/useAuth';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -223,8 +225,15 @@ const TabNavigator = () => {
   );
 };
 
-const MainNavigator = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+const MainNavigator = () => {
+  const { customer } = useAuth();
+
+  return (
+  <Stack.Navigator
+    screenOptions={{ headerShown: false }}
+    initialRouteName={customer?.must_change_password ? 'ForcedPasswordChange' : 'MainTabs'}
+  >
+    <Stack.Screen name="ForcedPasswordChange" component={ForcedPasswordChangeScreen} options={{ gestureEnabled: false }} />
     <Stack.Screen name="MainTabs" component={TabNavigator} />
     <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
     <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
@@ -234,7 +243,8 @@ const MainNavigator = () => (
     <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
     <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
   </Stack.Navigator>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   tabRoot: { flex: 1 },
