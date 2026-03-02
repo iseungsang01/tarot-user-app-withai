@@ -41,5 +41,5 @@ export const SUCCESS_MESSAGES = {
 };
 
 export const STORAGE_KEYS = {
-  ONBOARDING: 'has_seen_main_onboarding_v1',
+  COACH_MARKS: 'has_seen_main_coach_marks_v1',
 };

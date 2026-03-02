@@ -6,25 +6,24 @@ import { Colors } from '../constants/Colors';
 import { GradientBackground, LoadingSpinner } from '../components';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import { OnboardingScreen } from '../screens';
 
 import { STORAGE_KEYS } from '../constants/Config';
 
 const AppNavigator = () => {
   const { customer, loading } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showCoachMarks, setShowCoachMarks] = useState(false);
   const [onboardingLoading, setOnboardingLoading] = useState(true);
 
   useEffect(() => {
     const hydrateOnboardingState = async () => {
       try {
         if (!customer) {
-          setShowOnboarding(false);
+          setShowCoachMarks(false);
           return;
         }
 
-        const seen = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING);
-        setShowOnboarding(!seen);
+        const seen = await AsyncStorage.getItem(STORAGE_KEYS.COACH_MARKS);
+        setShowCoachMarks(!seen);
       } finally {
         setOnboardingLoading(false);
       }
@@ -34,9 +33,9 @@ const AppNavigator = () => {
     hydrateOnboardingState();
   }, [customer]);
 
-  const handleCloseOnboarding = async () => {
-    await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING, 'true');
-    setShowOnboarding(false);
+  const handleCloseCoachMarks = async () => {
+    await AsyncStorage.setItem(STORAGE_KEYS.COACH_MARKS, 'true');
+    setShowCoachMarks(false);
   };
 
   if (loading || onboardingLoading) {
@@ -61,7 +60,9 @@ const AppNavigator = () => {
         },
       }}
     >
-      {customer ? (showOnboarding ? <OnboardingScreen onClose={handleCloseOnboarding} /> : <MainNavigator />) : <AuthNavigator />}
+      {customer ? (
+        <MainNavigator shouldShowCoachMarks={showCoachMarks} onCompleteCoachMarks={handleCloseCoachMarks} />
+      ) : <AuthNavigator />}
     </NavigationContainer>
   );
 };

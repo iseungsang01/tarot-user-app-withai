@@ -1,7 +1,6 @@
 // Auth
 export { default as LoginScreen } from './auth/LoginScreen';
 export { default as RegisterScreen } from './auth/RegisterScreen';
-export { default as OnboardingScreen } from './auth/OnboardingScreen';
 
 // Fortune
 export { default as DailyFortuneScreen } from './fortune/DailyFortuneScreen';
