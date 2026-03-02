@@ -10,7 +10,7 @@ export const useVoteLogic = () => {
 
     // State
     const [votes, setVotes] = useState([]);
-    const [myVoteMap, setMyVoteMap] = useState({}); // ✅ 내 투표 기록 전체 캐싱
+    const [myVoteMap, setMyVoteMap] = useState({});
     const [selectedVote, setSelectedVote] = useState(null);
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [myVote, setMyVote] = useState(null);
@@ -18,8 +18,8 @@ export const useVoteLogic = () => {
     const [participantCount, setParticipantCount] = useState(0);
 
     // UI State
-    const [loading, setLoading] = useState(false); // ✅ 초기값을 false로 변경하여 깜빡임 제거
-    const [voteDataLoading, setVoteDataLoading] = useState(false); // ✅ 투표 상세 데이터 로딩 상태
+    const [loading, setLoading] = useState(false);
+    const [voteDataLoading, setVoteDataLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [showResults, setShowResults] = useState(false);
@@ -50,7 +50,6 @@ export const useVoteLogic = () => {
         setVoteDataLoading(true);
         try {
             const [resRes, countRes] = await Promise.all([
-                // voteService.getMyVote(vId, customer.id), // ❌ 이미 myVoteMap에서 가져왔으므로 네트워크 요청 제거
                 handleApiCall('VoteScreen.loadVoteResults', () => voteService.getVoteResults(vId), { showAlert: false }),
                 handleApiCall('VoteScreen.loadCount', () => voteService.getVoteParticipants(vId), { showAlert: false })
             ]);
@@ -59,8 +58,6 @@ export const useVoteLogic = () => {
             setVoteResults(finalResults);
             setParticipantCount(countRes.data?.count || 0);
 
-            // 결과 화면 업데이트 (이미 보여지고 있겠지만 최신 데이터로 업데이트)
-            // setShowResults(!!myVote); // ❌ onSelectVote에서 이미 처리했으므로 제거
         } catch (e) {
             console.error(e);
         } finally {
@@ -91,23 +88,17 @@ export const useVoteLogic = () => {
         setRefreshing(false);
     };
 
-    const isVoteEnded = (vote) => {
-        if (!vote) return false;
-        if (vote.ends_at && new Date(vote.ends_at) < new Date()) {
-            return true;
-        }
-        return false;
-    };
+    const isVoteEnded = (vote) => !!vote?.ends_at && new Date(vote.ends_at) < new Date();
 
     const onSelectVote = async (vote) => {
         setVoteDataLoading(true);
         setSelectedVote(vote);
 
-        // ✅ 잔상 제거: 이전 결과 초기화
+        // 이전 결과 초기화
         setVoteResults({});
         setParticipantCount(0);
 
-        // ✅ 1. 캐시된 내 투표 정보 즉시 적용 (딜레이 제거)
+        // 캐시된 내 투표 정보 즉시 적용
         const cachedMyVote = myVoteMap[vote.id] || null;
         setMyVote(cachedMyVote);
         setSelectedOptions(cachedMyVote?.selected_options || []);
@@ -116,7 +107,7 @@ export const useVoteLogic = () => {
         const isEnded = isVoteEnded(vote);
         setShowResults(!!cachedMyVote || isEnded);
 
-        // 2. 백그라운드에서 최신 집계 데이터 로드
+        // 백그라운드에서 최신 집계 데이터 로드
         await loadVoteData(vote.id);
     };
 
