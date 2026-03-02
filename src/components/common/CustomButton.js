@@ -20,34 +20,54 @@ export const CustomButton = ({
   disabled,
   loading,
   variant = 'primary',
+  size = 'default',
   style,
   textStyle
 }) => {
-  const getColors = () => {
-    switch (variant) {
-      case 'primary':
-        return Gradients.button;
-      case 'danger':
-        return Gradients.red;
-      case 'secondary':
-        return ['rgba(138, 43, 226, 0.3)', 'rgba(138, 43, 226, 0.5)'];
-      default:
-        return Gradients.button;
-    }
+  const variantTokens = {
+    primary: {
+      gradient: Gradients.button,
+      borderColor: Colors.gold,
+      borderWidth: 2,
+      textWeight: '700',
+    },
+    secondary: {
+      gradient: ['rgba(138, 43, 226, 0.22)', 'rgba(138, 43, 226, 0.34)'],
+      borderColor: Colors.purpleLight,
+      borderWidth: 1.5,
+      textWeight: '600',
+    },
+    tertiary: {
+      gradient: ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.1)'],
+      borderColor: 'rgba(255,255,255,0.2)',
+      borderWidth: 1,
+      textWeight: '500',
+    },
+    danger: {
+      gradient: Gradients.red,
+      borderColor: Colors.redSoft,
+      borderWidth: 2,
+      textWeight: '700',
+    },
   };
 
-  const getBorderColor = () => {
-    switch (variant) {
-      case 'primary':
-        return Colors.gold;
-      case 'danger':
-        return Colors.redSoft;
-      case 'secondary':
-        return Colors.purpleLight;
-      default:
-        return Colors.gold;
-    }
+  const sizeTokens = {
+    default: {
+      paddingVertical: 15,
+      paddingHorizontal: 30,
+      minHeight: 50,
+      textSize: 16,
+    },
+    compact: {
+      paddingVertical: 11,
+      paddingHorizontal: 14,
+      minHeight: 44,
+      textSize: 13,
+    },
   };
+
+  const currentVariant = variantTokens[variant] || variantTokens.primary;
+  const currentSize = sizeTokens[size] || sizeTokens.default;
 
   return (
     <TouchableOpacity
@@ -57,19 +77,25 @@ export const CustomButton = ({
       style={style}
     >
       <LinearGradient
-        colors={getColors()}
+        colors={currentVariant.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
           styles.button,
-          { borderColor: getBorderColor() },
+          {
+            borderColor: currentVariant.borderColor,
+            borderWidth: currentVariant.borderWidth,
+            paddingVertical: currentSize.paddingVertical,
+            paddingHorizontal: currentSize.paddingHorizontal,
+            minHeight: currentSize.minHeight,
+          },
           disabled && styles.disabled
         ]}
       >
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={[styles.text, textStyle]}>{title}</Text>
+          <Text style={[styles.text, { fontWeight: currentVariant.textWeight, fontSize: currentSize.textSize }, textStyle]}>{title}</Text>
         )}
       </LinearGradient>
     </TouchableOpacity>
@@ -78,18 +104,12 @@ export const CustomButton = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 15,
-    paddingHorizontal: 30,
     borderRadius: 10,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
   },
   text: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
   },
   disabled: {
     opacity: 0.5,

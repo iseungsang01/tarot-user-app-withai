@@ -228,9 +228,10 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             )}
                         </View>
 
+                        <Text style={styles.actionSectionLabel}>1차 액션 · 저장 준비</Text>
                         <View style={styles.btnRow}>
-                            <CustomButton title="📸 촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
-                            <CustomButton title="🖼️ 앨범에서 선택" onPress={() => onPick('lib')} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
+                            <CustomButton title="📸 촬영하기" onPress={() => onPick('cam')} variant="secondary" size="compact" style={styles.flexButton} />
+                            <CustomButton title="🖼️ 앨범에서 선택" onPress={() => onPick('lib')} variant="secondary" size="compact" style={styles.flexButton} />
                         </View>
 
                         <TextInput
@@ -242,16 +243,18 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             placeholderTextColor="#888"
                         />
 
+                        <Text style={styles.actionSectionLabel}>3차 액션 · 부가 기능</Text>
                         <View style={styles.voiceRow}>
-                            <CustomButton title="🎙️ 녹음 메모 추가" onPress={insertVoiceMemoMarker} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
-                            <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
+                            <CustomButton title="🎙️ 녹음 메모 추가" onPress={insertVoiceMemoMarker} variant="tertiary" size="compact" style={styles.flexButton} />
+                            <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="tertiary" size="compact" style={styles.flexButton} />
                         </View>
 
 
+                        <Text style={styles.actionSectionLabel}>2차 액션 · 편집 보조</Text>
                         <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}>
                             <View style={styles.polishHeaderRow}>
                                 <Text style={[styles.polishTitle, { color: theme.c }]}>🪄 AI 문장 다듬기</Text>
-                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} style={styles.polishBtn} textStyle={styles.buttonTextCompact} />
+                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} variant="secondary" size="compact" style={styles.polishBtn} />
                             </View>
                             {!!polishError && <Text style={styles.polishError}>⚠️ {polishError}</Text>}
                             {!!polishedReview && (
@@ -272,7 +275,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")}
                             onPress={onSave}
                             loading={s.saving}
-                            style={[styles.saveBtn, { backgroundColor: theme.btn }]}
+                            variant="primary"
+                            style={styles.saveBtn}
                         />
 
                     </ScrollView>
@@ -295,18 +299,19 @@ const styles = StyleSheet.create({
     titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFF', fontSize: 14, borderWidth: 1, marginBottom: 12 },
     input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, color: '#FFF', minHeight: 150, textAlignVertical: 'top', fontSize: 14, borderWidth: 1 },
     voiceRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    actionSectionLabel: { marginTop: 12, marginBottom: 8, color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
     whiteText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-    saveBtn: { marginTop: 20, height: 50 },
+    saveBtn: { marginTop: 20 },
     polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)' },
     polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
     polishTitle: { fontWeight: '700', fontSize: 13 },
-    polishBtn: { minWidth: 108, height: 36 },
+    polishBtn: { minWidth: 108 },
     polishError: { color: '#ff9e9e', marginTop: 8, fontSize: 12 },
     compareWrap: { marginTop: 8, flexDirection: 'row', gap: 8 },
     versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 7, alignItems: 'center' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
     versionChipText: { color: '#FFF', fontSize: 11, fontWeight: '600' },
-    buttonTextCompact: { fontSize: 13 }
+    flexButton: { flex: 1 }
 });
 
 export default VisitDetailScreen;
