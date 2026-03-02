@@ -10,10 +10,6 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 
 export const ONBOARDING_KEY = 'has_seen_main_onboarding_v1';
 
-/**
- * 메인 네비게이터
- * 인증 상태에 따라 AuthNavigator 또는 MainNavigator 표시
- */
 const AppNavigator = () => {
   const { customer, loading } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -21,17 +17,20 @@ const AppNavigator = () => {
 
   useEffect(() => {
     const hydrateOnboardingState = async () => {
-      if (!customer) {
-        setShowOnboarding(false);
-        setOnboardingLoading(false);
-        return;
-      }
+      try {
+        if (!customer) {
+          setShowOnboarding(false);
+          return;
+        }
 
-      const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
-      setShowOnboarding(!seen);
-      setOnboardingLoading(false);
+        const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setShowOnboarding(!seen);
+      } finally {
+        setOnboardingLoading(false);
+      }
     };
 
+    setOnboardingLoading(true);
     hydrateOnboardingState();
   }, [customer]);
 
@@ -40,7 +39,6 @@ const AppNavigator = () => {
     setShowOnboarding(false);
   };
 
-  // 앱 초기 로딩 중
   if (loading || onboardingLoading) {
     return (
       <GradientBackground>

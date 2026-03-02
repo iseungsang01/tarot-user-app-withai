@@ -22,9 +22,6 @@ import BugReportDetailScreen from '../screens/BugReportDetailScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-/**
- * 탭 아이콘 컴포넌트 (빨간점 포함)
- */
 const TabIcon = ({ emoji, hasNotification }) => (
   <View style={styles.iconContainer}>
     <Text style={styles.iconEmoji}>{emoji}</Text>
@@ -32,11 +29,10 @@ const TabIcon = ({ emoji, hasNotification }) => (
   </View>
 );
 
-/**
- * 탭 네비게이터
- * 하단 탭 바로 주요 화면들 전환
- * ✅ SafeAreaInsets 적용으로 홈 버튼 영역 보호
- */
+const tabIcon = (emoji, hasNotification = false) => () => (
+  <TabIcon emoji={emoji} hasNotification={hasNotification} />
+);
+
 const TabNavigator = () => {
   const { hasAnyUnread } = useNotifications();
   const insets = useSafeAreaInsets();
@@ -45,21 +41,21 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        unmountOnBlur: true, // ✅ 탭 이동 시 화면 초기화 (다른 탭 갔다 오면 처음 상태로)
+        unmountOnBlur: true,
         tabBarStyle: {
           backgroundColor: Colors.purpleMid,
           borderTopColor: Colors.gold,
           borderTopWidth: 2,
-          paddingBottom: insets.bottom, // ✅ 안전 영역만큼 패딩 추가
+          paddingBottom: insets.bottom,
           paddingTop: 5,
-          height: 60 + insets.bottom, // ✅ 높이도 안전 영역 고려
+          height: 60 + insets.bottom,
         },
         tabBarActiveTintColor: Colors.gold,
         tabBarInactiveTintColor: Colors.lavender,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
-          marginBottom: insets.bottom > 0 ? 0 : 5, // ✅ 홈 버튼이 있는 기기는 여백 조정
+          marginBottom: insets.bottom > 0 ? 0 : 5,
         },
       }}
       sceneContainerStyle={{
@@ -71,9 +67,7 @@ const TabNavigator = () => {
         component={HistoryScreen}
         options={{
           tabBarLabel: '홈',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🏠" hasNotification={false} />
-          ),
+          tabBarIcon: tabIcon('🏠'),
         }}
       />
       <Tab.Screen
@@ -81,9 +75,7 @@ const TabNavigator = () => {
         component={DailyFortuneScreen}
         options={{
           tabBarLabel: '운세',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🍀" hasNotification={false} />
-          ),
+          tabBarIcon: tabIcon('🍀'),
         }}
       />
       <Tab.Screen
@@ -91,9 +83,7 @@ const TabNavigator = () => {
         component={NoticeScreen}
         options={{
           tabBarLabel: '공지',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📢" hasNotification={hasAnyUnread} />
-          ),
+          tabBarIcon: tabIcon('📢', hasAnyUnread),
         }}
       />
       <Tab.Screen
@@ -101,9 +91,7 @@ const TabNavigator = () => {
         component={VoteScreen}
         options={{
           tabBarLabel: '투표',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🗳️" hasNotification={false} />
-          ),
+          tabBarIcon: tabIcon('🗳️'),
         }}
       />
       <Tab.Screen
@@ -111,20 +99,13 @@ const TabNavigator = () => {
         component={SettingsScreen}
         options={{
           tabBarLabel: '설정',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="⚙️" hasNotification={false} />
-          ),
+          tabBarIcon: tabIcon('⚙️'),
         }}
       />
     </Tab.Navigator>
   );
 };
 
-/**
- * 메인 네비게이터
- * 로그인 후 화면들을 관리
- * TabNavigator + VisitDetailScreen (모달 형식)
- */
 const MainNavigator = () => {
   return (
     <Stack.Navigator
@@ -133,49 +114,12 @@ const MainNavigator = () => {
       }}
     >
       <Stack.Screen name="MainTabs" component={TabNavigator} />
-      <Stack.Screen
-        name="VisitDetail"
-        component={VisitDetailScreen}
-        options={{
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="AIChatHistory"
-        component={AIChatHistoryScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="Coupon"
-        component={CouponScreen}
-        options={{
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="NoticeDetail"
-        component={NoticeDetailScreen}
-        options={{
-          presentation: 'card',
-        }}
-      />
-
-      <Stack.Screen
-        name="BugReport"
-        component={BugReportScreen}
-        options={{
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="BugReportDetail"
-        component={BugReportDetailScreen}
-        options={{
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Coupon" component={CouponScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
     </Stack.Navigator>
   );
 };
@@ -204,4 +148,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MainNavigator; 
+export default MainNavigator;
