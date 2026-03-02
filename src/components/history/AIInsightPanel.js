@@ -14,6 +14,7 @@ import {
     Platform,
 } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { TextColors } from '../../constants/Colors';
 import { useSummarizeReview, useAnalyzeHistory } from '../../hooks/useAI';
 
 export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult = null, onResult, onClear }) => {
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     },
     triggerIcon: { fontSize: 18 },
     triggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '600' },
-    triggerSubtext: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 },
+    triggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
     triggerArrow: { color: DrawerTheme.goldBright, fontSize: 20, opacity: 0.6 },
     panel: {
         backgroundColor: 'rgba(0,0,0,0.3)',
@@ -287,9 +288,9 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     },
-    closeText: { color: 'rgba(255,255,255,0.4)', fontSize: 16 },
+    closeText: { color: TextColors.subTextMuted, fontSize: 16 },
     loadingArea: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
-    loadingText: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
+    loadingText: { color: TextColors.subTextStrong, fontSize: 13 },
     errorArea: { padding: 16, gap: 10 },
     errorText: { color: '#FF6B6B', fontSize: 13 },
     retryButton: {
@@ -309,7 +310,7 @@ const styles = StyleSheet.create({
     sectionLabel: {
         fontSize: 12,
         fontWeight: '700',
-        color: 'rgba(255,255,255,0.5)',
+        color: TextColors.subTextStrong,
         letterSpacing: 0.5,
         textTransform: 'uppercase',
     },
@@ -323,10 +324,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.12)',
     },
-    keywordText: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+    keywordText: { color: TextColors.subTextStrong, fontSize: 12 },
     patternItem: { flexDirection: 'row', gap: 6 },
     patternDot: { color: DrawerTheme.goldBright, fontSize: 14 },
-    patternText: { flex: 1, color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 20 },
+    patternText: { flex: 1, color: TextColors.subTextHigh, fontSize: 14, lineHeight: 20 },
     growthSection: {
         backgroundColor: 'rgba(76, 175, 80, 0.06)',
         borderRadius: 8,
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(76, 175, 80, 0.2)',
     },
-    growthText: { color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 20 },
+    growthText: { color: TextColors.subTextHigh, fontSize: 14, lineHeight: 20 },
     adviceSection: {
         backgroundColor: 'rgba(255,193,7,0.06)',
         borderRadius: 8,
@@ -342,5 +343,5 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,193,7,0.2)',
     },
-    adviceText: { color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 20 },
+    adviceText: { color: TextColors.subTextHigh, fontSize: 14, lineHeight: 20 },
 });
