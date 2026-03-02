@@ -19,7 +19,7 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 // Hook
 import { useHistoryLogic } from '../../hooks/useHistoryLogic';
 
-const HistoryScreen = () => {
+const HistoryScreen = ({ onCaptureCoachFrame }) => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const {
@@ -77,6 +77,8 @@ const HistoryScreen = () => {
                 couponCount={couponCount}
                 onNavigateCoupon={() => navigation.navigate('Coupon')}
                 onNavigateStamp={() => navigation.navigate('Stamp')}
+                onCaptureStampFrame={(frame) => onCaptureCoachFrame?.('home-stamp', frame)}
+                onCaptureCouponFrame={(frame) => onCaptureCoachFrame?.('home-coupon', frame)}
             />
             <HistoryFilterBar
                 archiveMode={archiveMode}
@@ -92,6 +94,8 @@ const HistoryScreen = () => {
                 setSelectionMode={setSelectionMode}
                 setSelectedIds={setSelectedIds}
                 onMultiDelete={handleMultiDelete}
+                onCaptureArchiveFrame={(frame) => onCaptureCoachFrame?.('home-archive-mode', frame)}
+                onCaptureTimeFilterFrame={(frame) => onCaptureCoachFrame?.('home-time-filter', frame)}
             />
         </>
     );

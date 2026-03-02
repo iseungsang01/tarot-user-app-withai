@@ -4,7 +4,7 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.72)';
 
-const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose }) => {
+const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress }) => {
     const step = steps?.[stepIndex];
 
     if (!step?.frame) {
@@ -29,30 +29,40 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose }) => {
         : hole.y + hole.height + tooltipSpacing;
     const isLast = stepIndex === steps.length - 1;
 
+    const requiresTargetTap = step?.requireTargetTap;
+
     return (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={onNext}>
+            <View style={StyleSheet.absoluteFill}>
             <View style={[styles.overlayBlock, { left: 0, right: 0, top: 0, height: hole.y }]} />
             <View style={[styles.overlayBlock, { left: 0, top: hole.y, width: hole.x, height: hole.height }]} />
             <View style={[styles.overlayBlock, { left: hole.x + hole.width, right: 0, top: hole.y, height: hole.height }]} />
             <View style={[styles.overlayBlock, { left: 0, right: 0, top: hole.y + hole.height, bottom: 0 }]} />
+
+            <Pressable
+                style={[styles.targetTapArea, hole]}
+                onPress={onTargetPress || onNext}
+            />
 
             <View pointerEvents="none" style={[styles.highlight, hole]} />
 
             <View style={[styles.tooltip, { top: tooltipTop, left: 20, right: 20 }]}>
                 <Text style={styles.title}>{step.title}</Text>
                 <Text style={styles.description}>{step.description}</Text>
+                {requiresTargetTap && <Text style={styles.tapGuide}>네모 영역을 직접 눌러 다음 단계로 진행하세요.</Text>}
                 <View style={styles.tooltipBottom}>
                     <Text style={styles.counter}>{stepIndex + 1} / {steps.length}</Text>
-                    <Pressable onPress={onNext} style={styles.nextButton}>
-                        <Text style={styles.nextText}>{isLast ? '완료' : '다음'}</Text>
-                    </Pressable>
+                    {!requiresTargetTap && (
+                        <Pressable onPress={onNext} style={styles.nextButton}>
+                            <Text style={styles.nextText}>{isLast ? '완료' : '다음'}</Text>
+                        </Pressable>
+                    )}
                 </View>
                 <Pressable onPress={onClose} style={styles.closeButton}>
                     <Text style={styles.closeText}>건너뛰기</Text>
                 </Pressable>
             </View>
-            </Pressable>
+            </View>
         </View>
     );
 };
@@ -71,6 +81,11 @@ const styles = StyleSheet.create({
         zIndex: 5,
         elevation: 5,
     },
+    targetTapArea: {
+        position: 'absolute',
+        zIndex: 6,
+        backgroundColor: 'transparent',
+    },
     tooltip: {
         position: 'absolute',
         backgroundColor: 'rgba(11, 16, 30, 0.98)',
@@ -83,6 +98,7 @@ const styles = StyleSheet.create({
     },
     title: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 6 },
     description: { color: DrawerTheme.woodLight, lineHeight: 18 },
+    tapGuide: { color: DrawerTheme.goldBrass, marginTop: 6, fontSize: 12, fontWeight: '700' },
     tooltipBottom: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     counter: { color: DrawerTheme.goldBrass, fontSize: 12 },
     nextButton: {

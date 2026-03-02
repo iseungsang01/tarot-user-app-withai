@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { CommonStyles } from '../../styles/CommonStyles';
@@ -7,8 +7,21 @@ export const HistoryHeader = ({
     stats,
     couponCount,
     onNavigateCoupon,
-    onNavigateStamp
+    onNavigateStamp,
+    onCaptureStampFrame,
+    onCaptureCouponFrame
 }) => {
+    const stampRef = useRef(null);
+    const couponRef = useRef(null);
+
+    const captureRefFrame = (ref, capture) => {
+        if (!ref?.current || !capture) return;
+
+        ref.current.measureInWindow((x, y, width, height) => {
+            if (width > 0 && height > 0) capture({ x, y, width, height });
+        });
+    };
+
     return (
         <View style={{ width: '100%', alignItems: 'center' }}>
             <View style={styles.header}>
@@ -17,9 +30,14 @@ export const HistoryHeader = ({
                 </View>
                 <View style={styles.headerDivider} />
 
-                {/* Integrated Stats UI */}
                 <View style={styles.statsContainer}>
-                    <TouchableOpacity style={styles.statUnit} onPress={onNavigateStamp}>
+                    <TouchableOpacity
+                        ref={stampRef}
+                        style={styles.statUnit}
+                        onPress={onNavigateStamp}
+                        onLayout={() => captureRefFrame(stampRef, onCaptureStampFrame)}
+                        onPressIn={() => captureRefFrame(stampRef, onCaptureStampFrame)}
+                    >
                         <Text style={styles.statLabel}>스탬프</Text>
                         <Text style={[styles.statValue, { color: DrawerTheme.goldBright }]}>{stats.current_stamps}/10</Text>
                     </TouchableOpacity>
@@ -29,7 +47,13 @@ export const HistoryHeader = ({
                         <Text style={styles.statValue}>{stats.visit_count}</Text>
                     </View>
                     <View style={styles.divider} />
-                    <TouchableOpacity style={styles.statUnit} onPress={onNavigateCoupon}>
+                    <TouchableOpacity
+                        ref={couponRef}
+                        style={styles.statUnit}
+                        onPress={onNavigateCoupon}
+                        onLayout={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
+                        onPressIn={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
+                    >
                         <Text style={styles.statLabel}>보유 쿠폰</Text>
                         <Text style={[styles.statValue, { color: DrawerTheme.goldBright }]}>{couponCount}</Text>
                     </TouchableOpacity>
@@ -48,7 +72,7 @@ const styles = StyleSheet.create({
     title: CommonStyles.title,
     headerDivider: {
         ...CommonStyles.headerDivider,
-        marginBottom: 5, // 아래 스탯과의 간격 확보
+        marginBottom: 5,
     },
     statsContainer: {
         flexDirection: 'row',
