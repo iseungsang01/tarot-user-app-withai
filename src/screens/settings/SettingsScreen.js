@@ -21,7 +21,7 @@ import {
 } from '../../utils/errorHandler';
 import { APP_INFO, STORAGE_KEYS } from '../../constants/Config';
 import { styles } from '../../styles/SettingsStyles';
-import { OnboardingScreen } from '../auth';
+import OnboardingScreen from '../auth/OnboardingScreen';
 
 const SettingsScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
