@@ -79,17 +79,33 @@ const TabNavigator = () => {
   const navRef = useRef(null);
   const tabRootRef = useRef(null);
   const [tabRootWindowOffset, setTabRootWindowOffset] = useState({ x: 0, y: 0 });
+  const [isTabRootOffsetReady, setIsTabRootOffsetReady] = useState(false);
+  const zeroFrameCountsRef = useRef({});
 
   const captureTabRootOffset = useCallback(() => {
     if (!tabRootRef.current) return;
 
     tabRootRef.current.measureInWindow((x, y) => {
       setTabRootWindowOffset({ x, y });
+      setIsTabRootOffsetReady(true);
     });
   }, []);
 
   const registerFrame = (key, frame) => {
     if (!frame) return;
+
+    if (!isTabRootOffsetReady) {
+      return;
+    }
+
+    const isZeroFrame = frame.x === 0 && frame.y === 0;
+    const nextZeroCount = isZeroFrame ? (zeroFrameCountsRef.current[key] || 0) + 1 : 0;
+    zeroFrameCountsRef.current[key] = nextZeroCount;
+
+    if (isZeroFrame && nextZeroCount >= 2) {
+      console.warn(`[CoachMarks] Ignore repeated zero frame for "${key}"`, { frame, zeroCount: nextZeroCount });
+      return;
+    }
 
     const normalizedFrame = {
       ...frame,
