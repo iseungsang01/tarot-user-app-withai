@@ -19,10 +19,9 @@ import {
   showErrorAlert,
   showSuccessAlert
 } from '../utils/errorHandler';
-import { APP_INFO } from '../constants/Config';
+import { APP_INFO, STORAGE_KEYS } from '../constants/Config';
 import { styles } from '../styles/SettingsStyles';
 import OnboardingScreen from './OnboardingScreen';
-import { ONBOARDING_KEY } from '../navigation/AppNavigator';
 
 const SettingsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -91,7 +90,7 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const handleOpenGuide = async () => {
-    await AsyncStorage.removeItem(ONBOARDING_KEY);
+    await AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING);
     setIsGuideVisible(true);
   };
 

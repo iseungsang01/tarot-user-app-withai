@@ -198,12 +198,13 @@ export const getWelcomeMessage = async () => {
 // 3. 오늘의 운세 (Daily Fortune)
 // ─────────────────────────────────────────────────────────────
 
-export const getDailyFortune = async (userName = '사용자', previousFortune = '') => {
+export const getDailyFortune = async (userName = '사용자', previousFortune = '', cardName = '') => {
     const messages = [
         {
             role: 'system',
             content: `당신은 오늘의 운세를 알려주는 신비로운 타로 상담사입니다.
 사용자의 이름을 부르며, 오늘 하루를 위한 따뜻한 조언과 운세를 제공하세요.
+${cardName ? `사용자가 뽑은 타로 카드는 '${cardName}'입니다. 이 카드의 상징과 의미를 바탕으로 오늘의 운세를 해석해주세요.` : '오늘의 타로 카드를 하나 선정하여 그 의미를 바탕으로 운세를 알려주세요.'}
 답변은 3-4문장 정도로 간결하고 희망차게 작성하세요.
 
 ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0, 50)}...'라는 내용의 운세를 확인했습니다.

@@ -8,7 +8,7 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import OnboardingScreen from '../screens/OnboardingScreen';
 
-export const ONBOARDING_KEY = 'has_seen_main_onboarding_v1';
+import { STORAGE_KEYS } from '../constants/Config';
 
 const AppNavigator = () => {
   const { customer, loading } = useAuth();
@@ -23,7 +23,7 @@ const AppNavigator = () => {
           return;
         }
 
-        const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+        const seen = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING);
         setShowOnboarding(!seen);
       } finally {
         setOnboardingLoading(false);
@@ -35,7 +35,7 @@ const AppNavigator = () => {
   }, [customer]);
 
   const handleCloseOnboarding = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING, 'true');
     setShowOnboarding(false);
   };
 

@@ -39,3 +39,7 @@ export const SUCCESS_MESSAGES = {
   vote: '✅ 투표가 완료되었습니다!',
   couponUsed: '✅ 쿠폰이 사용되었습니다!',
 };
+
+export const STORAGE_KEYS = {
+  ONBOARDING: 'has_seen_main_onboarding_v1',
+};
