@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 export const HistoryFilterBar = ({
+    archiveMode,
+    onSetArchiveMode,
     timeFilter,
     setTimeFilter,
     selectedYear,
@@ -23,6 +25,29 @@ export const HistoryFilterBar = ({
     return (
         <View style={{ width: '100%', alignItems: 'center' }}>
             <View style={styles.filterSection}>
+                {/* Archive Mode Filter - Changed to ALL, ON, OFF order */}
+                <View style={[styles.archiveRow, { borderBottomWidth: 1, borderBottomColor: 'rgba(212,175,55,0.1)', paddingBottom: 10, marginBottom: 10 }]}>
+                    {[
+                        { id: 'ALL', label: 'ALL', color: DrawerTheme.goldBrass },
+                        { id: 'ON', label: 'ON', color: DrawerTheme.woodMid },
+                        { id: 'OFF', label: 'OFF', color: DrawerTheme.navyMid }
+                    ].map((tab) => (
+                        <TouchableOpacity
+                            key={tab.id}
+                            onPress={() => onSetArchiveMode(tab.id)}
+                            style={[
+                                styles.archiveButton,
+                                archiveMode === tab.id && { backgroundColor: tab.color, borderColor: DrawerTheme.goldBright }
+                            ]}
+                        >
+                            <Text style={[styles.archiveLabel, archiveMode === tab.id && styles.archiveLabelActive]}>
+                                {tab.id === 'ALL' ? 'ALL' : tab.id === 'ON' ? 'ON' : 'OFF'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* Time Filter Row (전체, 연도별, 월별) */}
                 <View style={styles.filterRow}>
                     {['ALL', 'YEAR', 'MONTH'].map((type) => (
                         <TouchableOpacity
@@ -105,7 +130,11 @@ export const HistoryFilterBar = ({
 };
 
 const styles = StyleSheet.create({
-    filterSection: { width: '92%', marginTop: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)' },
+    filterSection: { width: '100%', marginTop: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)' },
+    archiveRow: { flexDirection: 'row', gap: 6 },
+    archiveButton: { flex: 1, paddingVertical: 5, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center' },
+    archiveLabel: { fontSize: 10, color: '#AAA', fontWeight: 'bold' },
+    archiveLabelActive: { color: '#1A0F0A' },
     filterRow: { flexDirection: 'row', gap: 6, marginBottom: 6 },
     filterButton: { flex: 1, paddingVertical: 5, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center' },
     filterButtonActive: { backgroundColor: DrawerTheme.goldBrass, borderColor: DrawerTheme.goldBright },
@@ -122,7 +151,7 @@ const styles = StyleSheet.create({
     monthText: { fontSize: 9, color: '#999', fontWeight: 'bold' },
     monthTextActive: { color: DrawerTheme.goldBright },
 
-    selectionControl: { width: '92%', marginTop: 8 },
+    selectionControl: { width: '100%', marginTop: 8 },
     selectionActions: {
         backgroundColor: 'rgba(0,0,0,0.5)',
         borderRadius: 12,
@@ -160,7 +189,7 @@ const styles = StyleSheet.create({
     deleteAllText: { fontSize: 13, color: '#ff6b6b', fontWeight: 'bold' },
     deleteAllTextDisabled: { color: '#555' },
     hintContainer: {
-        width: '92%',
+        width: '100%',
         marginTop: 8,
         padding: 8,
         backgroundColor: 'rgba(212,175,55,0.1)',

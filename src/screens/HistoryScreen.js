@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Components
 import {
@@ -18,7 +19,9 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 // Hook
 import { useHistoryLogic } from '../hooks/useHistoryLogic';
 
-const HistoryScreen = ({ navigation }) => {
+const HistoryScreen = () => {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const {
     state,
     actions,
@@ -72,12 +75,12 @@ const HistoryScreen = ({ navigation }) => {
       <HistoryHeader
         stats={stats}
         couponCount={couponCount}
-        archiveMode={archiveMode}
-        onSetArchiveMode={setArchiveMode}
         onNavigateCoupon={() => navigation.navigate('Coupon')}
         onNavigateStamp={() => navigation.navigate('Stamp')}
       />
       <HistoryFilterBar
+        archiveMode={archiveMode}
+        onSetArchiveMode={setArchiveMode}
         timeFilter={timeFilter}
         setTimeFilter={setTimeFilter}
         selectedYear={selectedYear}
@@ -148,7 +151,10 @@ const HistoryScreen = ({ navigation }) => {
         data={[1]} // Dummy data for rendering layout
         renderItem={renderDrawerChest}
         ListHeaderComponent={renderHeader}
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingTop: insets.top + 20 }
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
       />
 
@@ -171,7 +177,7 @@ const HistoryScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: { paddingBottom: 80 },
+  scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
   manualAddDrawer: { height: 100, margin: 2, borderWidth: 1.5, borderStyle: 'dashed', borderColor: DrawerTheme.goldBrass, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   manualAddText: { fontSize: 16, fontWeight: 'bold' },
   emptyContainer: { padding: 60, alignItems: 'center' },
