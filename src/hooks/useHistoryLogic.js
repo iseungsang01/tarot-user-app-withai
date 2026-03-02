@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVisits } from './useVisits';
@@ -115,27 +115,44 @@ export const useHistoryLogic = (navigation) => {
         });
     }, [timeFilter, selectedYear, selectedMonth]);
 
+    const formattedServerVisits = useMemo(
+        () => serverVisits.map((visit) => ({ ...visit, is_manual: false })),
+        [serverVisits]
+    );
+
+    const allVisits = useMemo(
+        () => [...formattedServerVisits, ...personalNotes],
+        [formattedServerVisits, personalNotes]
+    );
+
     // Helper: Display Data Construction
-    const getDisplayData = useCallback(() => {
+    const displayData = useMemo(() => {
         let data = [];
-        const formattedServerVisits = serverVisits.map(v => ({ ...v, is_manual: false }));
 
         if (archiveMode === 'ON') data = formattedServerVisits;
         else if (archiveMode === 'OFF') data = personalNotes;
-        else data = [...formattedServerVisits, ...personalNotes].sort((a, b) =>
-            new Date(b.visit_date) - new Date(a.visit_date)
-        );
+        else {
+            data = [...allVisits].sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+        }
 
         return applyTimeFilter(data);
-    }, [serverVisits, personalNotes, archiveMode, applyTimeFilter]);
+    }, [archiveMode, formattedServerVisits, personalNotes, allVisits, applyTimeFilter]);
+
+    const displayDataById = useMemo(
+        () => new Map(displayData.map((visit) => [visit.id, visit])),
+        [displayData]
+    );
+
 
     // Actions
     const toggleSelection = useCallback((id) => {
-        const newSet = new Set(selectedIds);
-        if (newSet.has(id)) newSet.delete(id);
-        else newSet.add(id);
-        setSelectedIds(newSet);
-    }, [selectedIds]);
+        setSelectedIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) newSet.delete(id);
+            else newSet.add(id);
+            return newSet;
+        });
+    }, []);
 
     const handleLongPress = useCallback((visitId) => {
         if (!selectionMode) {
@@ -150,8 +167,7 @@ export const useHistoryLogic = (navigation) => {
         try {
             let itemToDelete = selectedItem;
             if (!itemToDelete) {
-                const displayData = getDisplayData();
-                itemToDelete = displayData.find(v => v.id === visitId);
+                itemToDelete = displayDataById.get(visitId);
             }
 
             if (!itemToDelete) {
@@ -176,7 +192,7 @@ export const useHistoryLogic = (navigation) => {
             Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
             console.error(error);
         }
-    }, [selectedItem, getDisplayData, loadLocalData, deleteVisit, refreshCustomer]);
+    }, [selectedItem, displayDataById, loadLocalData, deleteVisit, refreshCustomer]);
 
     const handleMultiDelete = useCallback(async () => {
         if (selectedIds.size === 0) {
@@ -194,12 +210,11 @@ export const useHistoryLogic = (navigation) => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const displayData = getDisplayData();
                             const serverIds = [];
                             const localIds = [];
 
-                            selectedIds.forEach(id => {
-                                const item = displayData.find(v => v.id === id);
+                            selectedIds.forEach((id) => {
+                                const item = displayDataById.get(id);
                                 if (item) {
                                     item.is_manual ? localIds.push(id) : serverIds.push(id);
                                 }
@@ -229,7 +244,7 @@ export const useHistoryLogic = (navigation) => {
                 }
             ]
         );
-    }, [selectedIds, getDisplayData, deleteVisit, loadLocalData, refreshCustomer]);
+    }, [selectedIds, displayDataById, deleteVisit, loadLocalData, refreshCustomer]);
 
     return {
         state: {
@@ -238,7 +253,8 @@ export const useHistoryLogic = (navigation) => {
             refreshing,
             stats,
             couponCount,
-            visits: [...serverVisits, ...personalNotes],
+            visits: allVisits,
+            displayData,
             archiveMode,
             timeFilter,
             selectedYear,
@@ -263,7 +279,6 @@ export const useHistoryLogic = (navigation) => {
             handleLongPress,
             handleDeleteVisit,
             handleMultiDelete
-        },
-        getDisplayData,
+        }
     };
 };

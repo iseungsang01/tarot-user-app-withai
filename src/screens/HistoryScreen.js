@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 // Components
@@ -22,7 +22,6 @@ const HistoryScreen = ({ navigation }) => {
   const {
     state,
     actions,
-    getDisplayData
   } = useHistoryLogic(navigation);
 
   const {
@@ -40,6 +39,7 @@ const HistoryScreen = ({ navigation }) => {
     selectedIds,
     isModalVisible,
     selectedItem,
+    displayData,
   } = state;
 
   const {
@@ -93,7 +93,6 @@ const HistoryScreen = ({ navigation }) => {
   );
 
   const renderDrawerChest = () => {
-    const displayData = getDisplayData();
     return (
       <DrawerChest isManualMode={archiveMode === 'OFF'} selectionMode={selectionMode}>
         <AIHistoryAnalysisPanel visits={visits} />
@@ -138,7 +137,7 @@ const HistoryScreen = ({ navigation }) => {
   };
 
   // ✅ 데이터가 없고 로딩 중일 때만 스피너 표시 (캐시된 데이터가 있으면 보여줌)
-  const isInitialLoading = isVisitsLoading && !refreshing && (!getDisplayData() || getDisplayData().length === 0);
+  const isInitialLoading = isVisitsLoading && !refreshing && displayData.length === 0;
 
   if (isInitialLoading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
 
