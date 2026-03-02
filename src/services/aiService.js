@@ -155,6 +155,43 @@ export const analyzeVisitHistory = async (visits) => {
     }
 };
 
+export const polishReviewText = async (reviewText) => {
+    if (!reviewText?.trim()) {
+        return { data: null, error: new Error('다듬을 상담 기록이 없습니다.') };
+    }
+
+    const messages = [
+        {
+            role: 'system',
+            content: `당신은 타로 상담 기록 정리 전문 어시스턴트입니다.
+상담사가 작성한 메모의 의미를 유지한 채 가독성만 높여주세요.
+- 사실/의미를 추가하거나 왜곡하지 마세요
+- 어조는 원문의 분위기를 유지하세요
+- 핵심 포인트를 정돈해서 4~8문장 내로 작성하세요
+- 반드시 JSON 형식으로만 응답하세요
+
+{
+  "polished": "다듬어진 상담 기록 텍스트"
+}`,
+        },
+        {
+            role: 'user',
+            content: `아래 메모를 다듬어주세요:\n\n${reviewText}`,
+        },
+    ];
+
+    const { data, error } = await callAIProxy(messages, { temperature: 0.4, maxTokens: 600 }, 'polishReviewText');
+    if (error) return { data: null, error };
+
+    try {
+        const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(cleanedData);
+        return { data: parsed.polished || '', error: null };
+    } catch {
+        return { data, error: null };
+    }
+};
+
 // ─────────────────────────────────────────────────────────────
 // 2. 대화형 AI 챗봇
 // ─────────────────────────────────────────────────────────────
@@ -238,6 +275,7 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
 export default {
     summarizeReview,
     analyzeVisitHistory,
+    polishReviewText,
     sendChatMessage,
     getWelcomeMessage,
     getDailyFortune,

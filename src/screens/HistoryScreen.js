@@ -75,6 +75,7 @@ const HistoryScreen = ({ navigation }) => {
         archiveMode={archiveMode}
         onSetArchiveMode={setArchiveMode}
         onNavigateCoupon={() => navigation.navigate('Coupon')}
+        onNavigateStamp={() => navigation.navigate('Coupon')}
       />
       <HistoryFilterBar
         timeFilter={timeFilter}

@@ -8,8 +8,10 @@ export const HistoryHeader = ({
     couponCount,
     archiveMode,
     onSetArchiveMode,
-    onNavigateCoupon
+    onNavigateCoupon,
+    onNavigateStamp
 }) => {
+    const tarotCards = ['🃏','🎩','👸','🤴','⚖️','🌙','☀️','⭐','🎭','🔱'];
     const stamps = Array.from({ length: 10 }, (_, i) => i < stats.current_stamps);
 
     return (
@@ -36,7 +38,7 @@ export const HistoryHeader = ({
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.stampRow}>
+            <TouchableOpacity style={styles.stampRow} onPress={onNavigateStamp} activeOpacity={0.85}>
                 {stamps.map((active, idx) => (
                     <View
                         key={`stamp-${idx}`}
@@ -45,10 +47,10 @@ export const HistoryHeader = ({
                             active ? styles.stampChipActive : styles.stampChipInactive,
                         ]}
                     >
-                        <Text style={styles.stampEmoji}>{active ? '⭐' : '✧'}</Text>
+                        <Text style={styles.stampEmoji}>{active ? tarotCards[idx] : '✧'}</Text>
                     </View>
                 ))}
-            </View>
+            </TouchableOpacity>
 
             {/* Archive Mode Tabs */}
             <View style={[styles.tabContainer, { borderColor: DrawerTheme.woodFrame }]}>
@@ -87,6 +89,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         flexDirection: 'row',
         justifyContent: 'space-between',
+        paddingVertical: 4,
     },
     stampChip: {
         width: 24,
