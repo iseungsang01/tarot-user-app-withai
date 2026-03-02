@@ -3,6 +3,12 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.72)';
+const NON_INTERCEPTING_TARGET_STEPS = new Set([
+    'home-stamp',
+    'home-coupon',
+    'home-archive-mode',
+    'home-time-filter',
+]);
 
 const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress }) => {
     const step = steps?.[stepIndex];
@@ -36,6 +42,8 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
     const isLast = stepIndex === steps.length - 1;
 
     const requiresTargetTap = step?.requireTargetTap;
+    const disableOverlayTargetTap = NON_INTERCEPTING_TARGET_STEPS.has(step?.key);
+    const showNextButton = !requiresTargetTap || disableOverlayTargetTap;
 
     return (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
@@ -46,8 +54,9 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
             <View style={[styles.overlayBlock, { left: 0, right: 0, top: hole.y + hole.height, bottom: 0 }]} />
 
             <Pressable
+                pointerEvents={disableOverlayTargetTap ? 'none' : 'auto'}
                 style={[styles.targetTapArea, holeStyle]}
-                onPress={onTargetPress || onNext}
+                onPress={disableOverlayTargetTap ? undefined : (onTargetPress || onNext)}
             />
 
             <View pointerEvents="none" style={[styles.highlight, holeStyle]} />
@@ -55,10 +64,10 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
             <View style={[styles.tooltip, { top: tooltipTop, left: 20, right: 20 }]}>
                 <Text style={styles.title}>{step.title}</Text>
                 <Text style={styles.description}>{step.description}</Text>
-                {requiresTargetTap && <Text style={styles.tapGuide}>네모 영역을 직접 눌러 다음 단계로 진행하세요.</Text>}
+                {requiresTargetTap && !disableOverlayTargetTap && <Text style={styles.tapGuide}>네모 영역을 직접 눌러 다음 단계로 진행하세요.</Text>}
                 <View style={styles.tooltipBottom}>
                     <Text style={styles.counter}>{stepIndex + 1} / {steps.length}</Text>
-                    {!requiresTargetTap && (
+                    {showNextButton && (
                         <Pressable onPress={onNext} style={styles.nextButton}>
                             <Text style={styles.nextText}>{isLast ? '완료' : '다음'}</Text>
                         </Pressable>
