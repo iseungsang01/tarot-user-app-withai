@@ -14,10 +14,10 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT USAGE ON SCHEMA extensions TO anon, authenticated;
 
--- 기본 권한 설정
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated;
+-- 기본 권한 설정 (최소 권한)
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
 
 -- ==========================================
 -- 2. 테이블 생성
@@ -149,40 +149,63 @@ ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vote_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_configs ENABLE ROW LEVEL SECURITY;
 
--- 공통 RLS 정책 (데모용으로 모두 허용되어 있으나 실제 운영 시 보안 강화 필요)
-CREATE POLICY "Allow All Select" ON customers FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON customers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON customers FOR UPDATE USING (true);
+-- 고객 정보: 본인 데이터만 접근 가능
+CREATE POLICY "Customers can view own profile" ON customers
+FOR SELECT USING (id = auth.uid());
+CREATE POLICY "Customers can insert own profile" ON customers
+FOR INSERT WITH CHECK (id = auth.uid());
+CREATE POLICY "Customers can update own profile" ON customers
+FOR UPDATE USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+CREATE POLICY "Customers can delete own profile" ON customers
+FOR DELETE USING (id = auth.uid());
 
-CREATE POLICY "Allow All Select" ON visit_history FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON visit_history FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON visit_history FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON visit_history FOR DELETE USING (true);
+-- 방문 이력: 본인 데이터만 접근 가능
+CREATE POLICY "Visit history owner select" ON visit_history
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Visit history owner insert" ON visit_history
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Visit history owner update" ON visit_history
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Visit history owner delete" ON visit_history
+FOR DELETE USING (customer_id = auth.uid());
 
-CREATE POLICY "Allow All Select" ON coupon_history FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON coupon_history FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON coupon_history FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON coupon_history FOR DELETE USING (true);
+-- 쿠폰 이력: 본인 데이터만 접근 가능
+CREATE POLICY "Coupon history owner select" ON coupon_history
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Coupon history owner insert" ON coupon_history
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Coupon history owner update" ON coupon_history
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Coupon history owner delete" ON coupon_history
+FOR DELETE USING (customer_id = auth.uid());
 
-CREATE POLICY "Allow All Select" ON notices FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON notices FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON notices FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON notices FOR DELETE USING (true);
+-- 공지사항: anon 포함 공개 읽기만 허용
+CREATE POLICY "Public can read published notices" ON notices
+FOR SELECT TO anon, authenticated USING (is_published = true);
 
-CREATE POLICY "Allow All Select" ON bug_reports FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON bug_reports FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON bug_reports FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON bug_reports FOR DELETE USING (true);
+-- 버그 리포트: 본인 데이터만 접근 가능
+CREATE POLICY "Bug reports owner select" ON bug_reports
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Bug reports owner insert" ON bug_reports
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Bug reports owner update" ON bug_reports
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Bug reports owner delete" ON bug_reports
+FOR DELETE USING (customer_id = auth.uid());
 
-CREATE POLICY "Allow All Select" ON votes FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON votes FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON votes FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON votes FOR DELETE USING (true);
+-- 투표: 읽기 전용 공개
+CREATE POLICY "Public can read active votes" ON votes
+FOR SELECT TO anon, authenticated USING (is_active = true);
 
-CREATE POLICY "Allow All Select" ON vote_responses FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON vote_responses FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON vote_responses FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON vote_responses FOR DELETE USING (true);
+-- 투표 응답: 본인 데이터만 접근 가능
+CREATE POLICY "Vote responses owner select" ON vote_responses
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Vote responses owner insert" ON vote_responses
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Vote responses owner update" ON vote_responses
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Vote responses owner delete" ON vote_responses
+FOR DELETE USING (customer_id = auth.uid());
 
 CREATE POLICY "Allow Read Configs" ON app_configs FOR SELECT USING (true);
 
