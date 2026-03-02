@@ -66,7 +66,7 @@ export const useVoteLogic = () => {
         } finally {
             setVoteDataLoading(false);
         }
-    }, [customer.id]);
+    }, []);
 
     // Back Handler for returning to list
     useFocusEffect(
@@ -136,6 +136,7 @@ export const useVoteLogic = () => {
 
     const handleSubmitVote = async () => {
         if (submitting) return;
+        if (!selectedVote) return;
 
         // 종료된 투표인지 확인
         if (isVoteEnded(selectedVote)) {
@@ -152,30 +153,32 @@ export const useVoteLogic = () => {
         }
 
         // Cancel checks
-        const isSingleCancel = !selectedVote.allow_multiple && selectedOptions.length === 0 && myVote;
-        const isMultiCancel = selectedVote.allow_multiple && selectedOptions.length === 0 && myVote;
+        const isCancelRequest = selectedOptions.length === 0 && !!myVote;
 
-        if (isSingleCancel || isMultiCancel) {
+        if (isCancelRequest) {
             setSubmitting(true);
-            const { error } = await handleApiCall(
-                'VoteScreen.cancelVote',
-                () => voteService.cancelVote(selectedVote.id, customer.id)
-            );
+            try {
+                const { error } = await handleApiCall(
+                    'VoteScreen.cancelVote',
+                    () => voteService.cancelVote(selectedVote.id, customer.id)
+                );
 
-            if (!error) {
-                // 로컬 상태 업데이트
-                setMyVoteMap(prev => {
-                    const next = { ...prev };
-                    delete next[selectedVote.id];
-                    return next;
-                });
-                setMyVote(null);
+                if (!error) {
+                    // 로컬 상태 업데이트
+                    setMyVoteMap(prev => {
+                        const next = { ...prev };
+                        delete next[selectedVote.id];
+                        return next;
+                    });
+                    setMyVote(null);
 
-                await loadVoteData(selectedVote.id);
-                setIsEditMode(false);
-                setShowResults(false);
+                    await loadVoteData(selectedVote.id);
+                    setIsEditMode(false);
+                    setShowResults(false);
+                }
+            } finally {
+                setSubmitting(false);
             }
-            setSubmitting(false);
             return;
         }
 
@@ -187,22 +190,25 @@ export const useVoteLogic = () => {
 
         // Submit
         setSubmitting(true);
-        const res = await handleApiCall(
-            'VoteScreen.submitVote',
-            () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id),
-            { successMessage: isEditMode ? '투표가 수정되었습니다.' : '투표가 완료되었습니다.' }
-        );
+        try {
+            const res = await handleApiCall(
+                'VoteScreen.submitVote',
+                () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id),
+                { successMessage: isEditMode ? '투표가 수정되었습니다.' : '투표가 완료되었습니다.' }
+            );
 
-        if (res.data) {
-            // 로컬 상태 업데이트
-            setMyVoteMap(prev => ({ ...prev, [selectedVote.id]: res.data }));
-            setMyVote(res.data);
+            if (res.data) {
+                // 로컬 상태 업데이트
+                setMyVoteMap(prev => ({ ...prev, [selectedVote.id]: res.data }));
+                setMyVote(res.data);
 
-            await loadVoteData(selectedVote.id);
-            setIsEditMode(false);
-            setShowResults(true);
+                await loadVoteData(selectedVote.id);
+                setIsEditMode(false);
+                setShowResults(true);
+            }
+        } finally {
+            setSubmitting(false);
         }
-        setSubmitting(false);
     };
 
     // Helper logic for rendering
