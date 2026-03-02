@@ -7,28 +7,33 @@ import { DrawerTheme } from '../constants/DrawerTheme';
 
 const guides = [
   {
+    icon: '🧭',
+    title: '하단 네비게이션 한눈에 보기',
+    description: '홈(서랍 기록), 운세(오늘의 운세), 공지(새 소식), 투표(의견 참여), 설정(계정/앱 관리) 순서로 이동해요.',
+  },
+  {
     icon: '🏠',
-    title: '홈에서 기록 관리',
-    description: '상담/개인 메모 서랍을 무제한으로 만들고, 서랍별 요약/썸네일을 빠르게 확인할 수 있어요.',
+    title: '홈 상단 버튼 설명',
+    description: 'ON/OFF/ALL 버튼으로 상담/개인/전체 서랍을 전환하고, 보유 쿠폰 숫자를 누르면 쿠폰 화면으로 바로 이동해요.',
   },
   {
-    icon: '🎟️',
-    title: '쿠폰은 홈에서 바로 이동',
-    description: '스탬프 진행률(10개 기준)과 쿠폰 보유 수를 홈 상단에서 확인하고 바로 쿠폰 화면으로 이동해요.',
+    icon: '🗂️',
+    title: '홈 필터 버튼 설명',
+    description: '전체/연도별/월별 버튼으로 기록을 좁혀볼 수 있고, 서랍을 길게 누르면 여러 개를 선택해 한 번에 삭제할 수 있어요.',
   },
   {
-    icon: '📢',
-    title: '공지와 투표는 하단 네비게이션',
-    description: 'AI 상담 탭 대신 공지/투표를 분리해 필요한 소식을 빠르게 확인할 수 있어요.',
+    icon: '➕',
+    title: '개인 메모 서랍 추가',
+    description: '홈 화면의 "+ 개인 메모 서랍 추가" 버튼을 누르면 직접 작성하는 서랍을 즉시 만들 수 있어요.',
   },
   {
-    icon: '🎙️',
-    title: '음성 메모로 기록 보조',
-    description: '상담 상세 화면에서 녹음 기능으로 빠르게 메모를 남길 수 있도록 준비했어요.',
+    icon: '🔁',
+    title: '가이드를 다시 보는 방법',
+    description: '설정 화면의 "앱 사용 가이드 다시 보기" 버튼으로 언제든 같은 안내를 다시 확인할 수 있어요.',
   },
 ];
 
-const OnboardingScreen = ({ onClose }) => {
+const OnboardingScreen = ({ onClose, buttonLabel = '시작하기' }) => {
   return (
     <GradientBackground>
       <SafeAreaView style={styles.safeArea}>
@@ -46,7 +51,7 @@ const OnboardingScreen = ({ onClose }) => {
             </View>
           ))}
 
-          <CustomButton title="시작하기" onPress={onClose} style={styles.button} />
+          <CustomButton title={buttonLabel} onPress={onClose} style={styles.button} />
         </ScrollView>
       </SafeAreaView>
     </GradientBackground>
