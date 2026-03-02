@@ -156,7 +156,7 @@ const CouponScreen = ({ navigation, isIntegrated = false }) => {
         {!isIntegrated && (
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>COUPON BOX</Text>
+              <Text style={styles.title}>COUPON BOARD</Text>
             </View>
             <View style={styles.headerDivider} />
             <Text style={styles.subtitle}>{customer.nickname}님의 소중한 혜택</Text>
