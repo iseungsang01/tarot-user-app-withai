@@ -20,7 +20,9 @@ export const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, select
   const isWritten = !!(visit.card_review && visit.card_review.trim()) || !!visit.card_image;
   const title = visit.title || visit.drawer_title || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 24) || (isManualMode ? '개인 메모 제목 없음' : '상담 기록 제목 없음');
   const imageUri = visit.card_image
-    ? (visit.card_image.startsWith('data') ? visit.card_image : `data:image/jpeg;base64,${visit.card_image}`)
+    ? (visit.card_image.startsWith('data') || visit.card_image.startsWith('http')
+      ? visit.card_image
+      : `data:image/jpeg;base64,${visit.card_image}`)
     : null;
 
   // 테마 설정 분기

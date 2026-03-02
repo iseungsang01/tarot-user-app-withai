@@ -14,6 +14,9 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
 
   const displayDate = visit.visit_date ?
     visit.visit_date.split('T')[0].split('-').map(Number).join('.') : '';
+  const imageUri = visit.card_image
+    ? ((visit.card_image.startsWith('data') || visit.card_image.startsWith('http')) ? visit.card_image : `data:image/jpeg;base64,${visit.card_image}`)
+    : null;
 
   /**
    * ✅ 삭제 처리 수정: visitId만 전달
@@ -69,14 +72,27 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
               </TouchableOpacity>
             </View>
 
-            {visit.card_image && (
+            {imageUri && (
               <View style={styles.cardContainer}>
                 <View style={[styles.goldFrame, isManual && { borderColor: DrawerTheme.navyLight, shadowColor: '#000' }]}>
                   <Image
-                    source={{ uri: visit.card_image }}
+                    source={{ uri: imageUri }}
                     style={styles.tarotImage}
                     resizeMode="cover"
                   />
+                </View>
+              </View>
+            )}
+
+            {visit.ai_insight?.summary && (
+              <View style={[styles.reviewSection, styles.aiSection]}>
+                <Text style={[styles.sectionLabel, styles.aiSectionLabel, isManual && { color: DrawerTheme.navyLight }]}>✨ AI 분석 노트</Text>
+                <View style={[
+                  styles.reviewContent,
+                  styles.aiContent,
+                  isManual && { backgroundColor: 'rgba(74, 90, 126, 0.18)', borderLeftColor: DrawerTheme.navyLight }
+                ]}>
+                  <Text style={styles.reviewText}>{visit.ai_insight.summary}</Text>
                 </View>
               </View>
             )}
@@ -87,7 +103,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
               </Text>
               <View style={[
                 styles.reviewContent,
-                !visit.card_image && styles.fullHeightReview,
+                !imageUri && styles.fullHeightReview,
                 isManual && { backgroundColor: 'rgba(74, 90, 126, 0.1)', borderLeftColor: DrawerTheme.navyLight }
               ]}>
                 <Text style={styles.reviewText}>
@@ -95,19 +111,6 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
                 </Text>
               </View>
             </View>
-
-
-            {visit.ai_insight?.summary && (
-              <View style={styles.reviewSection}>
-                <Text style={[styles.sectionLabel, isManual && { color: DrawerTheme.navyLight }]}>✨ AI 분석 노트</Text>
-                <View style={[
-                  styles.reviewContent,
-                  isManual && { backgroundColor: 'rgba(74, 90, 126, 0.1)', borderLeftColor: DrawerTheme.navyLight }
-                ]}>
-                  <Text style={styles.reviewText}>{visit.ai_insight.summary}</Text>
-                </View>
-              </View>
-            )}
 
             <View style={styles.actionArea}>
               <TouchableOpacity
@@ -176,6 +179,9 @@ const styles = StyleSheet.create({
   },
   fullHeightReview: { minHeight: 200 },
   reviewText: { fontSize: 16, color: '#E0E0E0', lineHeight: 28 },
+  aiSection: { marginBottom: 18 },
+  aiSectionLabel: { color: '#9ED0FF' },
+  aiContent: { borderLeftColor: '#5AA9E6', backgroundColor: 'rgba(35, 66, 97, 0.25)' },
   actionArea: { gap: 15 },
   primaryButton: {
     backgroundColor: '#D4AF37',

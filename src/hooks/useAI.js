@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import {
     summarizeReview,
     analyzeVisitHistory,
+    polishReviewText,
     sendChatMessage,
     getWelcomeMessage,
 } from '../services/aiService';
@@ -76,6 +77,38 @@ export const useAnalyzeHistory = () => {
     }, []);
 
     return { result, loading, error, analyze, reset };
+};
+
+
+
+export const usePolishReview = () => {
+    const [result, setResult] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const polish = useCallback(async (reviewText) => {
+        if (!reviewText?.trim()) return;
+
+        setLoading(true);
+        setError(null);
+
+        const { data, error: apiError } = await polishReviewText(reviewText);
+
+        if (apiError) {
+            setError(apiError.message || 'AI 다듬기 중 오류가 발생했습니다.');
+        } else {
+            setResult(data || '');
+        }
+
+        setLoading(false);
+    }, []);
+
+    const reset = useCallback(() => {
+        setResult('');
+        setError(null);
+    }, []);
+
+    return { result, loading, error, polish, reset };
 };
 
 // ─────────────────────────────────────────────────────────────

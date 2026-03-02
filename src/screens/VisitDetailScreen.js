@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,6 +11,7 @@ import {
   AISummaryPanel
 } from '../components';
 import { useAuth } from '../hooks/useAuth';
+import { usePolishReview } from '../hooks/useAI';
 import { visitService } from '../services/visitService';
 import { compressImage } from '../utils/imageOptimizer';
 import { DrawerTheme } from '../constants/DrawerTheme';
@@ -37,6 +38,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
   const up = (next) => setS(p => ({ ...p, ...next }));
   const [aiInsight, setAiInsight] = useState(null);
+  const [selectedReviewVersion, setSelectedReviewVersion] = useState('original');
+  const { result: polishedReview, loading: polishing, error: polishError, polish, reset: resetPolish } = usePolishReview();
 
 
   useEffect(() => {
@@ -59,6 +62,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
             loading: false
           });
           setAiInsight(item.ai_insight || null);
+          setSelectedReviewVersion('original');
+          resetPolish();
         }
       } else {
         // --- [ON 모드] 서버 데이터 불러오기 ---
@@ -72,6 +77,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
             loading: false
           });
           setAiInsight(data.ai_insight || null);
+          setSelectedReviewVersion('original');
+          resetPolish();
         }
       }
     } catch (err) {
@@ -97,12 +104,22 @@ const VisitDetailScreen = ({ route, navigation }) => {
     }
   };
 
+
+  const effectiveReview = useMemo(() => (
+    selectedReviewVersion === 'polished' && polishedReview ? polishedReview : s.review
+  ), [selectedReviewVersion, polishedReview, s.review]);
+
+  const runPolish = async () => {
+    await polish(s.review);
+    setSelectedReviewVersion('polished');
+  };
+
   const onSave = async () => {
     if (!s.uri && !s.review.trim() && !s.title.trim()) return Alert.alert("알림", "제목 또는 기록할 내용을 입력해주세요.");
     up({ saving: true });
 
     const payload = {
-      card_review: s.review.trim(),
+      card_review: effectiveReview.trim(),
       card_image: s.uri,
       visit_date: s.visit_date, // 새로 생성 시는 Now, 수정 시는 기존 날짜
       customer_id: customer?.id,
@@ -195,7 +212,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
               {s.uri ? (
                 <>
                   <Image
-                    source={{ uri: s.uri.startsWith('data') ? s.uri : `data:image/jpeg;base64,${s.uri}` }}
+                    source={{ uri: (s.uri.startsWith('data') || s.uri.startsWith('http')) ? s.uri : `data:image/jpeg;base64,${s.uri}` }}
                     style={styles.fullImg}
                   />
                   <TouchableOpacity onPress={() => up({ uri: null })} style={styles.delBtn}>
@@ -229,7 +246,26 @@ const VisitDetailScreen = ({ route, navigation }) => {
               <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} />
             </View>
 
-            <AISummaryPanel reviewText={s.review} visitDate={s.visit_date} initialResult={aiInsight} onResult={handleAIResult} onClear={clearAIInsight} />
+
+            <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}>
+              <View style={styles.polishHeaderRow}>
+                <Text style={[styles.polishTitle, { color: theme.c }]}>🪄 AI 문장 다듬기</Text>
+                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} style={styles.polishBtn} />
+              </View>
+              {!!polishError && <Text style={styles.polishError}>⚠️ {polishError}</Text>}
+              {!!polishedReview && (
+                <View style={styles.compareWrap}>
+                  <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'original' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('original')}>
+                    <Text style={styles.versionChipText}>직접 작성본</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'polished' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('polished')}>
+                    <Text style={styles.versionChipText}>AI 다듬은본</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <AISummaryPanel reviewText={effectiveReview} visitDate={s.visit_date} initialResult={aiInsight} onResult={handleAIResult} onClear={clearAIInsight} />
 
             <CustomButton
               title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")}
@@ -259,7 +295,16 @@ const styles = StyleSheet.create({
   input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 18, color: '#FFF', minHeight: 180, textAlignVertical: 'top', fontSize: 16, borderWidth: 1 },
   voiceRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   whiteText: { color: '#FFF', fontWeight: 'bold' },
-  saveBtn: { marginTop: 25, height: 55 }
+  saveBtn: { marginTop: 25, height: 55 },
+  polishPanel: { marginTop: 14, borderWidth: 1, borderRadius: 12, padding: 12, backgroundColor: 'rgba(255,255,255,0.04)' },
+  polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  polishTitle: { fontWeight: '700', fontSize: 14 },
+  polishBtn: { minWidth: 120, height: 40 },
+  polishError: { color: '#ff9e9e', marginTop: 8, fontSize: 12 },
+  compareWrap: { marginTop: 10, flexDirection: 'row', gap: 8 },
+  versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 8, alignItems: 'center' },
+  versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
+  versionChipText: { color: '#FFF', fontSize: 12, fontWeight: '600' }
 });
 
 export default VisitDetailScreen;

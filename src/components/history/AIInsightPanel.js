@@ -11,21 +11,11 @@ import {
     StyleSheet,
     TouchableOpacity,
     ActivityIndicator,
-    Animated,
     Platform,
 } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useSummarizeReview, useAnalyzeHistory } from '../../hooks/useAI';
 
-// ─────────────────────────────────────────────────────────────
-// 단일 기록 요약 패널
-// ─────────────────────────────────────────────────────────────
-
-/**
- * 단일 상담 기록 AI 요약
- * @param {string} reviewText - 상담 기록 텍스트
- * @param {string} visitDate - 방문 날짜
- */
 export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult = null, onResult, onClear }) => {
     const { result, loading, error, summarize, reset } = useSummarizeReview();
     const [expanded, setExpanded] = useState(!!initialResult);
@@ -64,7 +54,6 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
 
     return (
         <View style={styles.container}>
-            {/* 헤더 버튼 */}
             {!expanded ? (
                 <TouchableOpacity style={styles.triggerButton} onPress={handleAnalyze} activeOpacity={0.8}>
                     <Text style={styles.triggerIcon}>✨</Text>
@@ -73,7 +62,6 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
                 </TouchableOpacity>
             ) : (
                 <View style={styles.panel}>
-                    {/* 패널 헤더 */}
                     <View style={styles.panelHeader}>
                         <Text style={styles.panelTitle}>✨ AI 인사이트</Text>
                         <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -81,7 +69,6 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
                         </TouchableOpacity>
                     </View>
 
-                    {/* 로딩 상태 */}
                     {loading && (
                         <View style={styles.loadingArea}>
                             <ActivityIndicator size="small" color={DrawerTheme.goldBright} />
@@ -89,7 +76,6 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
                         </View>
                     )}
 
-                    {/* 에러 상태 */}
                     {error && !loading && (
                         <View style={styles.errorArea}>
                             <Text style={styles.errorText}>⚠️ {error}</Text>
@@ -99,10 +85,8 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
                         </View>
                     )}
 
-                    {/* 결과 */}
                     {(result || initialResult) && !loading && (
                         <View style={styles.resultArea}>
-                            {/* 분위기 배지 */}
                             <View style={styles.moodRow}>
                                 <Text style={styles.moodEmoji}>{(result || initialResult).moodEmoji}</Text>
                                 <View style={[
@@ -118,27 +102,24 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
                                 </View>
                             </View>
 
-                            {/* 요약 */}
                             <View style={styles.section}>
                                 <Text style={styles.sectionLabel}>📋 요약</Text>
                                 <Text style={styles.sectionContent}>{(result || initialResult).summary}</Text>
                             </View>
 
-                            {/* 키워드 */}
                             {(result || initialResult).keywords?.length > 0 && (
                                 <View style={styles.section}>
                                     <Text style={styles.sectionLabel}>🏷️ 키워드</Text>
                                     <View style={styles.keywordsRow}>
                                         {(result || initialResult).keywords.map((kw, i) => (
                                             <View key={i} style={styles.keywordChip}>
-                                                <Text style={styles.keywordText}>{kw}</Text>
+                                                <Text style={styles.keywordText}>#{kw}</Text>
                                             </View>
                                         ))}
                                     </View>
                                 </View>
                             )}
 
-                            {/* 다음 상담 제안 */}
                             {(result || initialResult).advice && (
                                 <View style={[styles.section, styles.adviceSection]}>
                                     <Text style={styles.sectionLabel}>💡 다음 상담 제안</Text>
@@ -153,14 +134,6 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
     );
 });
 
-// ─────────────────────────────────────────────────────────────
-// 전체 방문 기록 종합 분석 패널
-// ─────────────────────────────────────────────────────────────
-
-/**
- * 전체 방문 기록 종합 AI 분석
- * @param {Array} visits - 방문 기록 배열
- */
 export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
     const { result, loading, error, analyze, reset } = useAnalyzeHistory();
     const [expanded, setExpanded] = useState(false);
@@ -177,7 +150,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
         setExpanded(false);
     };
 
-    if (validCount < 2) return null; // 2개 미만이면 표시 안 함
+    if (validCount < 2) return null;
 
     return (
         <View style={styles.container}>
@@ -197,7 +170,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                 </TouchableOpacity>
             ) : (
                 <View style={styles.panel}>
-                    {/* 패널 헤더 */}
                     <View style={styles.panelHeader}>
                         <Text style={styles.panelTitle}>🔍 종합 AI 분석</Text>
                         <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -205,7 +177,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* 로딩 */}
                     {loading && (
                         <View style={styles.loadingArea}>
                             <ActivityIndicator size="small" color={DrawerTheme.goldBright} />
@@ -213,7 +184,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                         </View>
                     )}
 
-                    {/* 에러 */}
                     {error && !loading && (
                         <View style={styles.errorArea}>
                             <Text style={styles.errorText}>⚠️ {error}</Text>
@@ -223,16 +193,13 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                         </View>
                     )}
 
-                    {/* 결과 */}
                     {result && !loading && (
                         <View style={styles.resultArea}>
-                            {/* 전체 요약 */}
                             <View style={styles.section}>
                                 <Text style={styles.sectionLabel}>📖 전체 흐름</Text>
                                 <Text style={styles.sectionContent}>{result.overallSummary}</Text>
                             </View>
 
-                            {/* 반복 패턴 */}
                             {result.patterns?.length > 0 && (
                                 <View style={styles.section}>
                                     <Text style={styles.sectionLabel}>🔄 반복 주제</Text>
@@ -245,7 +212,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                                 </View>
                             )}
 
-                            {/* 성장 포인트 */}
                             {result.growthPoints && (
                                 <View style={[styles.section, styles.growthSection]}>
                                     <Text style={styles.sectionLabel}>🌱 변화 & 성장</Text>
@@ -253,7 +219,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                                 </View>
                             )}
 
-                            {/* 향후 방향 */}
                             {result.recommendation && (
                                 <View style={[styles.section, styles.adviceSection]}>
                                     <Text style={styles.sectionLabel}>💡 향후 상담 방향</Text>
@@ -268,10 +233,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
     );
 });
 
-// ─────────────────────────────────────────────────────────────
-// 스타일
-// ─────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
     container: { marginVertical: 8 },
     proBadgeMin: {
@@ -285,8 +246,6 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontWeight: '900',
     },
-
-    // 트리거 버튼
     triggerButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -305,8 +264,6 @@ const styles = StyleSheet.create({
     triggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '600' },
     triggerSubtext: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 },
     triggerArrow: { color: DrawerTheme.goldBright, fontSize: 20, opacity: 0.6 },
-
-    // 패널
     panel: {
         backgroundColor: 'rgba(0,0,0,0.3)',
         borderWidth: 1,
@@ -331,17 +288,8 @@ const styles = StyleSheet.create({
         fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     },
     closeText: { color: 'rgba(255,255,255,0.4)', fontSize: 16 },
-
-    // 로딩
-    loadingArea: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        padding: 16,
-    },
+    loadingArea: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
     loadingText: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
-
-    // 에러
     errorArea: { padding: 16, gap: 10 },
     errorText: { color: '#FF6B6B', fontSize: 13 },
     retryButton: {
@@ -352,17 +300,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.08)',
     },
     retryText: { color: DrawerTheme.goldBright, fontSize: 12 },
-
-    // 결과
     resultArea: { padding: 14, gap: 12 },
-
-    // 분위기
     moodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     moodEmoji: { fontSize: 20 },
     moodBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     moodText: { fontSize: 12, fontWeight: '700' },
-
-    // 섹션
     section: { gap: 6 },
     sectionLabel: {
         fontSize: 12,
@@ -372,8 +314,6 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     sectionContent: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 21 },
-
-    // 키워드
     keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
     keywordChip: {
         paddingHorizontal: 10,
@@ -384,13 +324,9 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.12)',
     },
     keywordText: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
-
-    // 패턴
     patternItem: { flexDirection: 'row', gap: 6 },
     patternDot: { color: DrawerTheme.goldBright, fontSize: 14 },
     patternText: { flex: 1, color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 20 },
-
-    // 성장
     growthSection: {
         backgroundColor: 'rgba(76, 175, 80, 0.06)',
         borderRadius: 8,
@@ -399,8 +335,6 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(76, 175, 80, 0.2)',
     },
     growthText: { color: 'rgba(255,255,255,0.8)', fontSize: 14, lineHeight: 20 },
-
-    // 제안
     adviceSection: {
         backgroundColor: 'rgba(255,193,7,0.06)',
         borderRadius: 8,
