@@ -51,7 +51,8 @@ const SettingsScreen = ({ navigation }) => {
             }
             const { error } = await supabase.rpc('update_customer_password', {
                 customer_uuid: customer.id,
-                new_password: newPassword
+                new_password: newPassword,
+                p_reason: 'settings_change'
             });
             if (!error) {
                 showSuccessAlert('UPDATE', Alert, '비밀번호가 변경되었습니다.');

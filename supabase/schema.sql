@@ -14,10 +14,10 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT USAGE ON SCHEMA extensions TO anon, authenticated;
 
--- 기본 권한 설정
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated;
+-- 기본 권한 설정 (최소 권한)
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
 
 -- ==========================================
 -- 2. 테이블 생성
@@ -28,7 +28,8 @@ CREATE TABLE public.customers (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     phone_number varchar(13) NOT NULL,
     nickname varchar(20),
-    password text NOT NULL DEFAULT crypt('1234', gen_salt('bf')),
+    password text NOT NULL,
+    must_change_password boolean NOT NULL DEFAULT false,
     birthday date,
 
     current_stamps integer DEFAULT 0 CHECK (current_stamps >= 0),
@@ -138,6 +139,14 @@ CREATE TABLE public.login_attempt_tracker (
     last_failed_at timestamptz,
     updated_at timestamptz NOT NULL DEFAULT NOW(),
     UNIQUE (phone_hash, ip_device_hash)
+-- [비밀번호 변경 감사 로그]
+CREATE TABLE public.customer_password_audit_logs (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    changed_at timestamptz NOT NULL DEFAULT NOW(),
+    changed_by text NOT NULL DEFAULT 'customer',
+    reason text,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
 -- ==========================================
@@ -150,6 +159,7 @@ CREATE INDEX idx_vote_responses_customer ON vote_responses(customer_id);
 CREATE INDEX idx_notices_pinned_published ON notices(is_pinned, is_published) WHERE is_published = true;
 CREATE INDEX idx_login_attempt_tracker_phone_hash ON login_attempt_tracker(phone_hash);
 CREATE INDEX idx_login_attempt_tracker_lock_expires_at ON login_attempt_tracker(lock_expires_at);
+CREATE INDEX idx_customer_password_audit_customer ON customer_password_audit_logs(customer_id, changed_at DESC);
 
 -- ==========================================
 -- 4. RLS (Row Level Security) 설정
@@ -198,8 +208,92 @@ CREATE POLICY "Allow All Select" ON vote_responses FOR SELECT USING (true);
 CREATE POLICY "Allow All Insert" ON vote_responses FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow All Update" ON vote_responses FOR UPDATE USING (true);
 CREATE POLICY "Allow All Delete" ON vote_responses FOR DELETE USING (true);
+ALTER TABLE customer_password_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- 고객 정보: 본인 데이터만 접근 가능
+CREATE POLICY "Customers can view own profile" ON customers
+FOR SELECT USING (id = auth.uid());
+CREATE POLICY "Customers can insert own profile" ON customers
+FOR INSERT WITH CHECK (id = auth.uid());
+CREATE POLICY "Customers can update own profile" ON customers
+FOR UPDATE USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+CREATE POLICY "Customers can delete own profile" ON customers
+FOR DELETE USING (id = auth.uid());
+
+-- 방문 이력: 본인 데이터만 접근 가능
+CREATE POLICY "Visit history owner select" ON visit_history
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Visit history owner insert" ON visit_history
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Visit history owner update" ON visit_history
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Visit history owner delete" ON visit_history
+FOR DELETE USING (customer_id = auth.uid());
+
+-- 쿠폰 이력: 본인 데이터만 접근 가능
+CREATE POLICY "Coupon history owner select" ON coupon_history
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Coupon history owner insert" ON coupon_history
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Coupon history owner update" ON coupon_history
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Coupon history owner delete" ON coupon_history
+FOR DELETE USING (customer_id = auth.uid());
+
+-- 공지사항: anon 포함 공개 읽기만 허용
+CREATE POLICY "Public can read published notices" ON notices
+FOR SELECT TO anon, authenticated USING (is_published = true);
+
+-- 버그 리포트: 본인 데이터만 접근 가능
+CREATE POLICY "Bug reports owner select" ON bug_reports
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Bug reports owner insert" ON bug_reports
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Bug reports owner update" ON bug_reports
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Bug reports owner delete" ON bug_reports
+FOR DELETE USING (customer_id = auth.uid());
+
+-- 투표: 읽기 전용 공개
+CREATE POLICY "Public can read active votes" ON votes
+FOR SELECT TO anon, authenticated USING (is_active = true);
+
+-- 투표 응답: 본인 데이터만 접근 가능
+CREATE POLICY "Vote responses owner select" ON vote_responses
+FOR SELECT USING (customer_id = auth.uid());
+CREATE POLICY "Vote responses owner insert" ON vote_responses
+FOR INSERT WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Vote responses owner update" ON vote_responses
+FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
+CREATE POLICY "Vote responses owner delete" ON vote_responses
+FOR DELETE USING (customer_id = auth.uid());
 
 CREATE POLICY "Allow Read Configs" ON app_configs FOR SELECT USING (true);
+CREATE POLICY "Allow All Select" ON customer_password_audit_logs FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON customer_password_audit_logs FOR INSERT WITH CHECK (true);
+
+-- ==========================================
+-- 4.1 비밀번호 정책 함수
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.validate_password_complexity(p_password text)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+BEGIN
+  IF p_password IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN (
+    char_length(p_password) >= 8
+    AND p_password ~ '[A-Z]'
+    AND p_password ~ '[a-z]'
+    AND p_password ~ '[0-9]'
+    AND p_password ~ '[^A-Za-z0-9]'
+  );
+END;
+$$;
 
 CREATE POLICY "No Direct Access login_attempt_tracker" ON login_attempt_tracker
 FOR ALL
@@ -331,11 +425,15 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', '이미 가입된 전화번호입니다.');
     END IF;
 
+    IF NOT public.validate_password_complexity(p_password) THEN
+        RETURN jsonb_build_object('success', false, 'message', '비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.');
+    END IF;
+
     v_nickname := COALESCE(NULLIF(p_nickname, ''), '유저_' || right(p_phone, 4));
 
     -- 데이터 삽입
-    INSERT INTO public.customers (phone_number, password, nickname)
-    VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname)
+    INSERT INTO public.customers (phone_number, password, nickname, must_change_password)
+    VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname, false)
     RETURNING id INTO v_customer_id;
 
     RETURN jsonb_build_object('success', true, 'id', v_customer_id);
@@ -454,6 +552,7 @@ BEGIN
           AND ip_device_hash IN ('__phone__', v_device_hash);
 
         RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
+        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname, 'must_change_password', v_customer.must_change_password);
     ELSE
         INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
         VALUES (
@@ -506,18 +605,204 @@ BEGIN
 END;
 $$;
 
+-- [기능] 비밀번호 일치 여부 확인
+CREATE OR REPLACE FUNCTION public.verify_password(customer_uuid uuid, input_password text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+  v_hashed_password text;
+BEGIN
+  SELECT password INTO v_hashed_password
+  FROM public.customers
+  WHERE id = customer_uuid
+    AND deleted_at IS NULL;
+
+  IF v_hashed_password IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN v_hashed_password = extensions.crypt(input_password, v_hashed_password);
+END;
+$$;
+
+-- [기능] 고객 비밀번호 변경 + 변경 이력 적재
+CREATE OR REPLACE FUNCTION public.update_customer_password(
+  customer_uuid uuid,
+  new_password text,
+  p_reason text DEFAULT 'user_change'
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+BEGIN
+  IF NOT public.validate_password_complexity(new_password) THEN
+    RAISE EXCEPTION '비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.';
+  END IF;
+
+  UPDATE public.customers
+  SET password = extensions.crypt(new_password, extensions.gen_salt('bf')),
+      must_change_password = false
+  WHERE id = customer_uuid
+    AND deleted_at IS NULL;
+
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO public.customer_password_audit_logs (customer_id, changed_by, reason, metadata)
+  VALUES (customer_uuid, 'customer', p_reason, jsonb_build_object('source', 'update_customer_password'));
+
+  RETURN true;
+END;
+$$;
+
 -- 실행 권한 부여
 GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.login_customer(text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
 
 -- ==========================================
 -- 6. 초기 데이터 삽입
 -- ==========================================
 
--- 초기 관리자 설정 (로그인 시 필요)
--- 초기 아이디: admin, 초기 비밀번호: p1o2m3n4 (보안을 위해 첫 로그인 후 변경 권장)
+-- 초기 관리자 설정 (배포 시크릿 주입)
+-- app.settings.admin_id / app.settings.admin_password 에 값을 주입한 경우에만 생성
+WITH injected_admin AS (
+  SELECT
+    NULLIF(current_setting('app.settings.admin_id', true), '') AS admin_id,
+    NULLIF(current_setting('app.settings.admin_password', true), '') AS admin_password
+)
 INSERT INTO public.app_configs (key, value, description)
-VALUES 
-  ('admin_id', 'admin', '관리자 로그인 아이디'),
-  ('admin_password', extensions.crypt('p1o2m3n4', extensions.gen_salt('bf')), '관리자 인증용 비밀번호 (해시저장)')
+SELECT 'admin_id', admin_id, '관리자 로그인 아이디(배포 시크릿 주입)'
+FROM injected_admin
+WHERE admin_id IS NOT NULL
 ON CONFLICT (key) DO NOTHING;
+
+WITH injected_admin AS (
+  SELECT NULLIF(current_setting('app.settings.admin_password', true), '') AS admin_password
+)
+INSERT INTO public.app_configs (key, value, description)
+SELECT 'admin_password', extensions.crypt(admin_password, extensions.gen_salt('bf')), '관리자 인증용 비밀번호(배포 시크릿 해시 저장)'
+FROM injected_admin
+WHERE admin_password IS NOT NULL
+ON CONFLICT (key) DO NOTHING;
+
+-- ==========================================
+-- AI Proxy 보안/제한 저장소
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.ai_proxy_rate_limits (
+  id bigserial PRIMARY KEY,
+  dimension text NOT NULL,
+  identifier text NOT NULL,
+  bucket_type text NOT NULL CHECK (bucket_type IN ('minute', 'hour')),
+  bucket_start timestamptz NOT NULL,
+  request_count integer NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (dimension, identifier, bucket_type, bucket_start)
+);
+
+CREATE TABLE IF NOT EXISTS public.ai_proxy_token_quotas (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL,
+  day_bucket date NOT NULL,
+  month_bucket text NOT NULL,
+  token_count bigint NOT NULL DEFAULT 0,
+  request_count integer NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, day_bucket, month_bucket)
+);
+
+ALTER TABLE public.ai_proxy_rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_proxy_token_quotas ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service role can manage ai_proxy_rate_limits"
+ON public.ai_proxy_rate_limits
+AS PERMISSIVE
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "service role can manage ai_proxy_token_quotas"
+ON public.ai_proxy_token_quotas
+AS PERMISSIVE
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION public.increment_ai_proxy_rate_limit(
+  p_dimension text,
+  p_identifier text,
+  p_bucket_type text,
+  p_bucket_start timestamptz,
+  p_limit integer
+)
+RETURNS TABLE(allowed boolean, current_count integer)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_count integer;
+BEGIN
+  INSERT INTO public.ai_proxy_rate_limits (dimension, identifier, bucket_type, bucket_start, request_count)
+  VALUES (p_dimension, p_identifier, p_bucket_type, p_bucket_start, 1)
+  ON CONFLICT (dimension, identifier, bucket_type, bucket_start)
+  DO UPDATE
+    SET request_count = public.ai_proxy_rate_limits.request_count + 1,
+        updated_at = now()
+  RETURNING request_count INTO v_count;
+
+  RETURN QUERY SELECT (v_count <= p_limit), v_count;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.apply_ai_proxy_token_usage(
+  p_user_id uuid,
+  p_day_bucket date,
+  p_month_bucket text,
+  p_used_tokens bigint,
+  p_daily_limit bigint,
+  p_monthly_limit bigint
+)
+RETURNS TABLE(allowed boolean, daily_total bigint, monthly_total bigint)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_daily_total bigint;
+  v_monthly_total bigint;
+BEGIN
+  INSERT INTO public.ai_proxy_token_quotas (user_id, day_bucket, month_bucket, token_count, request_count)
+  VALUES (p_user_id, p_day_bucket, p_month_bucket, p_used_tokens, 1)
+  ON CONFLICT (user_id, day_bucket, month_bucket)
+  DO UPDATE
+    SET token_count = public.ai_proxy_token_quotas.token_count + EXCLUDED.token_count,
+        request_count = public.ai_proxy_token_quotas.request_count + 1,
+        updated_at = now();
+
+  SELECT COALESCE(SUM(token_count), 0)
+    INTO v_daily_total
+  FROM public.ai_proxy_token_quotas
+  WHERE user_id = p_user_id
+    AND day_bucket = p_day_bucket;
+
+  SELECT COALESCE(SUM(token_count), 0)
+    INTO v_monthly_total
+  FROM public.ai_proxy_token_quotas
+  WHERE user_id = p_user_id
+    AND month_bucket = p_month_bucket;
+
+  RETURN QUERY SELECT (v_daily_total <= p_daily_limit AND v_monthly_total <= p_monthly_limit), v_daily_total, v_monthly_total;
+END;
+$$;

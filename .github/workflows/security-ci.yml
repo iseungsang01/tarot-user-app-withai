@@ -8,6 +8,12 @@ on:
 jobs:
   security:
     runs-on: ubuntu-latest
+    env:
+      AI_PROXY_REQUIRE_AUTH: true
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,4 +22,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: bash scripts/security-check.sh
+      - run: bash scripts/verify-ai-proxy-config.sh
       - run: npm audit --audit-level=high
