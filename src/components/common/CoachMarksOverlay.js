@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.72)';
@@ -20,11 +20,18 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose }) => {
         height: height + holePadding * 2,
     };
 
-    const tooltipTop = hole.y + hole.height + 12;
+    const screenHeight = Dimensions.get('window').height;
+    const tooltipHeight = 170;
+    const tooltipSpacing = 12;
+    const bottomSafeGap = 12;
+    const tooltipTop = (hole.y + hole.height + tooltipHeight + bottomSafeGap > screenHeight)
+        ? Math.max(bottomSafeGap, hole.y - tooltipHeight - tooltipSpacing)
+        : hole.y + hole.height + tooltipSpacing;
     const isLast = stepIndex === steps.length - 1;
 
     return (
-        <Pressable style={StyleSheet.absoluteFill} onPress={onNext}>
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onNext}>
             <View style={[styles.overlayBlock, { left: 0, right: 0, top: 0, height: hole.y }]} />
             <View style={[styles.overlayBlock, { left: 0, top: hole.y, width: hole.x, height: hole.height }]} />
             <View style={[styles.overlayBlock, { left: hole.x + hole.width, right: 0, top: hole.y, height: hole.height }]} />
@@ -45,7 +52,8 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose }) => {
                     <Text style={styles.closeText}>건너뛰기</Text>
                 </Pressable>
             </View>
-        </Pressable>
+            </Pressable>
+        </View>
     );
 };
 
@@ -60,14 +68,18 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: DrawerTheme.goldBright,
         backgroundColor: 'transparent',
+        zIndex: 5,
+        elevation: 5,
     },
     tooltip: {
         position: 'absolute',
-        backgroundColor: 'rgba(11, 16, 30, 0.95)',
-        borderColor: 'rgba(212,175,55,0.45)',
+        backgroundColor: 'rgba(11, 16, 30, 0.98)',
+        borderColor: 'rgba(212,175,55,0.55)',
         borderWidth: 1,
         borderRadius: 12,
         padding: 14,
+        zIndex: 10,
+        elevation: 10,
     },
     title: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 6 },
     description: { color: DrawerTheme.woodLight, lineHeight: 18 },
