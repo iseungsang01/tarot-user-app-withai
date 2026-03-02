@@ -13,7 +13,7 @@ const INITIAL_REPORT_DATA = {
   screenshot: null,
 };
 
-const PICKER_OPTIONS = { allowsEditing: true, quality: 0.7 };
+const PICKER_OPTIONS = { allowsEditing: false, quality: 0.7 };
 const COMPRESS_OPTIONS = { maxWidth: 1000, quality: 0.6 };
 
 export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing, onOpenDetail }) => {

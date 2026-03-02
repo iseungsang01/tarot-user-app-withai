@@ -92,8 +92,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()), Alert);
 
         const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
-            allowsEditing: true,
-            aspect: [3, 4],
+            allowsEditing: false,
             quality: 0.7
         });
 
