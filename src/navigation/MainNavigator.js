@@ -8,7 +8,6 @@ import { useNotifications } from '../hooks/useNotifications';
 import { CoachMarksOverlay } from '../components';
 import { useUI } from '../context/UIContext';
 
-// Screens
 import {
   HistoryScreen,
   SettingsScreen,
@@ -28,15 +27,25 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const COACH_STEPS = [
-  { key: 'tab-home', title: '홈 탭', description: '홈에서 스탬프, 방문 횟수, 보유 쿠폰을 한 번에 확인할 수 있어요.' },
-  { key: 'tab-home', title: '스탬프 & 보유 쿠폰', description: '상단 요약에서 스탬프/보유 쿠폰을 누르면 상세 화면으로 이동해요.' },
-  { key: 'tab-home', title: 'ALL · ON · OFF', description: '서랍 표시를 전체/ON/OFF로 전환해서 원하는 기록만 볼 수 있어요.' },
-  { key: 'tab-home', title: '전체 · 연도별 · 월별', description: '필터에서 기간을 전체/연도별/월별로 바꿔 기록을 빠르게 찾아보세요.' },
-  { key: 'tab-home', title: 'AI 종합 분석', description: '홈 상단 AI 종합 분석 카드에서 최근 상담 흐름을 요약해줘요.' },
-  { key: 'tab-notice', title: '공지 탭', description: '새 공지/알림은 공지 탭에서 빠르게 확인하세요.' },
-  { key: 'tab-settings', title: '설정 탭', description: '설정 탭에서 계정, 쿠폰함, 스탬프 보드 등 앱 설정을 관리해요.' },
-  { key: 'tab-home', title: '하단 네비게이터', description: '하단 버튼은 홈 · 운세 · 공지 · 투표 · 설정 순서로 이동합니다.' },
+  { key: 'tab-home', title: '1) 홈 탭으로 이동', description: '네모로 강조된 홈 탭을 눌러 실제 홈 화면으로 이동해주세요.', requireTargetTap: true },
+  { key: 'home-stamp', title: '2) 스탬프 확인', description: '홈 상단 요약의 스탬프 영역을 눌러 스탬프 화면으로 들어가 보세요.', requireTargetTap: true },
+  { key: 'home-coupon', title: '3) 쿠폰 확인', description: '다시 홈으로 돌아온 뒤, 보유 쿠폰 영역을 눌러 쿠폰함으로 이동해 보세요.', requireTargetTap: true },
+  { key: 'home-archive-mode', title: '4) ALL · ON · OFF 필터', description: '홈의 ALL/ON/OFF 버튼을 직접 눌러 기록 유형을 전환해 보세요.', requireTargetTap: true },
+  { key: 'home-time-filter', title: '5) 전체 · 연도별 · 월별', description: '기간 필터를 눌러 원하는 시점의 기록만 빠르게 찾아보세요.', requireTargetTap: true },
+  { key: 'tab-notice', title: '6) 공지 탭 탐색', description: '하단 공지 탭을 눌러 최신 공지/알림 목록으로 이동하세요.', requireTargetTap: true },
+  { key: 'tab-settings', title: '7) 설정 탭 탐색', description: '하단 설정 탭을 눌러 계정/앱 설정 메뉴를 확인하세요.', requireTargetTap: true },
+  { key: 'tab-home', title: '8) 가이드 종료', description: '다시 홈 탭으로 돌아오면 가이드가 완료됩니다.', requireTargetTap: true },
 ];
+
+const STEP_ROUTE_MAP = {
+  'tab-home': 'Home',
+  'home-stamp': 'Home',
+  'home-coupon': 'Home',
+  'home-archive-mode': 'Home',
+  'home-time-filter': 'Home',
+  'tab-notice': 'Notice',
+  'tab-settings': 'Settings',
+};
 
 const TabIcon = ({ emoji, hasNotification }) => (
   <View style={styles.iconContainer}>
@@ -49,23 +58,17 @@ const CoachableTabButton = ({ onCaptureFrame, ...props }) => {
   const ref = useRef(null);
 
   const captureFrame = () => {
-    if (!ref.current || !onCaptureFrame) {
-      return;
-    }
+    if (!ref.current || !onCaptureFrame) return;
 
     ref.current.measureInWindow((x, y, width, height) => {
-      if (width > 0 && height > 0) {
-        onCaptureFrame({ x, y, width, height });
-      }
+      if (width > 0 && height > 0) onCaptureFrame({ x, y, width, height });
     });
   };
 
   return <TouchableOpacity ref={ref} {...props} onLayout={captureFrame} onPressIn={captureFrame} />;
 };
 
-const tabIcon = (emoji, hasNotification = false) => () => (
-  <TabIcon emoji={emoji} hasNotification={hasNotification} />
-);
+const tabIcon = (emoji, hasNotification = false) => () => <TabIcon emoji={emoji} hasNotification={hasNotification} />;
 
 const TabNavigator = () => {
   const { hasAnyUnread } = useNotifications();
@@ -73,29 +76,41 @@ const TabNavigator = () => {
   const { showCoachMarks, completeCoachMarks } = useUI();
   const [stepIndex, setStepIndex] = useState(0);
   const [frames, setFrames] = useState({});
+  const navRef = useRef(null);
 
-  const registerFrame = (key, frame) => {
-    setFrames((prev) => ({ ...prev, [key]: frame }));
-  };
+  const registerFrame = (key, frame) => setFrames((prev) => ({ ...prev, [key]: frame }));
 
-  const stepsWithFrame = useMemo(() => (
-    COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] }))
-  ), [frames]);
-
+  const stepsWithFrame = useMemo(() => COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] })), [frames]);
   const isCoachVisible = showCoachMarks && !!stepsWithFrame[stepIndex]?.frame;
 
-  const nextStep = () => {
+  const finishCoach = () => {
+    completeCoachMarks();
+    setStepIndex(0);
+  };
+
+  const onCoachTargetPress = () => {
+    const currentStep = stepsWithFrame[stepIndex];
+    if (!currentStep) return;
+
+    const routeName = STEP_ROUTE_MAP[currentStep.key];
+    if (routeName) navRef.current?.navigate(routeName);
+
     if (stepIndex >= stepsWithFrame.length - 1) {
-      completeCoachMarks();
-      setStepIndex(0);
+      finishCoach();
       return;
     }
-    setStepIndex((prev) => prev + 1);
+
+    const nextIndex = stepIndex + 1;
+    const nextStep = stepsWithFrame[nextIndex];
+    const nextRouteName = STEP_ROUTE_MAP[nextStep.key];
+    if (nextRouteName) navRef.current?.navigate(nextRouteName);
+    setStepIndex(nextIndex);
   };
 
   return (
     <View style={styles.tabRoot}>
       <Tab.Navigator
+        ref={navRef}
         screenOptions={{
           headerShown: false,
           unmountOnBlur: true,
@@ -115,26 +130,22 @@ const TabNavigator = () => {
             marginBottom: insets.bottom > 0 ? 0 : 5,
           },
         }}
-        sceneContainerStyle={{
-          backgroundColor: Colors.purpleDark,
-        }}
+        sceneContainerStyle={{ backgroundColor: Colors.purpleDark }}
       >
         <Tab.Screen
           name="Home"
-          component={HistoryScreen}
           options={{
             tabBarLabel: '홈',
             tabBarIcon: tabIcon('🏠'),
             tabBarButton: (props) => <CoachableTabButton {...props} onCaptureFrame={(frame) => registerFrame('tab-home', frame)} />,
           }}
-        />
+        >
+          {(props) => <HistoryScreen {...props} onCaptureCoachFrame={registerFrame} />}
+        </Tab.Screen>
         <Tab.Screen
           name="DailyFortune"
           component={DailyFortuneScreen}
-          options={{
-            tabBarLabel: '운세',
-            tabBarIcon: tabIcon('🍀'),
-          }}
+          options={{ tabBarLabel: '운세', tabBarIcon: tabIcon('🍀') }}
         />
         <Tab.Screen
           name="Notice"
@@ -145,14 +156,7 @@ const TabNavigator = () => {
             tabBarButton: (props) => <CoachableTabButton {...props} onCaptureFrame={(frame) => registerFrame('tab-notice', frame)} />,
           }}
         />
-        <Tab.Screen
-          name="Vote"
-          component={VoteScreen}
-          options={{
-            tabBarLabel: '투표',
-            tabBarIcon: tabIcon('🗳️'),
-          }}
-        />
+        <Tab.Screen name="Vote" component={VoteScreen} options={{ tabBarLabel: '투표', tabBarIcon: tabIcon('🗳️') }} />
         <Tab.Screen
           name="Settings"
           component={SettingsScreen}
@@ -168,58 +172,35 @@ const TabNavigator = () => {
         <CoachMarksOverlay
           steps={stepsWithFrame}
           stepIndex={stepIndex}
-          onNext={nextStep}
-          onClose={() => {
-            completeCoachMarks();
-            setStepIndex(0);
-          }}
+          onNext={onCoachTargetPress}
+          onTargetPress={onCoachTargetPress}
+          onClose={finishCoach}
         />
       )}
     </View>
   );
 };
 
-const MainNavigator = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="MainTabs" component={TabNavigator} />
-      <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
-      <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Coupon" component={CouponScreen} options={{ presentation: 'card' }} />
-      <Stack.Screen name="Stamp" component={StampScreen} options={{ presentation: 'card' }} />
-      <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
-      <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
-      <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
-    </Stack.Navigator>
-  );
-};
+const MainNavigator = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="MainTabs" component={TabNavigator} />
+    <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="Coupon" component={CouponScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="Stamp" component={StampScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
+    <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
+  </Stack.Navigator>
+);
 
 const styles = StyleSheet.create({
   tabRoot: { flex: 1 },
-  iconContainer: {
-    position: 'relative',
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconEmoji: {
-    fontSize: 24,
-  },
+  iconContainer: { position: 'relative', width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
+  iconEmoji: { fontSize: 24 },
   redDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ff4444',
-    borderWidth: 1,
-    borderColor: Colors.purpleMid,
+    position: 'absolute', top: 0, right: 0, width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#ff4444', borderWidth: 1, borderColor: Colors.purpleMid,
   },
 });
 

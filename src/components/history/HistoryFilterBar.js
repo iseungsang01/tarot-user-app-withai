@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
@@ -15,8 +15,21 @@ export const HistoryFilterBar = ({
     selectedIds,
     setSelectionMode,
     setSelectedIds,
-    onMultiDelete
+    onMultiDelete,
+    onCaptureArchiveFrame,
+    onCaptureTimeFilterFrame
 }) => {
+    const archiveRef = useRef(null);
+    const timeFilterRef = useRef(null);
+
+    const captureRefFrame = (ref, capture) => {
+        if (!ref?.current || !capture) return;
+
+        ref.current.measureInWindow((x, y, width, height) => {
+            if (width > 0 && height > 0) capture({ x, y, width, height });
+        });
+    };
+
     const getYearOptions = () => {
         const currentYear = new Date().getFullYear();
         return Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -25,8 +38,11 @@ export const HistoryFilterBar = ({
     return (
         <View style={{ width: '100%', alignItems: 'center' }}>
             <View style={styles.filterSection}>
-                {/* Archive Mode Filter - Changed to ALL, ON, OFF order */}
-                <View style={[styles.archiveRow, { borderBottomWidth: 1, borderBottomColor: 'rgba(212,175,55,0.1)', paddingBottom: 10, marginBottom: 10 }]}>
+                <View
+                    ref={archiveRef}
+                    style={[styles.archiveRow, styles.archiveRowBox]}
+                    onLayout={() => captureRefFrame(archiveRef, onCaptureArchiveFrame)}
+                >
                     {[
                         { id: 'ALL', label: 'ALL', color: DrawerTheme.goldBrass },
                         { id: 'ON', label: 'ON', color: DrawerTheme.woodMid },
@@ -34,26 +50,33 @@ export const HistoryFilterBar = ({
                     ].map((tab) => (
                         <TouchableOpacity
                             key={tab.id}
-                            onPress={() => onSetArchiveMode(tab.id)}
+                            onPress={() => {
+                                onSetArchiveMode(tab.id);
+                                captureRefFrame(archiveRef, onCaptureArchiveFrame);
+                            }}
                             style={[
                                 styles.archiveButton,
                                 archiveMode === tab.id && { backgroundColor: tab.color, borderColor: DrawerTheme.goldBright }
                             ]}
                         >
-                            <Text style={[styles.archiveLabel, archiveMode === tab.id && styles.archiveLabelActive]}>
-                                {tab.id === 'ALL' ? 'ALL' : tab.id === 'ON' ? 'ON' : 'OFF'}
-                            </Text>
+                            <Text style={[styles.archiveLabel, archiveMode === tab.id && styles.archiveLabelActive]}>{tab.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
-                {/* Time Filter Row (전체, 연도별, 월별) */}
-                <View style={styles.filterRow}>
+                <View
+                    ref={timeFilterRef}
+                    style={styles.filterRow}
+                    onLayout={() => captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame)}
+                >
                     {['ALL', 'YEAR', 'MONTH'].map((type) => (
                         <TouchableOpacity
                             key={type}
                             style={[styles.filterButton, timeFilter === type && styles.filterButtonActive]}
-                            onPress={() => setTimeFilter(type)}
+                            onPress={() => {
+                                setTimeFilter(type);
+                                captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame);
+                            }}
                         >
                             <Text style={[styles.filterText, timeFilter === type && styles.filterTextActive]}>
                                 {type === 'ALL' ? '전체' : type === 'YEAR' ? '연도별' : '월별'}
@@ -91,7 +114,6 @@ export const HistoryFilterBar = ({
                 )}
             </View>
 
-            {/* Selection Control or Hint */}
             {selectionMode ? (
                 <View style={styles.selectionControl}>
                     <View style={styles.selectionActions}>
@@ -132,6 +154,7 @@ export const HistoryFilterBar = ({
 const styles = StyleSheet.create({
     filterSection: { width: '100%', marginTop: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)' },
     archiveRow: { flexDirection: 'row', gap: 6 },
+    archiveRowBox: { borderBottomWidth: 1, borderBottomColor: 'rgba(212,175,55,0.1)', paddingBottom: 10, marginBottom: 10 },
     archiveButton: { flex: 1, paddingVertical: 5, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center' },
     archiveLabel: { fontSize: 10, color: '#AAA', fontWeight: 'bold' },
     archiveLabelActive: { color: '#1A0F0A' },
