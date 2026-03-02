@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -39,6 +39,7 @@ const DailyFortuneScreen = () => {
     const [fadeAnim] = useState(new Animated.Value(0));
     const [cardAnims] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
     const [flipAnims] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
+    const scrollViewRef = useRef(null);
 
     const getLocalDateString = (date = new Date()) => {
         const year = date.getFullYear();
@@ -64,6 +65,16 @@ const DailyFortuneScreen = () => {
             }
         });
     }, []);
+
+    useEffect(() => {
+        if (!isPickingCard && cardRevealed && selectedFortune) {
+            const scrollTimer = setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 200);
+
+            return () => clearTimeout(scrollTimer);
+        }
+    }, [isPickingCard, cardRevealed, selectedFortune]);
 
     const loadLocalData = async () => {
         setLoading(true);
@@ -282,6 +293,7 @@ const DailyFortuneScreen = () => {
     return (
         <GradientBackground>
             <ScrollView
+                ref={scrollViewRef}
                 style={styles.container}
                 contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }}
             >
