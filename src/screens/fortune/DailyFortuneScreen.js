@@ -39,10 +39,19 @@ const DailyFortuneScreen = () => {
     const [isPickingCard, setIsPickingCard] = useState(false);
     const [selectedCardIdx, setSelectedCardIdx] = useState(null);
     const [pickedCardData, setPickedCardData] = useState(null);
+    const [pendingScrollAfterRepick, setPendingScrollAfterRepick] = useState(false);
     const [fadeAnim] = useState(new Animated.Value(0));
     const [cardAnims] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
     const [flipAnims] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
     const scrollViewRef = useRef(null);
+
+    const scrollToFortuneResult = React.useCallback(() => {
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 150);
+        });
+    }, []);
 
     const getLocalDateString = (date = new Date()) => {
         const year = date.getFullYear();
@@ -79,6 +88,7 @@ const DailyFortuneScreen = () => {
         setLoading(true);
         try {
             const shouldScrollAfterRepick = await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
+            setPendingScrollAfterRepick(!!shouldScrollAfterRepick);
 
             // 1. 로컬 운세 데이터 로드
             const fortunes = await storage.getAllFortunes();
@@ -97,12 +107,6 @@ const DailyFortuneScreen = () => {
                 setSelectedDate(todayStr);
                 setCardRevealed(true);
 
-                if (shouldScrollAfterRepick) {
-                    setTimeout(() => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 200);
-                    await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
-                }
             } else {
                 setSelectedDate(todayStr);
                 setCardRevealed(false);
@@ -116,14 +120,16 @@ const DailyFortuneScreen = () => {
 
     const checkAndScrollAfterRepick = async () => {
         const shouldScrollAfterRepick = await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
-        if (!shouldScrollAfterRepick) return;
-
-        setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 200);
-
-        await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
+        setPendingScrollAfterRepick(!!shouldScrollAfterRepick);
     };
+
+    useEffect(() => {
+        if (!pendingScrollAfterRepick || !selectedFortune || !cardRevealed) return;
+
+        scrollToFortuneResult();
+        setPendingScrollAfterRepick(false);
+        storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
+    }, [pendingScrollAfterRepick, selectedFortune, cardRevealed, scrollToFortuneResult]);
 
     const isErrorFortune = (fortune) => {
         if (!fortune || !fortune.fortune) return false;
