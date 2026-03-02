@@ -1,11 +1,17 @@
 import { supabase } from './supabase';
-import { storage, STORAGE_KEYS } from '../utils/storage';
+import { storage } from '../utils/storage';
 
 /**
  * 공지사항 및 버그 리포트 서비스
  * 공지사항 읽음 처리는 로컬 스토리지에서만 관리
  */
 export const noticeService = {
+  async getPublishedNoticeIds() {
+    const { data, error } = await supabase.from('notices').select('id').eq('is_published', true);
+    if (error) throw error;
+    return (data || []).map((notice) => notice.id);
+  },
+
   /**
    * 공지사항 목록 조회
    * @returns {object} { data, error }
@@ -35,19 +41,8 @@ export const noticeService = {
    */
   async markAllNoticesAsRead() {
     try {
-      // 1. 모든 공지사항 ID 조회
-      const { data: allNotices, error: noticesError } = await supabase
-        .from('notices')
-        .select('id')
-        .eq('is_published', true);
-
-      if (noticesError) throw noticesError;
-
-      // 2. 로컬 스토리지에 읽음 처리 (현재 존재하는 모든 공지사항 ID로 덮어쓰기 하여 정리)
-      const noticeIds = (allNotices || []).map((n) => n.id);
-      if (noticeIds.length > 0) await storage.markNoticesAsRead(noticeIds);
-      else await storage.save(STORAGE_KEYS.READ_NOTICES, []);
-
+      const noticeIds = await this.getPublishedNoticeIds();
+      await storage.markNoticesAsRead(noticeIds);
       return { error: null };
     } catch (error) {
       console.error('Mark notices as read error:', error);
@@ -76,13 +71,8 @@ export const noticeService = {
    */
   async getUnreadNoticeCount() {
     try {
-      // 1. 전체 공지사항 ID 조회
-      const { data, error } = await supabase.from('notices').select('id').eq('is_published', true);
-      if (error) throw error;
-
-      // 2. 로컬 스토리지에서 읽지 않은 개수 계산
-      const unreadCount = await storage.getUnreadNoticeCount((data || []).map((n) => n.id));
-
+      const noticeIds = await this.getPublishedNoticeIds();
+      const unreadCount = await storage.getUnreadNoticeCount(noticeIds);
       return { count: unreadCount, error: null };
     } catch (error) {
       console.error('Get unread notice count error:', error);
@@ -96,20 +86,10 @@ export const noticeService = {
    */
   async hasUnreadNotices() {
     try {
-      // 1. 전체 공지사항 ID 조회
-      const { data, error } = await supabase.from('notices').select('id').eq('is_published', true);
-      if (error) throw error;
-
-      const allNoticeIds = (data || []).map((n) => n.id);
-
-      // 2. 로컬 스토리지 동기화 (삭제된 공지사항 ID 제거 - 용량 최소화)
-      await storage.syncReadNotices(allNoticeIds);
-
-      // 3. 로컬 스토리지에서 읽은 공지사항 조회
+      const noticeIds = await this.getPublishedNoticeIds();
+      await storage.syncReadNotices(noticeIds);
       const readNotices = await storage.getReadNotices();
-
-      // 4. 하나라도 안 읽은 공지사항이 있는지 확인
-      return { hasUnread: allNoticeIds.some((id) => !readNotices.includes(id)), error: null };
+      return { hasUnread: noticeIds.some((id) => !readNotices.includes(id)), error: null };
     } catch (error) {
       console.error('Check unread notices error:', error);
       return { hasUnread: false, error };
