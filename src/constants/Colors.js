@@ -9,6 +9,37 @@ export const Colors = {
   redSoft: '#ff6b6b',
   errorRed: '#f44336',
   green: '#4caf50',
+  white: '#FFFFFF',
+  whiteSoft: '#888888',
+  whiteMute40: 'rgba(255,255,255,0.4)',
+  whiteMute50: 'rgba(255,255,255,0.5)',
+  whiteMute70: 'rgba(255,255,255,0.7)',
+  whiteMute80: 'rgba(255,255,255,0.8)',
+  whiteMute85: 'rgba(255,255,255,0.85)',
+  whiteOverlay04: 'rgba(255,255,255,0.04)',
+  whiteOverlay05: 'rgba(255,255,255,0.05)',
+  whiteOverlay07: 'rgba(255,255,255,0.07)',
+  whiteOverlay08: 'rgba(255,255,255,0.08)',
+  whiteOverlay10: 'rgba(255,255,255,0.1)',
+  whiteOverlay12: 'rgba(255,255,255,0.12)',
+  whiteOverlay20: 'rgba(255,255,255,0.2)',
+  goldOverlay18: 'rgba(212,175,55,0.18)',
+  errorSoft: '#ff9e9e',
+  blackOverlay30: 'rgba(0,0,0,0.3)',
+  blackOverlay40: 'rgba(0,0,0,0.4)',
+  redOverlay60: 'rgba(255,0,0,0.6)',
+  greenOverlaySoft: 'rgba(76, 175, 80, 0.06)',
+  greenOverlayBorder: 'rgba(76, 175, 80, 0.2)',
+  amberOverlaySoft: 'rgba(255,193,7,0.06)',
+  amberOverlayBorder: 'rgba(255,193,7,0.2)',
+};
+
+export const TypographyScale = {
+  caption: 11,
+  bodySmall: 12,
+  bodyCompact: 13,
+  body: 14,
+  titleSmall: 16,
 };
 
 export const Gradients = {

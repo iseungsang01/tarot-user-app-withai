@@ -16,6 +16,7 @@ import { visitService } from '../../services/visitService';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { Colors, TypographyScale } from '../../constants/Colors';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../../utils/errorHandler';
 
 const LOCAL_STORAGE_KEY = 'offline_visit_history';
@@ -205,7 +206,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             value={s.title}
                             onChangeText={v => up({ title: v })}
                             placeholder="서랍 제목을 입력하세요"
-                            placeholderTextColor="#888"
+                            placeholderTextColor={Colors.whiteSoft}
                             maxLength={40}
                         />
 
@@ -239,7 +240,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             value={s.review}
                             onChangeText={v => up({ review: v })}
                             placeholder={isOffMode ? "비밀스러운 메모를 남겨보세요..." : "상담 내용을 기록해두면 나중에 확인하기 좋아요."}
-                            placeholderTextColor="#888"
+                            placeholderTextColor={Colors.whiteSoft}
                         />
 
                         <View style={styles.voiceRow}>
@@ -284,29 +285,29 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
 const styles = StyleSheet.create({
     header: { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { fontSize: 16, fontWeight: 'bold' },
-    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 320, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 12, overflow: 'hidden', alignSelf: 'center' },
+    title: { fontSize: TypographyScale.titleSmall, fontWeight: 'bold' },
+    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 320, backgroundColor: Colors.blackOverlay40, borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 12, overflow: 'hidden', alignSelf: 'center' },
     fullImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: Colors.redOverlay60, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
     placeholderContainer: { alignItems: 'center' },
     placeholderText: { fontSize: 34, marginBottom: 8 },
-    placeholderSubText: { color: '#888', fontSize: 13 },
+    placeholderSubText: { color: Colors.whiteSoft, fontSize: TypographyScale.bodyCompact },
     btnRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-    titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFF', fontSize: 14, borderWidth: 1, marginBottom: 12 },
-    input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, color: '#FFF', minHeight: 150, textAlignVertical: 'top', fontSize: 14, borderWidth: 1 },
+    titleInput: { backgroundColor: Colors.whiteOverlay07, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: Colors.white, fontSize: TypographyScale.body, borderWidth: 1, marginBottom: 12 },
+    input: { backgroundColor: Colors.whiteOverlay07, borderRadius: 12, padding: 14, color: Colors.white, minHeight: 150, textAlignVertical: 'top', fontSize: TypographyScale.body, borderWidth: 1 },
     voiceRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
-    whiteText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+    whiteText: { color: Colors.white, fontWeight: 'bold', fontSize: TypographyScale.bodyCompact },
     saveBtn: { marginTop: 20, height: 50 },
-    polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)' },
+    polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: Colors.whiteOverlay04 },
     polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    polishTitle: { fontWeight: '700', fontSize: 13 },
+    polishTitle: { fontWeight: '700', fontSize: TypographyScale.bodyCompact },
     polishBtn: { minWidth: 108, height: 36 },
-    polishError: { color: '#ff9e9e', marginTop: 8, fontSize: 12 },
+    polishError: { color: Colors.errorSoft, marginTop: 8, fontSize: TypographyScale.bodySmall },
     compareWrap: { marginTop: 8, flexDirection: 'row', gap: 8 },
-    versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 7, alignItems: 'center' },
-    versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
-    versionChipText: { color: '#FFF', fontSize: 11, fontWeight: '600' },
-    buttonTextCompact: { fontSize: 13 }
+    versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: Colors.whiteOverlay20, paddingVertical: 7, alignItems: 'center' },
+    versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: Colors.goldOverlay18 },
+    versionChipText: { color: Colors.white, fontSize: TypographyScale.caption, fontWeight: '600' },
+    buttonTextCompact: { fontSize: TypographyScale.bodyCompact }
 });
 
 export default VisitDetailScreen;
