@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { VoteCard } from './VoteCard'; // Assuming VoteCard is in src/components/vote/
+import { VoteCard } from './VoteCard';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { CommonStyles } from '../../styles/CommonStyles';
 
