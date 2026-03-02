@@ -20,17 +20,17 @@ export const HistoryHeader = ({
                 {/* Integrated Stats UI */}
                 <View style={styles.statsContainer}>
                     <TouchableOpacity style={styles.statBox} onPress={onNavigateStamp}>
-                        <Text style={[styles.statLabel, { color: DrawerTheme.woodLight }]}>스탬프</Text>
+                        <Text style={styles.statLabel}>스탬프</Text>
                         <Text style={[styles.statValue, { color: DrawerTheme.goldBright }]}>{stats.current_stamps}/10</Text>
                     </TouchableOpacity>
-                    <View style={[styles.divider, { backgroundColor: DrawerTheme.woodFrame }]} />
+                    <View style={styles.divider} />
                     <View style={styles.statBox}>
-                        <Text style={[styles.statLabel, { color: DrawerTheme.woodLight }]}>방문 횟수</Text>
+                        <Text style={styles.statLabel}>방문 횟수</Text>
                         <Text style={styles.statValue}>{stats.visit_count}</Text>
                     </View>
-                    <View style={[styles.divider, { backgroundColor: DrawerTheme.woodFrame }]} />
+                    <View style={styles.divider} />
                     <TouchableOpacity style={styles.statBox} onPress={onNavigateCoupon}>
-                        <Text style={[styles.statLabel, { color: DrawerTheme.woodLight }]}>보유 쿠폰</Text>
+                        <Text style={styles.statLabel}>보유 쿠폰</Text>
                         <Text style={[styles.statValue, { color: DrawerTheme.goldBright }]}>{couponCount}</Text>
                     </TouchableOpacity>
                 </View>
@@ -54,8 +54,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 5
     },
-    statBox: { alignItems: 'center', flex: 1 },
-    statLabel: { fontSize: 9, marginBottom: 4, fontWeight: 'bold', opacity: 0.8 },
+    statBox: {
+        alignItems: 'center',
+        flex: 1,
+        backgroundColor: DrawerTheme.navyDark,
+        borderWidth: 1.5,
+        borderColor: DrawerTheme.woodFrame,
+        borderRadius: 8,
+        marginHorizontal: 4,
+        paddingVertical: 6,
+    },
+    statLabel: { fontSize: 9, marginBottom: 2, fontWeight: 'bold', color: DrawerTheme.woodLight, opacity: 0.95 },
     statValue: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
-    divider: { width: 1.5, height: 25, opacity: 0.5 },
+    divider: { width: 0 },
 });

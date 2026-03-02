@@ -70,7 +70,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10
   },
   bottomMolding: {
-    width: '100%',
+    width: '108%',
+    marginLeft: '-4%',
     height: 12,
     alignSelf: 'center',
     borderBottomLeftRadius: 6,
