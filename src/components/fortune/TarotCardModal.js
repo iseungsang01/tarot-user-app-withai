@@ -17,9 +17,6 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
     visit.visit_date.split('T')[0].split('-').map(Number).join('.') : '';
   const imageUri = toDisplayImageUri(visit.card_image);
 
-  /**
-   * ✅ 삭제 처리 수정: visitId만 전달
-   */
   const handleDeletePress = () => {
     Alert.alert(
       "기록 삭제",
@@ -34,10 +31,9 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
           onPress: () => {
             console.log('🗑️ [TarotCardModal] 삭제 버튼 클릭:', visit.id);
             onClose();
-            // 모달 닫힘 애니메이션 후 삭제 로직 실행 (UI 꼬임 방지)
             setTimeout(() => {
               console.log('🗑️ [TarotCardModal] onDelete 호출:', visit.id);
-              onDelete(visit.id); // ✅ visitId만 전달
+              onDelete(visit.id);
             }, 300);
           }
         }
