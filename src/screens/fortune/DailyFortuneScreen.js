@@ -11,6 +11,7 @@ import {
     Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../../components';
 import { Colors } from '../../constants/Colors';
@@ -59,6 +60,12 @@ const DailyFortuneScreen = () => {
         loadLocalData();
     }, [customer]);
 
+    useFocusEffect(
+        React.useCallback(() => {
+            checkAndScrollAfterRepick();
+        }, [])
+    );
+
     useEffect(() => {
         // 카드 선택 화면에서 즉시 앞면이 보이도록 이미지 캐시를 미리 준비
         MAJOR_ARCANA.forEach((card) => {
@@ -72,9 +79,6 @@ const DailyFortuneScreen = () => {
         setLoading(true);
         try {
             const shouldScrollAfterRepick = await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
-            if (shouldScrollAfterRepick) {
-                await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
-            }
 
             // 1. 로컬 운세 데이터 로드
             const fortunes = await storage.getAllFortunes();
@@ -97,6 +101,7 @@ const DailyFortuneScreen = () => {
                     setTimeout(() => {
                         scrollViewRef.current?.scrollToEnd({ animated: true });
                     }, 200);
+                    await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
                 }
             } else {
                 setSelectedDate(todayStr);
@@ -107,6 +112,17 @@ const DailyFortuneScreen = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const checkAndScrollAfterRepick = async () => {
+        const shouldScrollAfterRepick = await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
+        if (!shouldScrollAfterRepick) return;
+
+        setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 200);
+
+        await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
     };
 
     const isErrorFortune = (fortune) => {
