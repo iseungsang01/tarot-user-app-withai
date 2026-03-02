@@ -13,6 +13,7 @@ import VisitDetailScreen from '../screens/VisitDetailScreen';
 import DailyFortuneScreen from '../screens/DailyFortuneScreen';
 import AIChatHistoryScreen from '../screens/AIChatHistoryScreen';
 import CouponScreen from '../screens/CouponScreen';
+import StampScreen from '../screens/StampScreen';
 import NoticeScreen from '../screens/NoticeScreen';
 import NoticeDetailScreen from '../screens/NoticeDetailScreen';
 import VoteScreen from '../screens/VoteScreen';
@@ -117,6 +118,7 @@ const MainNavigator = () => {
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Coupon" component={CouponScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="Stamp" component={StampScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
