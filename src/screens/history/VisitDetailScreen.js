@@ -228,9 +228,25 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             )}
                         </View>
 
-                        <View style={styles.btnRow}>
-                            <CustomButton title="📸 촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
-                            <CustomButton title="🖼️ 앨범에서 선택" onPress={() => onPick('lib')} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
+                        <View style={[styles.buttonRow, styles.btnRow]}>
+                            <CustomButton
+                                title="📸 촬영하기"
+                                onPress={() => onPick('cam')}
+                                style={styles.rowButton}
+                                textStyle={styles.buttonTextCompact}
+                                numberOfLines={1}
+                                allowFontScaling={false}
+                                ellipsizeMode="tail"
+                            />
+                            <CustomButton
+                                title="🖼️ 앨범에서 선택"
+                                onPress={() => onPick('lib')}
+                                style={styles.rowButton}
+                                textStyle={styles.buttonTextCompact}
+                                numberOfLines={1}
+                                allowFontScaling={false}
+                                ellipsizeMode="tail"
+                            />
                         </View>
 
                         <TextInput
@@ -242,9 +258,26 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             placeholderTextColor="#888"
                         />
 
-                        <View style={styles.voiceRow}>
-                            <CustomButton title="🎙️ 녹음 메모 추가" onPress={insertVoiceMemoMarker} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
-                            <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
+                        <View style={[styles.buttonRow, styles.voiceRow]}>
+                            <CustomButton
+                                title="🎙️ 녹음 메모 추가"
+                                onPress={insertVoiceMemoMarker}
+                                style={styles.rowButton}
+                                textStyle={styles.buttonTextCompact}
+                                numberOfLines={1}
+                                allowFontScaling={false}
+                                ellipsizeMode="tail"
+                            />
+                            <CustomButton
+                                title="📎 녹음 업로드"
+                                onPress={insertVoiceMemoMarker}
+                                variant="secondary"
+                                style={styles.rowButton}
+                                textStyle={styles.buttonTextCompact}
+                                numberOfLines={1}
+                                allowFontScaling={false}
+                                ellipsizeMode="tail"
+                            />
                         </View>
 
 
@@ -291,10 +324,12 @@ const styles = StyleSheet.create({
     placeholderContainer: { alignItems: 'center' },
     placeholderText: { fontSize: 34, marginBottom: 8 },
     placeholderSubText: { color: '#888', fontSize: 13 },
-    btnRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+    buttonRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch', minHeight: 50 },
+    btnRow: { marginBottom: 14 },
+    rowButton: { flex: 1, minHeight: 50, alignSelf: 'stretch' },
     titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFF', fontSize: 14, borderWidth: 1, marginBottom: 12 },
     input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, color: '#FFF', minHeight: 150, textAlignVertical: 'top', fontSize: 14, borderWidth: 1 },
-    voiceRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    voiceRow: { marginTop: 10 },
     whiteText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
     saveBtn: { marginTop: 20, height: 50 },
     polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)' },

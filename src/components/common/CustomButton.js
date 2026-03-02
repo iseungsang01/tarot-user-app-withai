@@ -21,7 +21,10 @@ export const CustomButton = ({
   loading,
   variant = 'primary',
   style,
-  textStyle
+  textStyle,
+  numberOfLines,
+  allowFontScaling,
+  ellipsizeMode,
 }) => {
   const getColors = () => {
     switch (variant) {
@@ -69,7 +72,14 @@ export const CustomButton = ({
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={[styles.text, textStyle]}>{title}</Text>
+          <Text
+            style={[styles.text, textStyle]}
+            numberOfLines={numberOfLines}
+            allowFontScaling={allowFontScaling}
+            ellipsizeMode={ellipsizeMode}
+          >
+            {title}
+          </Text>
         )}
       </LinearGradient>
     </TouchableOpacity>
