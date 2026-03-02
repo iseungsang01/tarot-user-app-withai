@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Gradients } from '../constants/Colors';
+import { Gradients } from '../../constants/Colors';
 
 /**
  * 그라데이션 배경 컴포넌트

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
-import { DrawerTheme } from '../constants/DrawerTheme';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 /**
  * 서랍 정면(Unit) 컴포넌트

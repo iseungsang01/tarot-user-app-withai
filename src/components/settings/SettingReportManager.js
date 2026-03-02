@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { CustomButton } from './CustomButton';
-import { styles } from '../styles/SettingsStyles';
-import { compressImage } from '../utils/imageOptimizer';
+import { CustomButton } from '../common/CustomButton';
+import { styles } from '../../styles/SettingsStyles';
+import { compressImage } from '../../utils/imageOptimizer';
 
 export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing, onOpenDetail }) => {
   const [reportData, setReportData] = useState({

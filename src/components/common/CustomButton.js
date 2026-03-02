@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Gradients } from '../constants/Colors';
+import { Colors, Gradients } from '../../constants/Colors';
 
 /**
  * 커스텀 버튼 컴포넌트
@@ -14,13 +14,13 @@ import { Colors, Gradients } from '../constants/Colors';
  * @param {string} variant - 버튼 스타일 ('primary' | 'secondary' | 'danger')
  * @param {object} style - 추가 스타일
  */
-export const CustomButton = ({ 
-  title, 
-  onPress, 
-  disabled, 
+export const CustomButton = ({
+  title,
+  onPress,
+  disabled,
   loading,
   variant = 'primary',
-  style 
+  style
 }) => {
   const getColors = () => {
     switch (variant) {

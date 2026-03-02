@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { GradientBackground } from './GradientBackground';
-import { Colors } from '../constants/Colors';
-import { logError } from '../utils/errorHandler';
+import { Colors } from '../../constants/Colors';
+import { logError } from '../../utils/errorHandler';
 
 /**
  * Error Boundary Component

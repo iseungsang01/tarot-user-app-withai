@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { useError } from '../context/ErrorContext';
-import { Colors } from '../constants/Colors';
+import { useError } from '../../context/ErrorContext';
+import { Colors } from '../../constants/Colors';
 
 /**
  * 전역 에러 표시 컴포넌트

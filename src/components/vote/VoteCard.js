@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { DrawerTheme } from '../constants/DrawerTheme';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 export const VoteCard = ({ vote, onPress }) => {
   // 날짜 포맷: 26.01.12

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Linking, Platform, TouchableOpacity } from 'react-native';
-import { DrawerTheme } from '../constants/DrawerTheme';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 export const NoticeCard = ({ notice, onPress }) => {
   // 날짜 포맷 함수: 25.01.01
@@ -68,7 +68,7 @@ export const NoticeCard = ({ notice, onPress }) => {
             {notice.title}
           </Text>
         </View>
-        
+
         <Text style={styles.dateText}>
           {formatShortDate(notice.created_at)}
         </Text>
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', 
+    justifyContent: 'space-between',
     marginBottom: 15,
   },
   leftContent: {

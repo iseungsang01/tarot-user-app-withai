@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { formatDateShort } from '../utils/formatters';
-import { DrawerTheme } from '../constants/DrawerTheme';
+import { formatDateShort } from '../../utils/formatters';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 export const CouponCard = ({ coupon, type, onPress }) => {
   const isExpired = coupon.valid_until && new Date(coupon.valid_until) < new Date();
@@ -12,9 +12,9 @@ export const CouponCard = ({ coupon, type, onPress }) => {
     <TouchableOpacity
       style={[
         styles.card,
-        { 
+        {
           borderColor: isExpired ? '#333' : 'rgba(212, 175, 55, 0.3)',
-          backgroundColor: isExpired ? 'rgba(20,20,20,0.6)' : DrawerTheme.woodDark 
+          backgroundColor: isExpired ? 'rgba(20,20,20,0.6)' : DrawerTheme.woodDark
         },
         isExpired && styles.cardExpired,
       ]}
@@ -27,7 +27,7 @@ export const CouponCard = ({ coupon, type, onPress }) => {
 
       <View style={styles.content}>
         <Text style={[styles.icon, isExpired && styles.iconExpired]}>{icon}</Text>
-        
+
         <View style={styles.info}>
           <View style={styles.header}>
             <Text style={[styles.category, { color: isExpired ? '#666' : themeColor }]}>

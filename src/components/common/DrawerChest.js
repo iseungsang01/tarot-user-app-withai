@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { DrawerTheme } from '../constants/DrawerTheme';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 /**
  * 서랍장 틀 컴포넌트
@@ -18,7 +18,7 @@ export const DrawerChest = ({ children, isManualMode }) => {
       <View style={[styles.topSubMolding, { backgroundColor: bodyColor }]} />
 
       <View style={[
-        styles.mainBody, 
+        styles.mainBody,
         { borderColor: frameColor, backgroundColor: bodyColor }
       ]}>
         {/* 서랍들이 쌓이는 중심부 */}
@@ -38,17 +38,17 @@ export const DrawerChest = ({ children, isManualMode }) => {
 };
 
 const styles = StyleSheet.create({
-  chestContainer: { 
+  chestContainer: {
     width: '100%',
     maxWidth: 460,
-    alignSelf: 'center', 
-    marginVertical: 10 
+    alignSelf: 'center',
+    marginVertical: 10
   },
-  topMolding: { 
-    width: '100%', 
-    height: 10, 
-    alignSelf: 'center', 
-    borderTopLeftRadius: 8, 
+  topMolding: {
+    width: '100%',
+    height: 10,
+    alignSelf: 'center',
+    borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -56,36 +56,36 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 3
   },
-  topSubMolding: { 
-    width: '100%', 
-    height: 8, 
-    alignSelf: 'center' 
+  topSubMolding: {
+    width: '100%',
+    height: 8,
+    alignSelf: 'center'
   },
-  mainBody: { 
-    borderLeftWidth: 8, 
+  mainBody: {
+    borderLeftWidth: 8,
     borderRightWidth: 8,
   },
-  drawerContent: { 
+  drawerContent: {
     paddingTop: 5,
     paddingBottom: 10
   },
-  bottomMolding: { 
-    width: '100%', 
-    height: 12, 
-    alignSelf: 'center', 
-    borderBottomLeftRadius: 6, 
-    borderBottomRightRadius: 6 
+  bottomMolding: {
+    width: '100%',
+    height: 12,
+    alignSelf: 'center',
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6
   },
-  legsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 32, 
-    marginTop: -2 
+  legsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 32,
+    marginTop: -2
   },
-  leg: { 
-    width: 22, 
-    height: 20, 
-    borderBottomLeftRadius: 10, 
-    borderBottomRightRadius: 10 
+  leg: {
+    width: 22,
+    height: 20,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10
   },
 });

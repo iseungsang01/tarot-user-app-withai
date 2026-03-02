@@ -14,8 +14,8 @@ import {
     Animated,
     Platform,
 } from 'react-native';
-import { DrawerTheme } from '../constants/DrawerTheme';
-import { useSummarizeReview, useAnalyzeHistory } from '../hooks/useAI';
+import { DrawerTheme } from '../../constants/DrawerTheme';
+import { useSummarizeReview, useAnalyzeHistory } from '../../hooks/useAI';
 
 // ─────────────────────────────────────────────────────────────
 // 단일 기록 요약 패널

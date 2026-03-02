@@ -9,9 +9,9 @@ import {
   Platform,
 } from 'react-native';
 import { CustomButton } from './CustomButton';
-import { formatDateOnly } from '../utils/formatters';
-import { Colors } from '../constants/Colors';
-import { DrawerTheme } from '../constants/DrawerTheme';
+import { formatDateOnly } from '../../utils/formatters';
+import { Colors } from '../../constants/Colors';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 /**
  * 서랍장 카드 컴포넌트
@@ -19,7 +19,7 @@ import { DrawerTheme } from '../constants/DrawerTheme';
  */
 export const DrawerCard = ({ visit, index, isOpen, onToggle, onSelectCard, onDelete }) => {
   const [animatedHeight] = useState(new Animated.Value(isOpen ? 1 : 0));
-  
+
   // HistoryScreen에서 주입한 is_manual 여부 (true: 개인메모, false: 서버기록)
   const isManual = visit.is_manual;
 
@@ -53,7 +53,7 @@ export const DrawerCard = ({ visit, index, isOpen, onToggle, onSelectCard, onDel
           <View style={styles.handleLeft}>
             <Text style={styles.handleIcon}>{isManual ? '✒️' : '🗂️'}</Text>
             <Text style={[
-              styles.handleDate, 
+              styles.handleDate,
               isManual && { color: DrawerTheme.navyLight }
             ]}>
               {formatDateOnly(visit.visit_date)}
@@ -108,7 +108,7 @@ export const DrawerCard = ({ visit, index, isOpen, onToggle, onSelectCard, onDel
                 <Text style={[styles.addButtonText, isManual && { color: DrawerTheme.navyLight }]}>+ 기록 추가</Text>
               </TouchableOpacity>
             )}
-            
+
             <TouchableOpacity
               style={styles.deleteButton}
               // ✅ HistoryScreen의 handleDeleteVisit 규격에 맞게 ID만 전달
@@ -123,8 +123,8 @@ export const DrawerCard = ({ visit, index, isOpen, onToggle, onSelectCard, onDel
             <View style={styles.cardDisplay}>
               {visit.card_image && (
                 <View style={[styles.imageContainer, isManual && { borderColor: DrawerTheme.navyLight }]}>
-                  <Image 
-                    source={{ uri: visit.card_image }} 
+                  <Image
+                    source={{ uri: visit.card_image }}
                     style={styles.cardImage}
                     resizeMode="cover"
                   />
