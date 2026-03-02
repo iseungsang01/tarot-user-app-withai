@@ -117,7 +117,7 @@ const DailyFortuneScreen = () => {
         setIsPickingCard(true);
         Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 500,
+            duration: 250, // 500 -> 250으로 단축
             useNativeDriver: true,
         }).start();
 
@@ -126,10 +126,10 @@ const DailyFortuneScreen = () => {
             anim.setValue(0);
             Animated.spring(anim, {
                 toValue: 1,
-                delay: 300 + (i * 150),
+                delay: i * 50, // 더 빠르게
                 useNativeDriver: true,
-                tension: 40,
-                friction: 7,
+                tension: 50,
+                friction: 8,
             }).start();
         });
 
@@ -146,10 +146,14 @@ const DailyFortuneScreen = () => {
     const onSelectCard = (idx) => {
         if (drawing) return;
         setSelectedCardIdx(idx);
+        // 선택 즉시 뽑기 실행 (별도의 확인 버튼 없이 바로 진행)
+        onPickCard(idx);
     };
 
-    const onPickCard = async () => {
-        if (drawing || selectedCardIdx === null) return;
+    const onPickCard = async (idx) => {
+        if (drawing) return;
+        const currentIdx = idx !== undefined ? idx : selectedCardIdx;
+        if (currentIdx === null) return;
 
         setDrawing(true);
         setCheckInLoading(true);
@@ -159,62 +163,70 @@ const DailyFortuneScreen = () => {
             const randomCard = MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
             setPickedCardData(randomCard);
 
-            // 2. 카드 뒤집기 애니메이션
-            Animated.spring(flipAnims[selectedCardIdx], {
+            // 2. 카드 뒤집기 애니메이션 시작
+            Animated.spring(flipAnims[currentIdx], {
                 toValue: 1,
                 useNativeDriver: true,
-                friction: 8,
-                tension: 40,
+                friction: 9,
+                tension: 60,
             }).start();
 
-            // 3. 연출을 위해 약간 대기 (카드가 뒤집히는 시간)
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // 3. ✨ [핵심] 즉시 결과 화면으로 전환 준비 (AI 응답을 기다리지 않음)
+            // 카드의 정체는 이미 알기 때문에 즉시 결과창의 '껍데기'를 보여줌
+            const initialFortuneState = {
+                cardName: randomCard.nameKr,
+                cardImage: randomCard.image,
+                fortune: null, // 아직 텍스트는 없음
+                luckyColor: null,
+                luckyItem: null
+            };
 
-            // 4. 출석 기록 저장
+            // 약간의 연출용 지연(200ms) 후 즉시 결과 스크린으로 전환
+            setTimeout(() => {
+                setSelectedFortune(initialFortuneState);
+                setSelectedDate(todayStr);
+                setCardRevealed(true);
+                setIsPickingCard(false);
+            }, 200);
+
+            // 4. 백그라운드에서 AI 운세 및 데이터 저장 진행
+            const nickname = customer.nickname || '귀한 손님';
+            const currentFortune = allFortunes[todayStr];
+            const prevContent = currentFortune && !isErrorFortune(currentFortune) ? currentFortune.fortune : '';
+
+            // AI 호출 및 출석 저장을 병렬로 진행
+            const [fortuneResult] = await Promise.all([
+                getDailyFortune(nickname, prevContent, randomCard.name),
+                !todayCheckedIn ? storage.saveAttendance(todayStr) : Promise.resolve()
+            ]);
+
             if (!todayCheckedIn) {
-                await storage.saveAttendance(todayStr);
                 setTodayCheckedIn(true);
                 setAttendanceHistory(prev => [...new Set([...prev, todayStr])]);
             }
 
-            // 5. 오늘의 운세 가져오기
-            const nickname = customer.nickname || '귀한 손님';
-            const currentFortune = allFortunes[todayStr];
-            const prevContent = currentFortune && !isErrorFortune(currentFortune) ? currentFortune.fortune : '';
-            const { data, error: fortuneError } = await getDailyFortune(nickname, prevContent, randomCard.name);
+            if (fortuneResult.error) throw fortuneResult.error;
 
-            if (fortuneError) throw fortuneError;
-
-            // 카드 정보 추가
-            const fortuneWithCard = {
-                ...data,
+            const finalFortune = {
+                ...fortuneResult.data,
                 cardName: randomCard.nameKr,
                 cardImage: randomCard.image
             };
 
-            // 6. 결과 페이지로 전환 전 약간의 지연
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 5. 완료된 데이터를 UI에 반영 (텍스트가 스르륵 나타남)
+            await storage.saveDailyFortune(finalFortune, todayStr);
+            setAllFortunes(prev => ({ ...prev, [todayStr]: finalFortune }));
+            setSelectedFortune(finalFortune);
 
-            // 7. 로컬 운세 저장 및 상태 업데이트
-            await storage.saveDailyFortune(fortuneWithCard, todayStr);
-            setAllFortunes(prev => ({ ...prev, [todayStr]: fortuneWithCard }));
-            setSelectedFortune(fortuneWithCard);
-            setSelectedDate(todayStr);
-            setCardRevealed(true);
-            setIsPickingCard(false); // 뽑기 완료 후 모드 해제
-            setSelectedCardIdx(null);
-            setPickedCardData(null);
-            flipAnims.forEach(anim => anim.setValue(0));
         } catch (error) {
             console.error('Pick card error:', error);
-            Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다. 다시 시도해주세요.');
+            Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다.');
             setIsPickingCard(false);
-            setSelectedCardIdx(null);
-            setPickedCardData(null);
-            flipAnims.forEach(anim => anim.setValue(0));
         } finally {
             setDrawing(false);
             setCheckInLoading(false);
+            setSelectedCardIdx(null);
+            setPickedCardData(null);
         }
     };
 
@@ -391,14 +403,7 @@ const DailyFortuneScreen = () => {
                                             );
                                         })}
                                     </View>
-                                    {selectedCardIdx !== null && !drawing && (
-                                        <TouchableOpacity
-                                            style={styles.revealButton}
-                                            onPress={onPickCard}
-                                        >
-                                            <Text style={styles.revealButtonText}>오늘의 운세 확인하기</Text>
-                                        </TouchableOpacity>
-                                    )}
+                                    {/* Reveal 버튼 제거 - 클릭 즉시 진행됨 */}
                                     {drawing && (
                                         <View style={styles.drawingStatus}>
                                             <ActivityIndicator color={Colors.gold} size="small" />
@@ -490,15 +495,22 @@ const DailyFortuneScreen = () => {
                             </View>
                         )}
 
-                        <Text style={styles.fortuneContent}>{selectedFortune?.fortune || '운세 내용을 불러오지 못했습니다. 다시 시도해주세요.'}</Text>
+                        {selectedFortune?.fortune ? (
+                            <Text style={styles.fortuneContent}>{selectedFortune.fortune}</Text>
+                        ) : (
+                            <View style={styles.loadingFortuneText}>
+                                <ActivityIndicator size="small" color={Colors.gold} />
+                                <Text style={styles.interpretingText}>운명의 메시지를 해석하는 중...</Text>
+                            </View>
+                        )}
                         <View style={styles.fortuneFooter}>
                             <View style={styles.fortuneInfo}>
                                 <Text style={styles.infoLabel}>행운의 색</Text>
-                                <Text style={styles.infoValue}>{selectedFortune?.luckyColor || '-'}</Text>
+                                <Text style={styles.infoValue}>{selectedFortune?.luckyColor || '...'}</Text>
                             </View>
                             <View style={styles.fortuneInfo}>
                                 <Text style={styles.infoLabel}>행운의 아이템</Text>
-                                <Text style={styles.infoValue}>{selectedFortune?.luckyItem || '-'}</Text>
+                                <Text style={styles.infoValue}>{selectedFortune?.luckyItem || '...'}</Text>
                             </View>
                         </View>
                     </View>
@@ -801,6 +813,21 @@ const styles = StyleSheet.create({
         textShadowColor: 'rgba(212, 175, 55, 0.5)',
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 10,
+    },
+    loadingFortuneText: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        padding: 15,
+        borderRadius: 12,
+        marginBottom: 20,
+    },
+    interpretingText: {
+        color: Colors.gold,
+        fontSize: 14,
+        fontWeight: '600',
+        fontStyle: 'italic',
     },
     drawingStatus: {
         flexDirection: 'row',
