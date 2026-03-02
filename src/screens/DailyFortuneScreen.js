@@ -57,6 +57,15 @@ const DailyFortuneScreen = () => {
         loadLocalData();
     }, [customer]);
 
+    useEffect(() => {
+        // 카드 선택 화면에서 즉시 앞면이 보이도록 이미지 캐시를 미리 준비
+        MAJOR_ARCANA.forEach((card) => {
+            if (card?.image) {
+                Image.prefetch(card.image);
+            }
+        });
+    }, []);
+
     const loadLocalData = async () => {
         setLoading(true);
         try {

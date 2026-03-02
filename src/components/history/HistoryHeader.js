@@ -11,7 +11,7 @@ export const HistoryHeader = ({
     onNavigateCoupon,
     onNavigateStamp
 }) => {
-    const tarotCards = ['🃏','🎩','👸','🤴','⚖️','🌙','☀️','⭐','🎭','🔱'];
+    const tarotCards = ['🃏','🎩','👸','🤴','⚖️','🌙','☀️','🕯️','🎭','🔱'];
     const stamps = Array.from({ length: 10 }, (_, i) => i < stats.current_stamps);
 
     return (
@@ -22,10 +22,10 @@ export const HistoryHeader = ({
 
             {/* Stats Board */}
             <View style={[styles.brassBoard, { backgroundColor: DrawerTheme.woodDark, borderColor: DrawerTheme.woodFrame }]}> 
-                <View style={styles.statBox}>
-                    <Text style={[styles.statLabel, { color: DrawerTheme.woodLight }]}>스탬프</Text>
+                <TouchableOpacity style={styles.statBox} onPress={onNavigateStamp}>
+                    <Text style={[styles.statLabel, { color: DrawerTheme.woodLight }]}>스탬프 보드</Text>
                     <Text style={styles.statValue}>{stats.current_stamps}/10</Text>
-                </View>
+                </TouchableOpacity>
                 <View style={[styles.divider, { backgroundColor: DrawerTheme.woodFrame }]} />
                 <View style={styles.statBox}>
                     <Text style={[styles.statLabel, { color: DrawerTheme.woodLight }]}>방문 횟수</Text>
@@ -47,7 +47,7 @@ export const HistoryHeader = ({
                             active ? styles.stampChipActive : styles.stampChipInactive,
                         ]}
                     >
-                        <Text style={styles.stampEmoji}>{active ? tarotCards[idx] : '✧'}</Text>
+                        <Text style={styles.stampEmoji}>{active ? tarotCards[idx] : ''}</Text>
                     </View>
                 ))}
             </TouchableOpacity>
@@ -73,7 +73,7 @@ export const HistoryHeader = ({
 };
 
 const styles = StyleSheet.create({
-    header: { ...CommonStyles.headerBoard, paddingVertical: 18 },
+    header: { ...CommonStyles.headerBoard, paddingVertical: 18, marginTop: 20 },
     title: { ...CommonStyles.title, fontSize: 22 },
     brassBoard: { flexDirection: 'row', width: '92%', marginTop: 10, padding: 10, borderRadius: 8, borderWidth: 2, elevation: 10 },
     statBox: { alignItems: 'center', flex: 1 },
