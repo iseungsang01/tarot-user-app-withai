@@ -9,7 +9,7 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import OnboardingScreen from '../screens/OnboardingScreen';
 
-const ONBOARDING_KEY = 'has_seen_main_onboarding_v1';
+export const ONBOARDING_KEY = 'has_seen_main_onboarding_v1';
 
 /**
  * 메인 네비게이터

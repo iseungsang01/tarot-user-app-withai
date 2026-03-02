@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   GradientBackground,
@@ -20,12 +21,15 @@ import {
 } from '../utils/errorHandler';
 import { APP_INFO } from '../constants/Config';
 import { styles } from '../styles/SettingsStyles';
+import OnboardingScreen from './OnboardingScreen';
+import { ONBOARDING_KEY } from '../navigation/AppNavigator';
 
 const SettingsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { customer, logout } = useAuth();
   const [activeSection, setActiveSection] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
 
   const toggleSection = useCallback((section) => {
     setActiveSection(prev => (prev === section ? null : section));
@@ -86,6 +90,15 @@ const SettingsScreen = ({ navigation }) => {
     } catch { setProcessing(false); }
   };
 
+  const handleOpenGuide = async () => {
+    await AsyncStorage.removeItem(ONBOARDING_KEY);
+    setIsGuideVisible(true);
+  };
+
+  if (isGuideVisible) {
+    return <OnboardingScreen onClose={() => setIsGuideVisible(false)} buttonLabel="닫기" />;
+  }
+
   return (
     <GradientBackground>
       <ScrollView
@@ -133,6 +146,12 @@ const SettingsScreen = ({ navigation }) => {
             </View>
           </>
         )}
+
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.menuButton} onPress={handleOpenGuide}>
+            <Text style={styles.menuButtonText}>📘 앱 사용 가이드 다시 보기</Text>
+          </TouchableOpacity>
+        </View>
 
         <CustomButton
           title="로그아웃"
