@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
 
 export const visitService = {
@@ -28,12 +28,7 @@ export const visitService = {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('visit_history')
-        .select('id, customer_id, visit_date')
-        .eq('customer_id', customerId)
-        .eq('is_deleted', false)
-        .order('visit_date', { ascending: false });
+      const { data, error } = await supabaseClient.getVisits(customerId);
 
       if (error) throw error;
       return { data, error: null };
@@ -56,12 +51,7 @@ export const visitService = {
 
       let updatedServerData = {};
       if (Object.keys(serverPayload).length > 0) {
-        const { data, error } = await supabase
-          .from('visit_history')
-          .update(serverPayload)
-          .eq('id', visitId)
-          .select()
-          .single();
+        const { data, error } = await supabaseClient.updateVisit(visitId, serverPayload);
 
         if (error) throw error;
         updatedServerData = data;
@@ -89,11 +79,7 @@ export const visitService = {
         return { data: null, error: 'Guest cannot save to server' };
       }
 
-      const { data, error } = await supabase
-        .from('visit_history')
-        .insert(serverPayload)
-        .select()
-        .single();
+      const { data, error } = await supabaseClient.createVisit(serverPayload);
 
       if (error) throw error;
 
@@ -113,12 +99,7 @@ export const visitService = {
   },
 
   async getVisit(visitId) {
-    const { data, error } = await supabase
-      .from('visit_history')
-      .select('id, customer_id, visit_date')
-      .eq('id', visitId)
-      .eq('is_deleted', false)
-      .single();
+    const { data, error } = await supabaseClient.getVisit(visitId);
 
     if (error) return { data: null, error };
 
@@ -140,10 +121,7 @@ export const visitService = {
    */
   async deleteVisit(visitId) {
     try {
-      const { error } = await supabase
-        .from('visit_history')
-        .update({ is_deleted: true })
-        .eq('id', visitId);
+      const { error } = await supabaseClient.softDeleteVisit(visitId);
 
       if (error) throw error;
 
@@ -167,11 +145,7 @@ export const visitService = {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('current_stamps, visit_count')
-        .eq('id', customerId)
-        .single();
+      const { data, error } = await supabaseClient.getCustomerStats(customerId);
 
       if (error) throw error;
 

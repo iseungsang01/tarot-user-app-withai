@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
 
 const CUSTOMER_KEY = 'tarot_customer';
@@ -22,7 +22,7 @@ export const authService = {
       const guard = await getLoginGuard();
       const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
-      const { data: resultData, error: rpcError } = await supabase.rpc('login_customer', {
+      const { data: resultData, error: rpcError } = await supabaseClient.loginCustomer({
         p_phone: phoneNumber.trim(),
         p_password: password,
         p_client_fingerprint: clientFingerprint,
@@ -91,7 +91,7 @@ export const authService = {
 
     try {
       // .maybeSingle()을 사용하여 데이터가 없어도 에러가 나지 않게 처리
-      const { data, error } = await supabase.from('customers').select('*').eq('id', customerId).maybeSingle();
+      const { data, error } = await supabaseClient.getCustomerById(customerId);
 
       if (error) {
         console.error('❌ 정보 갱신 에러:', error.message);
@@ -116,7 +116,7 @@ export const authService = {
   */
   async updateNickname(customerId, newNickname) {
     try {
-      const { data, error } = await supabase.rpc('update_my_nickname', {
+      const { data, error } = await supabaseClient.updateMyNickname({
         p_id: customerId,
         p_new_nickname: newNickname,
       });
@@ -134,7 +134,7 @@ export const authService = {
    */
   async register(phoneNumber, password, nickname = '') {
     try {
-      const { data: resultData, error: rpcError } = await supabase.rpc('register_customer', {
+      const { data: resultData, error: rpcError } = await supabaseClient.registerCustomer({
         p_phone: phoneNumber.trim(),
         p_password: password,
         p_nickname: nickname,
@@ -164,7 +164,7 @@ export const authService = {
    */
   async deleteAccount(customerId) {
     try {
-      const { data, error } = await supabase.rpc('delete_my_account', { p_id: customerId });
+      const { data, error } = await supabaseClient.deleteMyAccount({ p_id: customerId });
       if (error) throw error;
 
       if (data) await this.logout();

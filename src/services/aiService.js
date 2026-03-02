@@ -3,9 +3,7 @@
  * AI 서비스 호출 (Supabase Edge Function 프록시 - Google Gemini 기반)
  */
 
-import { supabase } from './supabase';
-
-const EDGE_FUNCTION_NAME = 'ai-proxy';
+import { supabaseClient } from './supabaseClient';
 
 const stringifyError = (errorValue) => {
     if (!errorValue) return '';
@@ -22,14 +20,12 @@ const stringifyError = (errorValue) => {
 
 const callAIProxy = async (messages, options = {}, task = 'chat') => {
     try {
-        const { data, error } = await supabase.functions.invoke(EDGE_FUNCTION_NAME, {
-            body: {
-                task,
-                messages,
-                options: {
-                    temperature: options.temperature ?? 0.7,
-                    maxTokens: options.maxTokens ?? 1000,
-                },
+        const { data, error } = await supabaseClient.invokeAIProxy({
+            task,
+            messages,
+            options: {
+                temperature: options.temperature ?? 0.7,
+                maxTokens: options.maxTokens ?? 1000,
             },
         });
 

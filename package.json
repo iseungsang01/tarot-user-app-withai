@@ -12,7 +12,8 @@
     "typecheck:app": "tsc --noEmit -p tsconfig.app.json",
     "typecheck:edge": "tsc --noEmit -p tsconfig.edge.json",
     "typecheck": "npm run typecheck:app && npm run typecheck:edge",
-    "test": "npm run security-check"
+    "test": "npm run security-check && npm run test:unit",
+    "test:unit": "node --test test/services/*.test.cjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
