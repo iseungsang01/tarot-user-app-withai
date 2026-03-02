@@ -7,18 +7,20 @@ import { Colors } from '../constants/Colors';
 import { useNotifications } from '../hooks/useNotifications';
 
 // Screens
-import HistoryScreen from '../screens/HistoryScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import VisitDetailScreen from '../screens/VisitDetailScreen';
-import DailyFortuneScreen from '../screens/DailyFortuneScreen';
-import AIChatHistoryScreen from '../screens/AIChatHistoryScreen';
-import CouponScreen from '../screens/CouponScreen';
-import StampScreen from '../screens/StampScreen';
-import NoticeScreen from '../screens/NoticeScreen';
-import NoticeDetailScreen from '../screens/NoticeDetailScreen';
-import VoteScreen from '../screens/VoteScreen';
-import BugReportScreen from '../screens/BugReportScreen';
-import BugReportDetailScreen from '../screens/BugReportDetailScreen';
+import {
+  HistoryScreen,
+  SettingsScreen,
+  VisitDetailScreen,
+  DailyFortuneScreen,
+  AIChatHistoryScreen,
+  CouponScreen,
+  StampScreen,
+  NoticeScreen,
+  NoticeDetailScreen,
+  VoteScreen,
+  BugReportScreen,
+  BugReportDetailScreen,
+} from '../screens';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();

@@ -6,7 +6,7 @@ import { Colors } from '../constants/Colors';
 import { GradientBackground, LoadingSpinner } from '../components';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import OnboardingScreen from '../screens/OnboardingScreen';
+import { OnboardingScreen } from '../screens';
 
 import { STORAGE_KEYS } from '../constants/Config';
 
