@@ -6,36 +6,43 @@ import { styles } from '../../styles/SettingsStyles';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
 
+const INITIAL_REPORT_DATA = {
+  title: '',
+  description: '',
+  report_type: '어플 버그',
+  screenshot: null,
+};
+
+const PICKER_OPTIONS = { allowsEditing: true, quality: 0.7 };
+const COMPRESS_OPTIONS = { maxWidth: 1000, quality: 0.6 };
+
 export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing, onOpenDetail }) => {
-  const [reportData, setReportData] = useState({
-    title: '', description: '', report_type: '어플 버그', screenshot: null
-  });
+  const [reportData, setReportData] = useState(INITIAL_REPORT_DATA);
 
   const handleFieldChange = (field, value) => {
     setReportData(prev => ({ ...prev, [field]: value }));
   };
 
-  const pickImageFromLibrary = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const pickImageWith = async (requestPermission, launchPicker) => {
+    const perm = await requestPermission();
     if (perm.status !== 'granted') return;
 
-    const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.7 });
+    const res = await launchPicker(PICKER_OPTIONS);
     if (!res.canceled && res.assets?.[0]?.uri) {
-      const comp = await compressImage(res.assets[0].uri, { maxWidth: 1000, quality: 0.6 });
+      const comp = await compressImage(res.assets[0].uri, COMPRESS_OPTIONS);
       setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
     }
   };
 
-  const pickImageFromCamera = async () => {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (perm.status !== 'granted') return;
+  const pickImageFromLibrary = () => pickImageWith(
+    ImagePicker.requestMediaLibraryPermissionsAsync,
+    ImagePicker.launchImageLibraryAsync
+  );
 
-    const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.7 });
-    if (!res.canceled && res.assets?.[0]?.uri) {
-      const comp = await compressImage(res.assets[0].uri, { maxWidth: 1000, quality: 0.6 });
-      setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
-    }
-  };
+  const pickImageFromCamera = () => pickImageWith(
+    ImagePicker.requestCameraPermissionsAsync,
+    ImagePicker.launchCameraAsync
+  );
 
   const pickImage = () => {
     Alert.alert('스크린샷 첨부', '이미지 가져오기 방식을 선택하세요.', [
@@ -47,7 +54,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
 
   const handleSubmit = async () => {
     await onSubmit(reportData);
-    setReportData({ title: '', description: '', report_type: '어플 버그', screenshot: null });
+    setReportData(INITIAL_REPORT_DATA);
   };
 
   return (
