@@ -40,7 +40,23 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const up = (next) => setS(p => ({ ...p, ...next }));
     const [aiInsight, setAiInsight] = useState(null);
     const [selectedReviewVersion, setSelectedReviewVersion] = useState('original');
+    const [imageAspectRatio, setImageAspectRatio] = useState(3 / 4);
     const { result: polishedReview, loading: polishing, error: polishError, polish, reset: resetPolish } = usePolishReview();
+
+    const updateImageAspectRatio = useCallback((uri) => {
+        if (!uri) {
+            setImageAspectRatio(3 / 4);
+            return;
+        }
+
+        Image.getSize(
+            toDisplayImageUri(uri),
+            (width, height) => {
+                if (width > 0 && height > 0) setImageAspectRatio(width / height);
+            },
+            () => setImageAspectRatio(3 / 4)
+        );
+    }, []);
 
 
     useEffect(() => {
@@ -62,6 +78,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         visit_date: item.visit_date, // 기존 날짜 유지
                         loading: false
                     });
+                    updateImageAspectRatio(item.card_image);
                     setAiInsight(item.ai_insight || null);
                     setSelectedReviewVersion('original');
                     resetPolish();
@@ -77,6 +94,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         visit_date: data.visit_date, // 서버에 기록된 실제 방문 날짜 유지
                         loading: false
                     });
+                    updateImageAspectRatio(data.card_image);
                     setAiInsight(data.ai_insight || null);
                     setSelectedReviewVersion('original');
                     resetPolish();
@@ -92,19 +110,25 @@ const VisitDetailScreen = ({ route, navigation }) => {
         if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()), Alert);
 
         const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
-            allowsEditing: true,
-            aspect: [3, 4],
+            allowsEditing: false,
             quality: 0.7
         });
 
         if (!res.canceled && res.assets[0]) {
             try {
-                const comp = await compressImage(res.assets[0].uri, { maxWidth: 800, quality: 0.6 });
+                const { uri, width, height } = res.assets[0];
+                if (width && height) setImageAspectRatio(width / height);
+
+                const comp = await compressImage(uri, { maxWidth: 800, quality: 0.6 });
                 up({ uri: comp.base64 });
             } catch { Alert.alert("오류", "이미지 처리에 실패했습니다."); }
         }
     };
 
+
+    useEffect(() => {
+        updateImageAspectRatio(s.uri);
+    }, [s.uri, updateImageAspectRatio]);
 
     const effectiveReview = useMemo(() => (
         selectedReviewVersion === 'polished' && polishedReview ? polishedReview : s.review
@@ -209,7 +233,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             maxLength={40}
                         />
 
-                        <View style={[styles.imgBox, { borderColor: theme.c }]}>
+                        <View style={[styles.imgBox, { borderColor: theme.c, aspectRatio: imageAspectRatio }]}>
                             {s.uri ? (
                                 <>
                                     <Image

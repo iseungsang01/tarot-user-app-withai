@@ -13,11 +13,12 @@ const INITIAL_REPORT_DATA = {
   screenshot: null,
 };
 
-const PICKER_OPTIONS = { allowsEditing: true, quality: 0.7 };
+const PICKER_OPTIONS = { allowsEditing: false, quality: 0.7 };
 const COMPRESS_OPTIONS = { maxWidth: 1000, quality: 0.6 };
 
 export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, processing, onOpenDetail }) => {
   const [reportData, setReportData] = useState(INITIAL_REPORT_DATA);
+  const [previewAspectRatio, setPreviewAspectRatio] = useState(4 / 3);
 
   const handleFieldChange = (field, value) => {
     setReportData(prev => ({ ...prev, [field]: value }));
@@ -29,7 +30,12 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
 
     const res = await launchPicker(PICKER_OPTIONS);
     if (!res.canceled && res.assets?.[0]?.uri) {
-      const comp = await compressImage(res.assets[0].uri, COMPRESS_OPTIONS);
+      const { uri, width, height } = res.assets[0];
+      if (width && height) {
+        setPreviewAspectRatio(width / height);
+      }
+
+      const comp = await compressImage(uri, COMPRESS_OPTIONS);
       setReportData(prev => ({ ...prev, screenshot: comp.base64 }));
     }
   };
@@ -80,7 +86,10 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         <Text style={styles.uploadButtonText}>📎 스크린샷 첨부 (카메라/앨범)</Text>
       </TouchableOpacity>
       {!!reportData.screenshot && (
-        <Image source={{ uri: toDisplayImageUri(reportData.screenshot) }} style={styles.previewImage} />
+        <Image
+          source={{ uri: toDisplayImageUri(reportData.screenshot) }}
+          style={[styles.previewImage, { aspectRatio: previewAspectRatio }]}
+        />
       )}
 
       <CustomButton
