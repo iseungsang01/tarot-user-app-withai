@@ -2,11 +2,27 @@ import { supabase } from './supabase';
 import { storage } from '../utils/storage';
 
 export const visitService = {
+  syncLocalVisitFields: async (visitId, updates) => {
+    const localFieldHandlers = {
+      card_image: [storage.saveCardImage, storage.deleteCardImage],
+      card_review: [storage.saveCardReview, storage.deleteCardReview],
+      title: [storage.saveCardTitle, storage.deleteCardTitle],
+      ai_insight: [storage.saveCardAIInsight, storage.deleteCardAIInsight],
+    };
+
+    await Promise.all(
+      Object.entries(localFieldHandlers).map(async ([field, [saveFn, deleteFn]]) => {
+        if (updates[field] === undefined) return;
+        return updates[field] ? saveFn(visitId, updates[field]) : deleteFn(visitId);
+      }),
+    );
+  },
+
   /**
    * 고객의 방문 기록 목록 조회
    */
   async getVisits(customerId) {
-    // ✅ 게스트 모드: 빈 데이터 반환
+    // 게스트 모드: 빈 데이터 반환
     if (customerId === 'guest') {
       return { data: [], error: null };
     }
@@ -32,21 +48,8 @@ export const visitService = {
    */
   async updateVisit(visitId, updates) {
     try {
-      // 1. 로컬 데이터 처리 (이미지/리뷰) - *여전히 UI에서 개별 호출하거나 훅에서 처리 가능하지만, 호환성을 위해 유지하되 단순화*
-      if (updates.card_image !== undefined) {
-        updates.card_image ? await storage.saveCardImage(visitId, updates.card_image) : await storage.deleteCardImage(visitId);
-      }
-      if (updates.card_review !== undefined) {
-        updates.card_review ? await storage.saveCardReview(visitId, updates.card_review) : await storage.deleteCardReview(visitId);
-      }
-      if (updates.title !== undefined) {
-        updates.title ? await storage.saveCardTitle(visitId, updates.title) : await storage.deleteCardTitle(visitId);
-      }
-      if (updates.ai_insight !== undefined) {
-        updates.ai_insight ? await storage.saveCardAIInsight(visitId, updates.ai_insight) : await storage.deleteCardAIInsight(visitId);
-      }
+      await this.syncLocalVisitFields(visitId, updates);
 
-      // 2. 서버 업데이트
       const serverPayload = {};
       if (updates.visit_date) serverPayload.visit_date = updates.visit_date;
       if (updates.customer_id) serverPayload.customer_id = updates.customer_id;
@@ -81,7 +84,7 @@ export const visitService = {
         visit_date: visitData.visit_date
       };
 
-      // ✅ 게스트 모드: 서버 저장 차단 (혹은 에러 반환)
+      // 게스트 모드: 서버 저장 차단
       if (visitData.customer_id === 'guest') {
         return { data: null, error: 'Guest cannot save to server' };
       }
@@ -133,7 +136,7 @@ export const visitService = {
   },
 
   /**
-   * ✅ 방문 기록 삭제 (Soft Delete + 로컬 스토리지 완전 정리)
+   * 방문 기록 삭제
    */
   async deleteVisit(visitId) {
     try {
@@ -158,7 +161,7 @@ export const visitService = {
   },
 
   async getCustomerStats(customerId) {
-    // ✅ 게스트 모드: 기본 스탯 반환
+    // 게스트 모드: 기본 스탯 반환
     if (customerId === 'guest') {
       return { data: { current_stamps: 0, visit_count: 0 }, error: null };
     }

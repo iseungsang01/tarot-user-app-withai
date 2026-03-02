@@ -47,7 +47,6 @@ const DailyFortuneScreen = () => {
         return `${year}-${month}-${day}`;
     };
 
-    const isGuest = customer?.isGuest || customer?.id === 'guest';
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
@@ -101,32 +100,25 @@ const DailyFortuneScreen = () => {
         const content = fortune.fortune;
         return content.includes('오류') || content.includes('초과') || content.includes('부족') || content.includes('Error');
     };
+    const hasValidFortune = (fortune) => !!fortune && !isErrorFortune(fortune);
 
     const handleCheckIn = async (isRepick = false) => {
-        // 게스트도 이용 가능하도록 수정
-        // if (isGuest) {
-        //     Alert.alert('로그인 필요', '회원만 이용 가능합니다.', [{ text: '확인' }]);
-        //     return;
-        // }
-
-        // 이미 정상적인 운세가 있으면 중단 (isRepick이 아니거나 오류가 아닌 경우만)
         const currentFortune = allFortunes[todayStr];
-        if (!isRepick && currentFortune && !isErrorFortune(currentFortune)) {
+        if (!isRepick && hasValidFortune(currentFortune)) {
             return;
         }
         setIsPickingCard(true);
         Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 250, // 500 -> 250으로 단축
+            duration: 250,
             useNativeDriver: true,
         }).start();
 
-        // 카드들이 하나씩 나타나게
         cardAnims.forEach((anim, i) => {
             anim.setValue(0);
             Animated.spring(anim, {
                 toValue: 1,
-                delay: i * 50, // 더 빠르게
+                delay: i * 50,
                 useNativeDriver: true,
                 tension: 50,
                 friction: 8,
@@ -146,7 +138,6 @@ const DailyFortuneScreen = () => {
     const onSelectCard = (idx) => {
         if (drawing) return;
         setSelectedCardIdx(idx);
-        // 선택 즉시 뽑기 실행 (별도의 확인 버튼 없이 바로 진행)
         onPickCard(idx);
     };
 
@@ -159,11 +150,9 @@ const DailyFortuneScreen = () => {
         setCheckInLoading(true);
 
         try {
-            // 1. 카드 무작위 선택
             const randomCard = MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
             setPickedCardData(randomCard);
 
-            // 2. 카드 뒤집기 애니메이션 시작
             Animated.spring(flipAnims[currentIdx], {
                 toValue: 1,
                 useNativeDriver: true,
@@ -171,17 +160,14 @@ const DailyFortuneScreen = () => {
                 tension: 60,
             }).start();
 
-            // 3. ✨ [핵심] 즉시 결과 화면으로 전환 준비 (AI 응답을 기다리지 않음)
-            // 카드의 정체는 이미 알기 때문에 즉시 결과창의 '껍데기'를 보여줌
             const initialFortuneState = {
                 cardName: randomCard.nameKr,
                 cardImage: randomCard.image,
-                fortune: null, // 아직 텍스트는 없음
+                fortune: null,
                 luckyColor: null,
                 luckyItem: null
             };
 
-            // 약간의 연출용 지연(200ms) 후 즉시 결과 스크린으로 전환
             setTimeout(() => {
                 setSelectedFortune(initialFortuneState);
                 setSelectedDate(todayStr);
@@ -189,12 +175,10 @@ const DailyFortuneScreen = () => {
                 setIsPickingCard(false);
             }, 200);
 
-            // 4. 백그라운드에서 AI 운세 및 데이터 저장 진행
             const nickname = customer.nickname || '귀한 손님';
             const currentFortune = allFortunes[todayStr];
-            const prevContent = currentFortune && !isErrorFortune(currentFortune) ? currentFortune.fortune : '';
+            const prevContent = hasValidFortune(currentFortune) ? currentFortune.fortune : '';
 
-            // AI 호출 및 출석 저장을 병렬로 진행
             const [fortuneResult] = await Promise.all([
                 getDailyFortune(nickname, prevContent, randomCard.name),
                 !todayCheckedIn ? storage.saveAttendance(todayStr) : Promise.resolve()
@@ -213,7 +197,6 @@ const DailyFortuneScreen = () => {
                 cardImage: randomCard.image
             };
 
-            // 5. 완료된 데이터를 UI에 반영 (텍스트가 스르륵 나타남)
             await storage.saveDailyFortune(finalFortune, todayStr);
             setAllFortunes(prev => ({ ...prev, [todayStr]: finalFortune }));
             setSelectedFortune(finalFortune);
@@ -251,7 +234,7 @@ const DailyFortuneScreen = () => {
             const isAttended = attendanceHistory.includes(dateStr);
             const isToday = todayStr === dateStr;
             const fortuneForDay = allFortunes[dateStr];
-            const hasFortune = !!fortuneForDay && !isErrorFortune(fortuneForDay);
+            const hasFortune = hasValidFortune(fortuneForDay);
             const isSelected = selectedDate === dateStr;
 
             days.push(
@@ -293,7 +276,7 @@ const DailyFortuneScreen = () => {
     }, [currentYear, currentMonth, attendanceHistory, allFortunes, selectedDate, todayStr]);
 
     const todayFortune = allFortunes[todayStr];
-    const hasFortuneToday = !!todayFortune && !!todayFortune.fortune && !isErrorFortune(todayFortune);
+    const hasFortuneToday = !!todayFortune?.fortune && hasValidFortune(todayFortune);
     const isTodayError = !!todayFortune && isErrorFortune(todayFortune);
 
     return (
