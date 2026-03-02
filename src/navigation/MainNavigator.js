@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -77,8 +77,28 @@ const TabNavigator = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [frames, setFrames] = useState({});
   const navRef = useRef(null);
+  const tabRootRef = useRef(null);
+  const [tabRootWindowOffset, setTabRootWindowOffset] = useState({ x: 0, y: 0 });
 
-  const registerFrame = (key, frame) => setFrames((prev) => ({ ...prev, [key]: frame }));
+  const captureTabRootOffset = useCallback(() => {
+    if (!tabRootRef.current) return;
+
+    tabRootRef.current.measureInWindow((x, y) => {
+      setTabRootWindowOffset({ x, y });
+    });
+  }, []);
+
+  const registerFrame = (key, frame) => {
+    if (!frame) return;
+
+    const normalizedFrame = {
+      ...frame,
+      x: Math.max(0, frame.x - tabRootWindowOffset.x),
+      y: Math.max(0, frame.y - tabRootWindowOffset.y),
+    };
+
+    setFrames((prev) => ({ ...prev, [key]: normalizedFrame }));
+  };
 
   const stepsWithFrame = useMemo(() => COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] })), [frames]);
   const isCoachVisible = showCoachMarks && !!stepsWithFrame[stepIndex]?.frame;
@@ -108,7 +128,13 @@ const TabNavigator = () => {
   };
 
   return (
-    <View style={styles.tabRoot}>
+    <View
+      ref={tabRootRef}
+      style={styles.tabRoot}
+      onLayout={() => {
+        requestAnimationFrame(captureTabRootOffset);
+      }}
+    >
       <Tab.Navigator
         ref={navRef}
         screenOptions={{
