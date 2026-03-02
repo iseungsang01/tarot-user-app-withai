@@ -7,7 +7,9 @@ import {
     ScrollView,
     ActivityIndicator,
     Alert,
+    Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../components';
 import { Colors } from '../constants/Colors';
@@ -29,6 +31,10 @@ const DailyFortuneScreen = () => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [todayCheckedIn, setTodayCheckedIn] = useState(false);
     const [cardRevealed, setCardRevealed] = useState(false);
+    const [isPickingCard, setIsPickingCard] = useState(false);
+    const [selectedCardIdx, setSelectedCardIdx] = useState(null);
+    const [fadeAnim] = useState(new Animated.Value(0));
+    const [cardAnims] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
 
     const getLocalDateString = (date = new Date()) => {
         const year = date.getFullYear();
@@ -95,20 +101,50 @@ const DailyFortuneScreen = () => {
         if (!isRepick && currentFortune && !isErrorFortune(currentFortune)) {
             return;
         }
-        setDrawing(true);
+        setIsPickingCard(true);
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+        }).start();
+
+        // 카드들이 하나씩 나타나게
+        cardAnims.forEach((anim, i) => {
+            anim.setValue(0);
+            Animated.spring(anim, {
+                toValue: 1,
+                delay: 300 + (i * 150),
+                useNativeDriver: true,
+                tension: 40,
+                friction: 7,
+            }).start();
+        });
+
         if (isRepick) {
-            setCheckInLoading(true);
             setSelectedFortune(null);
+            setCardRevealed(false);
         }
+        return;
+
+    };
+
+    const onSelectCard = (idx) => {
+        if (drawing) return;
+        setSelectedCardIdx(idx);
+    };
+
+    const onPickCard = async () => {
+        if (drawing || selectedCardIdx === null) return;
+
+        setDrawing(true);
+        setCheckInLoading(true);
         setCardRevealed(false);
 
         try {
-            if (isRepick) {
-                // 광고 보기 시뮬레이션 (2초 대기)
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
+            // 카드 뽑는 연출 (1.5초)
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // 1. 출석 기록 저장 (이미 했으면 건너뜀)
+            // 1. 출석 기록 저장
             if (!todayCheckedIn) {
                 await storage.saveAttendance(todayStr);
                 setTodayCheckedIn(true);
@@ -117,7 +153,8 @@ const DailyFortuneScreen = () => {
 
             // 2. 오늘의 운세 가져오기
             const nickname = customer.nickname || '귀한 손님';
-            const prevContent = isRepick && currentFortune ? currentFortune.fortune : '';
+            const currentFortune = allFortunes[todayStr];
+            const prevContent = currentFortune && !isErrorFortune(currentFortune) ? currentFortune.fortune : '';
             const { data, error: fortuneError } = await getDailyFortune(nickname, prevContent);
 
             if (fortuneError) throw fortuneError;
@@ -128,14 +165,13 @@ const DailyFortuneScreen = () => {
             setSelectedFortune(data);
             setSelectedDate(todayStr);
             setCardRevealed(true);
+            setIsPickingCard(false); // 뽑기 완료 후 모드 해제
+            setSelectedCardIdx(null);
         } catch (error) {
-            console.error('Check-in error:', error);
-            Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-            // 실패 시 기존 운세 복구 (선택 사항)
-            if (isRepick && currentFortune) {
-                setSelectedFortune(currentFortune);
-                setCardRevealed(true);
-            }
+            console.error('Pick card error:', error);
+            Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다. 다시 시도해주세요.');
+            setIsPickingCard(false);
+            setSelectedCardIdx(null);
         } finally {
             setDrawing(false);
             setCheckInLoading(false);
@@ -215,66 +251,142 @@ const DailyFortuneScreen = () => {
                 contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }}
             >
                 <View style={styles.header}>
-                    <View style={styles.titleRow}><Text style={styles.title}>FORTUNE BOARD</Text></View>
+                    <View style={styles.titleRow}>
+                        <Text style={styles.title}>{isPickingCard ? 'PICK YOUR CARD' : 'FORTUNE BOARD'}</Text>
+                    </View>
                     <View style={styles.headerDivider} />
-                    <Text style={styles.subtitle}>{currentYear}년 {currentMonth + 1}월 오늘의 운세를 확인하세요</Text>
+                    <Text style={styles.subtitle}>
+                        {isPickingCard ? '오늘 당신의 운명이 담긴 카드를 골라보세요' : `${currentYear}년 ${currentMonth + 1}월 오늘의 운세를 확인하세요`}
+                    </Text>
                 </View>
 
-                <View style={styles.card}>
-                    {loading ? (
-                        <ActivityIndicator color={Colors.gold} size="large" style={{ marginVertical: 40 }} />
-                    ) : (
-                        calendarGrid
-                    )}
-                </View>
+                {!isPickingCard && (
+                    <View style={styles.card}>
+                        {loading ? (
+                            <ActivityIndicator color={Colors.gold} size="large" style={{ marginVertical: 40 }} />
+                        ) : (
+                            calendarGrid
+                        )}
+                    </View>
+                )}
 
                 <View style={styles.actionSection}>
                     {selectedDate === todayStr ? (
                         <View style={{ gap: 12 }}>
-                            {!hasFortuneToday && !isTodayError && (
-                                <View style={styles.doneBanner}>
-                                    <Text style={styles.doneText}>카드를 뽑아 오늘의 운세를 확인해보세요 ✨</Text>
-                                </View>
-                            )}
+                            {isPickingCard ? (
+                                <Animated.View style={[styles.cardPickerContainer, { opacity: fadeAnim }]}>
+                                    <Text style={styles.pickerTitle}>마음이 끌리는 카드를 선택하세요</Text>
+                                    <View style={styles.cardRow}>
+                                        {[0, 1, 2].map((idx) => (
+                                            <Animated.View
+                                                key={idx}
+                                                style={{
+                                                    width: '30%',
+                                                    transform: [
+                                                        {
+                                                            translateY: cardAnims[idx].interpolate({
+                                                                inputRange: [0, 1],
+                                                                outputRange: [50, 0]
+                                                            })
+                                                        },
+                                                        { scale: selectedCardIdx === idx ? 1.1 : 1 }
+                                                    ]
+                                                }}
+                                            >
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.tarotCard,
+                                                        selectedCardIdx === idx && styles.selectedTarotCard,
+                                                        drawing && selectedCardIdx !== idx && { opacity: 0.5 }
+                                                    ]}
+                                                    onPress={() => onSelectCard(idx)}
+                                                    disabled={drawing}
+                                                >
+                                                    <LinearGradient
+                                                        colors={['#2d004d', '#1a0033']}
+                                                        style={styles.cardBack}
+                                                    >
+                                                        <View style={styles.cardPattern}>
+                                                            <View style={styles.innerPattern}>
+                                                                <Text style={styles.cardPatternText}>✨</Text>
+                                                            </View>
+                                                        </View>
+                                                    </LinearGradient>
+                                                </TouchableOpacity>
+                                            </Animated.View>
+                                        ))}
+                                    </View>
+                                    {selectedCardIdx !== null && !drawing && (
+                                        <TouchableOpacity
+                                            style={styles.revealButton}
+                                            onPress={onPickCard}
+                                        >
+                                            <Text style={styles.revealButtonText}>오늘의 운세 확인하기</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    {drawing && (
+                                        <View style={styles.drawingStatus}>
+                                            <ActivityIndicator color={Colors.gold} size="small" />
+                                            <Text style={styles.drawingText}>운명의 카드를 해석하는 중...</Text>
+                                        </View>
+                                    )}
+                                    {!drawing && (
+                                        <TouchableOpacity
+                                            style={styles.cancelPick}
+                                            onPress={() => setIsPickingCard(false)}
+                                        >
+                                            <Text style={styles.cancelPickText}>돌아가기</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </Animated.View>
+                            ) : (
+                                <>
+                                    {!hasFortuneToday && !isTodayError && (
+                                        <View style={styles.doneBanner}>
+                                            <Text style={styles.doneText}>카드를 뽑아 오늘의 운세를 확인해보세요 ✨</Text>
+                                        </View>
+                                    )}
 
-                            <TouchableOpacity
-                                style={[
-                                    styles.drawCard,
-                                    (hasFortuneToday && !isTodayError) && {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                                        borderWidth: 1.5,
-                                        borderColor: Colors.gold,
-                                    },
-                                    isTodayError && { backgroundColor: Colors.lavender }
-                                ]}
-                                onPress={() => handleCheckIn(hasFortuneToday && !isTodayError)}
-                                disabled={drawing}
-                                activeOpacity={0.8}
-                            >
-                                {checkInLoading ? (
-                                    <ActivityIndicator color={hasFortuneToday && !isTodayError ? Colors.gold : "#000"} />
-                                ) : (
-                                    <>
-                                        <Text style={styles.cardIcon}>{(hasFortuneToday && !isTodayError) ? '✨' : '🃏'}</Text>
-                                        <Text style={[
-                                            styles.checkInButtonText,
-                                            (hasFortuneToday && !isTodayError) && { color: Colors.gold, fontSize: 16 }
-                                        ]}>
-                                            {isTodayError
-                                                ? '운세 카드 다시 뽑기'
-                                                : (hasFortuneToday && !isTodayError
-                                                    ? '카드 다시 뽑기'
-                                                    : (todayCheckedIn ? '오늘의 운세 카드 열기' : '오늘의 운세 카드 뽑기'))
-                                            }
-                                        </Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.drawCard,
+                                            (hasFortuneToday && !isTodayError) && {
+                                                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                                                borderWidth: 1.5,
+                                                borderColor: Colors.gold,
+                                            },
+                                            isTodayError && { backgroundColor: Colors.lavender }
+                                        ]}
+                                        onPress={() => handleCheckIn(hasFortuneToday && !isTodayError)}
+                                        disabled={drawing}
+                                        activeOpacity={0.8}
+                                    >
+                                        {checkInLoading ? (
+                                            <ActivityIndicator color={hasFortuneToday && !isTodayError ? Colors.gold : "#000"} />
+                                        ) : (
+                                            <>
+                                                <Text style={styles.cardIcon}>{(hasFortuneToday && !isTodayError) ? '✨' : '🃏'}</Text>
+                                                <Text style={[
+                                                    styles.checkInButtonText,
+                                                    (hasFortuneToday && !isTodayError) && { color: Colors.gold, fontSize: 16 }
+                                                ]}>
+                                                    {isTodayError
+                                                        ? '운세 카드 다시 뽑기'
+                                                        : (hasFortuneToday && !isTodayError
+                                                            ? '카드 다시 뽑기'
+                                                            : (todayCheckedIn ? '오늘의 운세 카드 열기' : '오늘의 운세 카드 뽑기'))
+                                                    }
+                                                </Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
 
-                            {hasFortuneToday && !isTodayError && cardRevealed && (
-                                <View style={styles.doneBanner}>
-                                    <Text style={styles.doneText}>카드 확인 완료! 아래에서 오늘의 운세를 확인하세요.</Text>
-                                </View>
+                                    {hasFortuneToday && !isTodayError && cardRevealed && (
+                                        <View style={styles.doneBanner}>
+                                            <Text style={styles.doneText}>카드 확인 완료! 아래에서 오늘의 운세를 확인하세요.</Text>
+                                        </View>
+                                    )}
+                                </>
                             )}
                         </View>
                     ) : selectedDate && selectedDate !== todayStr ? (
@@ -501,6 +613,113 @@ const styles = StyleSheet.create({
         color: Colors.lavender,
         fontSize: 14,
         opacity: 0.6,
+    },
+    cardPickerContainer: {
+        alignItems: 'center',
+        paddingVertical: 20,
+    },
+    pickerTitle: {
+        color: Colors.gold,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 25,
+    },
+    cardRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        paddingHorizontal: 10,
+    },
+    tarotCard: {
+        width: '100%',
+        aspectRatio: 0.6,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: 'rgba(212, 175, 55, 0.4)',
+        overflow: 'hidden',
+        backgroundColor: '#000',
+    },
+    selectedTarotCard: {
+        borderColor: Colors.gold,
+        borderWidth: 2,
+        shadowColor: Colors.gold,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 15,
+        elevation: 15,
+    },
+    cardBack: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 6,
+    },
+    cardPattern: {
+        width: '100%',
+        height: '100%',
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.2)',
+        borderRadius: 8,
+        padding: 4,
+    },
+    innerPattern: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.1)',
+        borderRadius: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    },
+    cardPatternText: {
+        fontSize: 28,
+        color: Colors.gold,
+        opacity: 0.8,
+        textShadowColor: 'rgba(212, 175, 55, 0.5)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 10,
+    },
+    drawingStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 30,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+        gap: 10,
+    },
+    drawingText: {
+        color: Colors.gold,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    revealButton: {
+        marginTop: 35,
+        backgroundColor: Colors.gold,
+        paddingHorizontal: 30,
+        paddingVertical: 15,
+        borderRadius: 25,
+        shadowColor: Colors.gold,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    revealButtonText: {
+        color: '#000',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    cancelPick: {
+        marginTop: 30,
+        padding: 10,
+    },
+    cancelPickText: {
+        color: Colors.lavender,
+        fontSize: 14,
+        textDecorationLine: 'underline',
+        opacity: 0.7,
     },
 });
 
