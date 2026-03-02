@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -36,6 +36,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
   });
 
   const up = (next) => setS(p => ({ ...p, ...next }));
+  const [aiInsight, setAiInsight] = useState(null);
+
 
   useEffect(() => {
     if (visitId) loadData();
@@ -56,6 +58,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
             visit_date: item.visit_date, // 기존 날짜 유지
             loading: false
           });
+          setAiInsight(item.ai_insight || null);
         }
       } else {
         // --- [ON 모드] 서버 데이터 불러오기 ---
@@ -68,6 +71,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
             visit_date: data.visit_date, // 서버에 기록된 실제 방문 날짜 유지
             loading: false
           });
+          setAiInsight(data.ai_insight || null);
         }
       }
     } catch (err) {
@@ -80,7 +84,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
     if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()), Alert);
 
     const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
-      allowsEditing: true, aspect: [4, 3], quality: 0.7
+      allowsEditing: true,
+      aspect: [3, 4],
+      quality: 0.7
     });
 
     if (!res.canceled && res.assets[0]) {
@@ -100,7 +106,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
       card_image: s.uri,
       visit_date: s.visit_date, // 새로 생성 시는 Now, 수정 시는 기존 날짜
       customer_id: customer?.id,
-      is_manual: isOffMode
+      is_manual: isOffMode,
+      title: s.title.trim(),
+      ai_insight: aiInsight
     };
 
     try {
@@ -109,7 +117,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
         let list = stored ? JSON.parse(stored) : [];
 
-        const localPayload = { ...payload, title: s.title.trim() };
+        const localPayload = { ...payload };
 
         if (s.isEdit) {
           list = list.map(v => v.id === visitId ? { ...v, ...localPayload } : v);
@@ -141,6 +149,15 @@ const VisitDetailScreen = ({ route, navigation }) => {
     up({ review: `${s.review}${marker}` });
     Alert.alert('안내', '실녹음/업로드 기능은 다음 버전에서 제공됩니다. 우선 음성 메모 표시를 빠르게 남길 수 있게 구성했어요.');
   };
+
+
+  const handleAIResult = useCallback((result) => {
+    setAiInsight(result || null);
+  }, []);
+
+  const clearAIInsight = useCallback(() => {
+    setAiInsight(null);
+  }, []);
 
   if (s.loading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
 
@@ -194,8 +211,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
             </View>
 
             <View style={styles.btnRow}>
-              <CustomButton title="촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} />
-              <CustomButton title="앨범에서 선택" onPress={() => onPick('lib')} variant="secondary" style={{ flex: 1 }} />
+              <CustomButton title="📸 촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} />
+              <CustomButton title="🖼️ 앨범에서 선택" onPress={() => onPick('lib')} style={{ flex: 1 }} />
             </View>
 
             <TextInput
@@ -212,7 +229,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
               <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} />
             </View>
 
-            <AISummaryPanel reviewText={s.review} visitDate={s.visit_date} />
+            <AISummaryPanel reviewText={s.review} visitDate={s.visit_date} initialResult={aiInsight} onResult={handleAIResult} onClear={clearAIInsight} />
 
             <CustomButton
               title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")}
@@ -231,8 +248,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   header: { padding: 15, borderRadius: 12, borderWidth: 1.5, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 18, fontWeight: 'bold' },
-  imgBox: { height: 260, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 15, overflow: 'hidden' },
-  fullImg: { width: '100%', height: '100%' },
+  imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 380, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 15, overflow: 'hidden', alignSelf: 'center' },
+  fullImg: { width: '100%', height: '100%', resizeMode: 'cover' },
   delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   placeholderContainer: { alignItems: 'center' },
   placeholderText: { fontSize: 40, marginBottom: 10 },

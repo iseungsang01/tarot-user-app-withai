@@ -39,6 +39,12 @@ export const visitService = {
       if (updates.card_review !== undefined) {
         updates.card_review ? await storage.saveCardReview(visitId, updates.card_review) : await storage.deleteCardReview(visitId);
       }
+      if (updates.title !== undefined) {
+        updates.title ? await storage.saveCardTitle(visitId, updates.title) : await storage.deleteCardTitle(visitId);
+      }
+      if (updates.ai_insight !== undefined) {
+        updates.ai_insight ? await storage.saveCardAIInsight(visitId, updates.ai_insight) : await storage.deleteCardAIInsight(visitId);
+      }
 
       // 2. 서버 업데이트
       const serverPayload = {};
@@ -90,6 +96,8 @@ export const visitService = {
 
       if (visitData.card_image) await storage.saveCardImage(data.id, visitData.card_image);
       if (visitData.card_review) await storage.saveCardReview(data.id, visitData.card_review);
+      if (visitData.title) await storage.saveCardTitle(data.id, visitData.title);
+      if (visitData.ai_insight) await storage.saveCardAIInsight(data.id, visitData.ai_insight);
 
       return {
         data: { ...data, is_manual: false },
@@ -116,7 +124,9 @@ export const visitService = {
         ...data,
         is_manual: false,
         card_image: await storage.getCardImage(visitId),
-        card_review: await storage.getCardReview(visitId)
+        card_review: await storage.getCardReview(visitId),
+        title: await storage.getCardTitle(visitId),
+        ai_insight: await storage.getCardAIInsight(visitId)
       },
       error: null
     };
@@ -137,6 +147,8 @@ export const visitService = {
       // 로컬 스토리지 정리
       await storage.deleteCardImage(visitId);
       await storage.deleteCardReview(visitId);
+      await storage.deleteCardTitle(visitId);
+      await storage.deleteCardAIInsight(visitId);
 
       return { error: null };
     } catch (error) {

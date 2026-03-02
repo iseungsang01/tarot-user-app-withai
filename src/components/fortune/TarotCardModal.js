@@ -58,7 +58,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
             <View style={styles.header}>
               <View>
                 <Text style={[styles.dateTitle, isManual && { color: DrawerTheme.navyLight }]}>
-                  {displayDate}의 기록
+                  {visit.title?.trim() ? visit.title : `${displayDate}의 기록`}
                 </Text>
                 <Text style={[styles.sourceTag, { color: isManual ? DrawerTheme.navyLight : DrawerTheme.woodLight }]}>
                   {isManual ? '📝 개인 메모장' : '🏛 타로 아카이브'}
@@ -75,7 +75,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
                   <Image
                     source={{ uri: visit.card_image }}
                     style={styles.tarotImage}
-                    resizeMode="contain"
+                    resizeMode="cover"
                   />
                 </View>
               </View>
@@ -95,6 +95,19 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
                 </Text>
               </View>
             </View>
+
+
+            {visit.ai_insight?.summary && (
+              <View style={styles.reviewSection}>
+                <Text style={[styles.sectionLabel, isManual && { color: DrawerTheme.navyLight }]}>✨ AI 분석 노트</Text>
+                <View style={[
+                  styles.reviewContent,
+                  isManual && { backgroundColor: 'rgba(74, 90, 126, 0.1)', borderLeftColor: DrawerTheme.navyLight }
+                ]}>
+                  <Text style={styles.reviewText}>{visit.ai_insight.summary}</Text>
+                </View>
+              </View>
+            )}
 
             <View style={styles.actionArea}>
               <TouchableOpacity
@@ -151,7 +164,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#D4AF37',
     shadowColor: '#FFD700', shadowOpacity: 0.3, shadowRadius: 15, elevation: 10,
   },
-  tarotImage: { width: SCREEN_HEIGHT * 0.28, height: SCREEN_HEIGHT * 0.45, borderRadius: 5 },
+  tarotImage: { width: SCREEN_HEIGHT * 0.3, aspectRatio: 3 / 4, maxHeight: SCREEN_HEIGHT * 0.45, borderRadius: 5 },
   reviewSection: { marginBottom: 35 },
   sectionLabel: { fontSize: 16, color: '#D4AF37', marginBottom: 12, fontWeight: 'bold' },
   reviewContent: {

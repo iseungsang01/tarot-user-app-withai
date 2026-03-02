@@ -35,11 +35,15 @@ export const useVisits = (customerId) => {
             // 이미지 캐시와 병합 (UI 표시용)
             const allImages = await storage.getAllCardImages();
             const allReviews = await storage.getAllCardReviews();
+            const allTitles = await storage.getAllCardTitles();
+            const allAIInsights = await storage.getAllCardAIInsights();
 
             return data.map(visit => ({
                 ...visit,
                 card_image: allImages[visit.id] || null,
                 card_review: allReviews[visit.id] || null,
+                title: allTitles[visit.id] || '',
+                ai_insight: allAIInsights[visit.id] || null,
             }));
         },
         enabled: !!customerId,
@@ -59,6 +63,8 @@ export const useVisits = (customerId) => {
             // 로컬 데이터도 정리
             await storage.deleteCardImage(visitId);
             await storage.deleteCardReview(visitId);
+            await storage.deleteCardTitle(visitId);
+            await storage.deleteCardAIInsight(visitId);
             return visitId;
         },
         onSuccess: () => {
