@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.72)';
 
-const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress }) => {
+const TARGET_TAP_FALLBACK_DELAY_MS = 4500;
+
+const CoachMarksOverlay = ({
+    steps,
+    stepIndex,
+    onNext,
+    onClose,
+    onTargetPress,
+    debugShowFrame = false,
+}) => {
     const step = steps?.[stepIndex];
+    const [showFallbackHint, setShowFallbackHint] = useState(false);
 
     if (!step?.frame) {
         return null;
@@ -36,6 +46,32 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
     const isLast = stepIndex === steps.length - 1;
 
     const requiresTargetTap = step?.requireTargetTap;
+    const frameDebugText = useMemo(() => (
+        `x:${Math.round(x)} y:${Math.round(y)} w:${Math.round(width)} h:${Math.round(height)}`
+    ), [height, width, x, y]);
+
+    useEffect(() => {
+        setShowFallbackHint(false);
+
+        if (!requiresTargetTap) {
+            return undefined;
+        }
+
+        const timeoutId = setTimeout(() => {
+            setShowFallbackHint(true);
+        }, TARGET_TAP_FALLBACK_DELAY_MS);
+
+        return () => clearTimeout(timeoutId);
+    }, [requiresTargetTap, stepIndex]);
+
+    const handleTargetPress = () => {
+        setShowFallbackHint(false);
+        if (onTargetPress) {
+            onTargetPress();
+            return;
+        }
+        onNext();
+    };
 
     return (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
@@ -47,7 +83,7 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
 
             <Pressable
                 style={[styles.targetTapArea, holeStyle]}
-                onPress={onTargetPress || onNext}
+                onPress={handleTargetPress}
             />
 
             <View pointerEvents="none" style={[styles.highlight, holeStyle]} />
@@ -56,9 +92,20 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
                 <Text style={styles.title}>{step.title}</Text>
                 <Text style={styles.description}>{step.description}</Text>
                 {requiresTargetTap && <Text style={styles.tapGuide}>네모 영역을 직접 눌러 다음 단계로 진행하세요.</Text>}
+                {requiresTargetTap && showFallbackHint && (
+                    <Text style={styles.fallbackHint}>대상 버튼을 누르기 어렵다면 아래 강제 진행 버튼을 눌러 주세요.</Text>
+                )}
+                {debugShowFrame && <Text style={styles.debugText}>[DEBUG] {frameDebugText}</Text>}
                 <View style={styles.tooltipBottom}>
                     <Text style={styles.counter}>{stepIndex + 1} / {steps.length}</Text>
-                    {!requiresTargetTap && (
+                    {requiresTargetTap ? (
+                        <Pressable
+                            onPress={onNext}
+                            style={[styles.forceNextButton, showFallbackHint && styles.forceNextButtonActive]}
+                        >
+                            <Text style={styles.forceNextText}>{isLast ? '완료(강제 진행)' : '다음(강제 진행)'}</Text>
+                        </Pressable>
+                    ) : (
                         <Pressable onPress={onNext} style={styles.nextButton}>
                             <Text style={styles.nextText}>{isLast ? '완료' : '다음'}</Text>
                         </Pressable>
@@ -105,6 +152,18 @@ const styles = StyleSheet.create({
     title: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 6 },
     description: { color: DrawerTheme.woodLight, lineHeight: 18 },
     tapGuide: { color: DrawerTheme.goldBrass, marginTop: 6, fontSize: 12, fontWeight: '700' },
+    fallbackHint: {
+        color: '#FFD699',
+        marginTop: 6,
+        fontSize: 11,
+        lineHeight: 15,
+    },
+    debugText: {
+        color: '#9BC4FF',
+        marginTop: 6,
+        fontSize: 11,
+        fontFamily: 'monospace',
+    },
     tooltipBottom: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     counter: { color: DrawerTheme.goldBrass, fontSize: 12 },
     nextButton: {
@@ -114,6 +173,22 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
     },
     nextText: { color: '#0B1020', fontWeight: '800' },
+    forceNextButton: {
+        backgroundColor: 'rgba(212,175,55,0.2)',
+        borderColor: DrawerTheme.goldBrass,
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+    },
+    forceNextButtonActive: {
+        backgroundColor: DrawerTheme.goldBrass,
+    },
+    forceNextText: {
+        color: '#F5E0A0',
+        fontSize: 11,
+        fontWeight: '800',
+    },
     closeButton: { marginTop: 8, alignSelf: 'flex-end' },
     closeText: { color: DrawerTheme.woodLight, fontSize: 12 },
 });
