@@ -20,7 +20,7 @@ export const MAJOR_ARCANA = [
     {
         id: 'm02',
         name: 'The High Priestess',
-        nameKr: '2. 고위 여사제',
+        nameKr: '2. 여사제',
         image: 'https://raw.githubusercontent.com/ekelen/tarot-api/master/static/cards/m02.jpg'
     },
     {
