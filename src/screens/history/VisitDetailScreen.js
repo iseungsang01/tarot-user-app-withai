@@ -229,8 +229,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         </View>
 
                         <View style={styles.btnRow}>
-                            <CustomButton title="📸 촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} />
-                            <CustomButton title="🖼️ 앨범에서 선택" onPress={() => onPick('lib')} style={{ flex: 1 }} />
+                            <CustomButton title="📸 촬영하기" onPress={() => onPick('cam')} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
+                            <CustomButton title="🖼️ 앨범에서 선택" onPress={() => onPick('lib')} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
                         </View>
 
                         <TextInput
@@ -243,15 +243,15 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         />
 
                         <View style={styles.voiceRow}>
-                            <CustomButton title="🎙️ 녹음 메모 추가" onPress={insertVoiceMemoMarker} style={{ flex: 1 }} />
-                            <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} />
+                            <CustomButton title="🎙️ 녹음 메모 추가" onPress={insertVoiceMemoMarker} style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
+                            <CustomButton title="📎 녹음 업로드" onPress={insertVoiceMemoMarker} variant="secondary" style={{ flex: 1 }} textStyle={styles.buttonTextCompact} />
                         </View>
 
 
                         <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}>
                             <View style={styles.polishHeaderRow}>
                                 <Text style={[styles.polishTitle, { color: theme.c }]}>🪄 AI 문장 다듬기</Text>
-                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} style={styles.polishBtn} />
+                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} style={styles.polishBtn} textStyle={styles.buttonTextCompact} />
                             </View>
                             {!!polishError && <Text style={styles.polishError}>⚠️ {polishError}</Text>}
                             {!!polishedReview && (
@@ -283,29 +283,30 @@ const VisitDetailScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    header: { padding: 15, borderRadius: 12, borderWidth: 1.5, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { fontSize: 18, fontWeight: 'bold' },
-    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 380, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 15, overflow: 'hidden', alignSelf: 'center' },
+    header: { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    title: { fontSize: 16, fontWeight: 'bold' },
+    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 320, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 12, overflow: 'hidden', alignSelf: 'center' },
     fullImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
     placeholderContainer: { alignItems: 'center' },
-    placeholderText: { fontSize: 40, marginBottom: 10 },
+    placeholderText: { fontSize: 34, marginBottom: 8 },
     placeholderSubText: { color: '#888', fontSize: 13 },
-    btnRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-    titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#FFF', fontSize: 15, borderWidth: 1, marginBottom: 14 },
-    input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 18, color: '#FFF', minHeight: 180, textAlignVertical: 'top', fontSize: 16, borderWidth: 1 },
-    voiceRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-    whiteText: { color: '#FFF', fontWeight: 'bold' },
-    saveBtn: { marginTop: 25, height: 55 },
-    polishPanel: { marginTop: 14, borderWidth: 1, borderRadius: 12, padding: 12, backgroundColor: 'rgba(255,255,255,0.04)' },
+    btnRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+    titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFF', fontSize: 14, borderWidth: 1, marginBottom: 12 },
+    input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, color: '#FFF', minHeight: 150, textAlignVertical: 'top', fontSize: 14, borderWidth: 1 },
+    voiceRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    whiteText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+    saveBtn: { marginTop: 20, height: 50 },
+    polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)' },
     polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    polishTitle: { fontWeight: '700', fontSize: 14 },
-    polishBtn: { minWidth: 120, height: 40 },
+    polishTitle: { fontWeight: '700', fontSize: 13 },
+    polishBtn: { minWidth: 108, height: 36 },
     polishError: { color: '#ff9e9e', marginTop: 8, fontSize: 12 },
-    compareWrap: { marginTop: 10, flexDirection: 'row', gap: 8 },
-    versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 8, alignItems: 'center' },
+    compareWrap: { marginTop: 8, flexDirection: 'row', gap: 8 },
+    versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 7, alignItems: 'center' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
-    versionChipText: { color: '#FFF', fontSize: 12, fontWeight: '600' }
+    versionChipText: { color: '#FFF', fontSize: 11, fontWeight: '600' },
+    buttonTextCompact: { fontSize: 13 }
 });
 
 export default VisitDetailScreen;

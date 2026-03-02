@@ -20,7 +20,8 @@ export const CustomButton = ({
   disabled,
   loading,
   variant = 'primary',
-  style
+  style,
+  textStyle
 }) => {
   const getColors = () => {
     switch (variant) {
@@ -68,7 +69,7 @@ export const CustomButton = ({
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.text}>{title}</Text>
+          <Text style={[styles.text, textStyle]}>{title}</Text>
         )}
       </LinearGradient>
     </TouchableOpacity>
