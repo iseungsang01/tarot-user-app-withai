@@ -14,6 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePolishReview } from '../hooks/useAI';
 import { visitService } from '../services/visitService';
 import { compressImage } from '../utils/imageOptimizer';
+import { toDisplayImageUri } from '../utils/imageUri';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../utils/errorHandler';
 
@@ -212,7 +213,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
               {s.uri ? (
                 <>
                   <Image
-                    source={{ uri: (s.uri.startsWith('data') || s.uri.startsWith('http')) ? s.uri : `data:image/jpeg;base64,${s.uri}` }}
+                    source={{ uri: toDisplayImageUri(s.uri) }}
                     style={styles.fullImg}
                   />
                   <TouchableOpacity onPress={() => up({ uri: null })} style={styles.delBtn}>

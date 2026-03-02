@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
+import { extractBase64Data, isLocalFileUri, isRemoteUri } from './imageUri';
 
 const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
 
@@ -89,27 +90,36 @@ export const storage = {
 
       await ensureDirExists();
 
+      const prevFileUri = await this.getCardImage(visitId);
+
       // 파일명 생성 (visitId 기반)
       const fileName = `visit_${visitId}_${Date.now()}.jpg`;
       const fileUri = IMAGE_DIR + fileName;
+      let finalUri = fileUri;
 
-      // 1. 이미지가 Base64인 경우 (구버전 호환)
-      if (imageData.startsWith('data:image')) {
-        const base64Code = imageData.split('base64,')[1];
+      // 1. 이미지가 Base64/Data URI인 경우
+      const base64Code = extractBase64Data(imageData);
+      if (base64Code) {
         await FileSystem.writeAsStringAsync(fileUri, base64Code, { encoding: FileSystem.EncodingType.Base64 });
       }
       // 2. 이미지가 로컬 File URI인 경우 (ImagePicker 결과)
-      else if (imageData.startsWith('file://')) {
+      else if (isLocalFileUri(imageData)) {
         await FileSystem.copyAsync({ from: imageData, to: fileUri });
+      }
+      // 3. 원격 URI의 경우는 경로 그대로 저장
+      else if (isRemoteUri(imageData)) {
+        finalUri = imageData;
       } else {
         console.warn('⚠️ 알 수 없는 이미지 포맷, 저장 건너뜀');
         return;
       }
 
       // 3. AsyncStorage에는 "파일 경로(URI)"만 저장
-      await this._updateMap(STORAGE_KEYS.CARD_IMAGES, visitId, fileUri);
+      await this._updateMap(STORAGE_KEYS.CARD_IMAGES, visitId, finalUri);
 
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      const fileInfo = isRemoteUri(finalUri)
+        ? { size: 0 }
+        : await FileSystem.getInfoAsync(finalUri);
       const metadata = {
         visitId,
         timestamp: new Date().toISOString(),
@@ -117,7 +127,11 @@ export const storage = {
       };
       await this._updateImageCacheMetadata(visitId, metadata);
 
-      console.log('✅ [Storage] 이미지 파일 저장 완료:', fileUri);
+      if (prevFileUri && prevFileUri !== finalUri && prevFileUri.startsWith(IMAGE_DIR)) {
+        await FileSystem.deleteAsync(prevFileUri, { idempotent: true });
+      }
+
+      console.log('✅ [Storage] 이미지 파일 저장 완료:', finalUri);
 
       // (선택) 이전 이미지 파일이 있다면 정리하는 로직이 필요할 수 있음
     } catch (e) {
@@ -127,7 +141,16 @@ export const storage = {
 
   async getCardImage(visitId) {
     const images = await this.get(STORAGE_KEYS.CARD_IMAGES) || {};
-    return images[visitId] || null;
+    const uri = images[visitId] || null;
+    if (!uri) return null;
+
+    if (isRemoteUri(uri) || uri.startsWith('data:image')) return uri;
+    try {
+      const info = await FileSystem.getInfoAsync(uri);
+      return info.exists ? uri : null;
+    } catch {
+      return null;
+    }
   },
 
   async getAllCardImages() {
@@ -266,6 +289,12 @@ export const storage = {
   async clearImageCache() {
     try {
       console.log('🧹 [Storage] 이미지 캐시 정리 시작');
+      const images = await this.getAllCardImages();
+      await Promise.allSettled(
+        Object.values(images)
+          .filter((uri) => typeof uri === 'string' && uri.startsWith(IMAGE_DIR))
+          .map((uri) => FileSystem.deleteAsync(uri, { idempotent: true }))
+      );
       await this.remove(STORAGE_KEYS.CARD_IMAGES);
       await this.remove(STORAGE_KEYS.IMAGE_CACHE);
       console.log('✅ [Storage] 이미지 캐시 정리 완료');
