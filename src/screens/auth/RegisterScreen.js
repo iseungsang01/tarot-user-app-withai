@@ -19,6 +19,10 @@ const RegisterScreen = ({ navigation }) => {
     const { register } = useAuth();
 
     const resetMsg = () => message.text && setMessage({ text: '', type: '' });
+    const handleTextChange = (setter) => (text) => {
+        setter(text);
+        resetMsg();
+    };
 
     const handlePhoneChange = (text) => {
         setPhone(formatPhoneNumber(text));
@@ -46,7 +50,6 @@ const RegisterScreen = ({ navigation }) => {
         setMessage({ text: '가입 정보를 처리하고 있습니다...', type: 'info' });
 
         try {
-            // AuthContext/service에 register 기능이 있다고 가정하거나 추가할 예정
             const { data, error } = await register(phone, password, nickname);
 
             if (data) {
@@ -99,7 +102,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.textInput}
                                     value={nickname}
-                                    onChangeText={(text) => { setNickname(text); resetMsg(); }}
+                                    onChangeText={handleTextChange(setNickname)}
                                     placeholder="사용하실 이름을 입력하세요"
                                     placeholderTextColor="rgba(166, 137, 102, 0.4)"
                                     editable={!loading}
@@ -111,7 +114,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.textInput}
                                     value={password}
-                                    onChangeText={(text) => { setPassword(text); resetMsg(); }}
+                                    onChangeText={handleTextChange(setPassword)}
                                     placeholder="비밀번호 입력"
                                     placeholderTextColor="rgba(166, 137, 102, 0.4)"
                                     secureTextEntry
@@ -124,7 +127,7 @@ const RegisterScreen = ({ navigation }) => {
                                 <TextInput
                                     style={styles.textInput}
                                     value={confirmPassword}
-                                    onChangeText={(text) => { setConfirmPassword(text); resetMsg(); }}
+                                    onChangeText={handleTextChange(setConfirmPassword)}
                                     placeholder="비밀번호 다시 입력"
                                     placeholderTextColor="rgba(166, 137, 102, 0.4)"
                                     secureTextEntry
