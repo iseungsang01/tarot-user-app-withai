@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { ensureAuthenticatedSession, normalizeAuthError, supabase } from './supabase';
 import { storage } from '../utils/storage';
 
 const CUSTOMER_KEY = 'tarot_customer';
@@ -13,10 +13,47 @@ const getLoginGuard = async () => (await storage.get(LOGIN_GUARD_KEY)) || { ...d
 const saveLoginGuard = async (guard) => storage.save(LOGIN_GUARD_KEY, guard);
 const resetLoginGuard = async () => storage.remove(LOGIN_GUARD_KEY);
 
+const buildLoginIdentifiers = (phoneNumber, payload) => {
+  const normalizedPhone = phoneNumber?.trim() || '';
+  const candidates = [
+    payload?.auth_email,
+    payload?.email,
+    payload?.identifier,
+    normalizedPhone,
+  ].filter(Boolean);
+
+  return [...new Set(candidates)];
+};
+
+const establishSupabaseSession = async ({ phoneNumber, password, rpcPayload }) => {
+  const accessToken = rpcPayload?.access_token;
+  const refreshToken = rpcPayload?.refresh_token;
+
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    if (error) {
+      return { ok: false, error: normalizeAuthError(error, '로그인 세션을 복구하지 못했습니다. 다시 로그인해주세요.') };
+    }
+    return { ok: true, error: null };
+  }
+
+  const identifiers = buildLoginIdentifiers(phoneNumber, rpcPayload);
+  for (const identifier of identifiers) {
+    const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
+    if (!error) return { ok: true, error: null };
+  }
+
+  return {
+    ok: false,
+    error: {
+      message: '로그인에는 성공했지만 인증 세션을 만들지 못했습니다. 다시 로그인해주세요.',
+      code: 'AUTH_SESSION_REQUIRED',
+      requiresReLogin: true,
+    },
+  };
+};
+
 export const authService = {
-  /**
-   * 로그인 (RPC 방식 + 객체 응답 처리 수정됨)
-   */
   async login(phoneNumber, password) {
     try {
       const guard = await getLoginGuard();
@@ -38,7 +75,6 @@ export const authService = {
         const serverLockUntil = resultData?.lock_expires_at ? new Date(resultData.lock_expires_at).getTime() : 0;
         const lockUntil = serverLockUntil || (failedAttempts >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0);
 
-        // 클라이언트 가드는 UX 보조(버튼 비활성화) 용도이며, 보안 판단은 서버 응답을 따른다.
         await saveLoginGuard({ failedAttempts, lockUntil });
 
         return {
@@ -50,11 +86,22 @@ export const authService = {
         };
       }
 
+      const sessionResult = await establishSupabaseSession({ phoneNumber, password, rpcPayload: resultData });
+      if (!sessionResult.ok) return { data: null, error: sessionResult.error };
+
       const realUUID = resultData.id;
       if (!realUUID) return { data: null, error: { message: '로그인 데이터 오류' } };
 
       const customerData = await this.refreshCustomer(realUUID);
-      if (!customerData) return { data: null, error: { message: '회원 정보를 불러올 수 없습니다.' } };
+      if (!customerData) {
+        const missingSession = await ensureAuthenticatedSession();
+        return {
+          data: null,
+          error: missingSession.ok
+            ? { message: '회원 정보를 불러올 수 없습니다.' }
+            : normalizeAuthError(null, '인증이 만료되었습니다. 다시 로그인해주세요.'),
+        };
+      }
 
       await resetLoginGuard();
       return { data: customerData, error: null };
@@ -64,33 +111,35 @@ export const authService = {
     }
   },
 
-  /**
-   * 로그아웃
-   */
   async logout() {
+    await supabase.auth.signOut().catch(() => null);
     await storage.remove(CUSTOMER_KEY);
   },
 
-  /**
-   * 저장된 고객 정보 조회
-   */
   async getStoredCustomer() {
     try {
       const customer = await storage.get(CUSTOMER_KEY);
-      return customer ? this.refreshCustomer(customer.id) : null;
+      if (!customer) return null;
+
+      const sessionStatus = await ensureAuthenticatedSession();
+      if (!sessionStatus.ok) {
+        await this.logout();
+        return null;
+      }
+
+      return this.refreshCustomer(customer.id);
     } catch {
       return null;
     }
   },
 
-  /**
-   * 고객 정보 새로고침
-   */
   async refreshCustomer(customerId) {
     if (!customerId) return null;
 
     try {
-      // .maybeSingle()을 사용하여 데이터가 없어도 에러가 나지 않게 처리
+      const sessionStatus = await ensureAuthenticatedSession();
+      if (!sessionStatus.ok) return null;
+
       const { data, error } = await supabase.from('customers').select('*').eq('id', customerId).maybeSingle();
 
       if (error) {
@@ -111,9 +160,6 @@ export const authService = {
     }
   },
 
-  /**
-  * 닉네임 변경
-  */
   async updateNickname(customerId, newNickname) {
     try {
       const { data, error } = await supabase.rpc('update_my_nickname', {
@@ -129,9 +175,6 @@ export const authService = {
     }
   },
 
-  /**
-   * 회원가입
-   */
   async register(phoneNumber, password, nickname = '') {
     try {
       const { data: resultData, error: rpcError } = await supabase.rpc('register_customer', {
@@ -152,16 +195,17 @@ export const authService = {
         };
       }
 
-      return { data: resultData, error: null };
+      // 회원가입 직후에도 동일한 세션 경로 사용
+      const loginResult = await this.login(phoneNumber, password);
+      if (loginResult.error) return { data: null, error: loginResult.error };
+
+      return { data: loginResult.data, error: null };
     } catch (error) {
       console.error('❌ 시스템 에러:', error);
       return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
     }
   },
 
-  /**
-   * 회원 탈퇴
-   */
   async deleteAccount(customerId) {
     try {
       const { data, error } = await supabase.rpc('delete_my_account', { p_id: customerId });
