@@ -17,3 +17,11 @@ export const Gradients = {
   goldBrown: ['#D4A679', '#B8860B'],
   red: ['#ff6b6b', '#ee5a6f'],
 };
+
+export const TextColors = {
+  inputPlaceholderOff: '#9FB0D1',
+  inputPlaceholderOn: '#E6D1A8',
+  subTextStrong: 'rgba(255,255,255,0.72)',
+  subTextHigh: 'rgba(255,255,255,0.82)',
+  subTextMuted: 'rgba(255,255,255,0.62)',
+};

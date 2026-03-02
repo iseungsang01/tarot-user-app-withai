@@ -16,6 +16,7 @@ import { visitService } from '../../services/visitService';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { TextColors } from '../../constants/Colors';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../../utils/errorHandler';
 
 const LOCAL_STORAGE_KEY = 'offline_visit_history';
@@ -181,8 +182,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
     // UI 테마: OFF 모드는 네이비, ON 모드는 황동/나무 색상 적용
     const theme = isOffMode
-        ? { c: DrawerTheme.navyLight, bg: '#10171E', btn: DrawerTheme.navyMid }
-        : { c: DrawerTheme.goldBrass, bg: DrawerTheme.woodMid, btn: DrawerTheme.woodDark };
+        ? { c: DrawerTheme.navyLight, bg: '#10171E', btn: DrawerTheme.navyMid, placeholder: TextColors.inputPlaceholderOff }
+        : { c: DrawerTheme.goldBrass, bg: DrawerTheme.woodMid, btn: DrawerTheme.woodDark, placeholder: TextColors.inputPlaceholderOn };
 
     return (
         <GradientBackground>
@@ -205,7 +206,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             value={s.title}
                             onChangeText={v => up({ title: v })}
                             placeholder="서랍 제목을 입력하세요"
-                            placeholderTextColor="#888"
+                            placeholderTextColor={theme.placeholder}
                             maxLength={40}
                         />
 
@@ -255,7 +256,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             value={s.review}
                             onChangeText={v => up({ review: v })}
                             placeholder={isOffMode ? "비밀스러운 메모를 남겨보세요..." : "상담 내용을 기록해두면 나중에 확인하기 좋아요."}
-                            placeholderTextColor="#888"
+                            placeholderTextColor={theme.placeholder}
                         />
 
                         <View style={[styles.buttonRow, styles.voiceRow]}>
@@ -323,6 +324,8 @@ const styles = StyleSheet.create({
     delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
     placeholderContainer: { alignItems: 'center' },
     placeholderText: { fontSize: 34, marginBottom: 8 },
+    placeholderSubText: { color: TextColors.subTextStrong, fontSize: 13 },
+    btnRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
     placeholderSubText: { color: '#888', fontSize: 13 },
     buttonRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch', minHeight: 50 },
     btnRow: { marginBottom: 14 },
