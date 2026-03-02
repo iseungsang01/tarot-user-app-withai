@@ -1,16 +1,25 @@
-import { supabase } from './supabase';
+import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
+
+const reloginError = (message = '인증이 만료되었습니다. 다시 로그인해주세요.') => ({
+  message,
+  requiresReLogin: true,
+  isAuthError: true,
+});
+
+const requireSession = async () => {
+  const state = await ensureAuthenticatedSession();
+  return state.ok ? null : reloginError(state.error?.message);
+};
 
 /**
  * 고객 서비스
  * 고객 정보 조회 및 업데이트
  */
 export const customerService = {
-  /**
-   * 고객 정보 조회
-   * @param {number} customerId - 고객 ID
-   * @returns {object} { data, error }
-   */
   async getCustomer(customerId) {
+    const authError = await requireSession();
+    if (authError) return { data: null, error: authError };
+
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -18,15 +27,13 @@ export const customerService = {
       .is('deleted_at', null)
       .single();
 
-    return { data, error };
+    return { data, error: withAuthErrorHandling(error, authError.message) };
   },
 
-  /**
-   * 전화번호로 고객 조회
-   * @param {string} phoneNumber - 전화번호 (010-1234-5678)
-   * @returns {object} { data, error }
-   */
   async getCustomerByPhone(phoneNumber) {
+    const authError = await requireSession();
+    if (authError) return { data: null, error: authError };
+
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -34,16 +41,13 @@ export const customerService = {
       .is('deleted_at', null)
       .single();
 
-    return { data, error };
+    return { data, error: withAuthErrorHandling(error, authError.message) };
   },
 
-  /**
-   * 고객 정보 업데이트
-   * @param {number} customerId - 고객 ID
-   * @param {object} updates - 수정할 필드들
-   * @returns {object} { data, error }
-   */
   async updateCustomer(customerId, updates) {
+    const authError = await requireSession();
+    if (authError) return { data: null, error: authError };
+
     const { data, error } = await supabase
       .from('customers')
       .update(updates)
@@ -52,43 +56,33 @@ export const customerService = {
       .select()
       .single();
 
-    return { data, error };
+    return { data, error: withAuthErrorHandling(error, authError.message) };
   },
 
-  /**
-   * 고객 탈퇴 (Soft Delete - RPC 함수 사용)
-   * ✅ RLS 우회를 위해 SQL 함수 사용
-   * @param {string} customerId - 고객 ID (UUID)
-   * @returns {object} { success, error }
-   */
   async deleteCustomer(customerId) {
     try {
-      console.log('🗑️ [customerService] 탈퇴 시작:', customerId);
-      
-      // RPC 함수 호출로 RLS 우회
+      const authError = await requireSession();
+      if (authError) return { success: false, error: authError };
+
       const { data, error } = await supabase
         .rpc('soft_delete_customer', {
-          customer_uuid: customerId
+          customer_uuid: customerId,
         });
 
       if (error) {
-        console.error('❌ [customerService] RPC 오류:', error);
-        return { success: false, error };
+        return { success: false, error: withAuthErrorHandling(error, authError.message) };
       }
 
       if (data === false) {
-        console.error('❌ [customerService] 탈퇴 실패: 이미 탈퇴되었거나 존재하지 않는 계정');
-        return { 
-          success: false, 
-          error: { message: '이미 탈퇴되었거나 존재하지 않는 계정입니다.' }
+        return {
+          success: false,
+          error: { message: '이미 탈퇴되었거나 존재하지 않는 계정입니다.' },
         };
       }
 
-      console.log('✅ [customerService] 탈퇴 성공');
       return { success: true, error: null };
     } catch (error) {
-      console.error('❌ [customerService] 탈퇴 오류:', error);
-      return { success: false, error };
+      return { success: false, error: withAuthErrorHandling(error, reloginError().message) };
     }
   },
 };

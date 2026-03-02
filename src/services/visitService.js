@@ -1,5 +1,17 @@
 import { supabaseClient } from './supabaseClient';
+import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
 import { storage } from '../utils/storage';
+
+const authFailure = (message = '인증이 만료되었습니다. 다시 로그인해주세요.') => ({
+  message,
+  requiresReLogin: true,
+  isAuthError: true,
+});
+
+const requireSession = async () => {
+  const session = await ensureAuthenticatedSession();
+  return session.ok ? null : authFailure(session.error?.message);
+};
 
 export const visitService = {
   syncLocalVisitFields: async (visitId, updates) => {
@@ -18,19 +30,22 @@ export const visitService = {
     );
   },
 
-  /**
-   * 고객의 방문 기록 목록 조회
-   */
   async getVisits(customerId) {
-    // 게스트 모드: 빈 데이터 반환
-    if (customerId === 'guest') {
-      return { data: [], error: null };
-    }
+    if (customerId === 'guest') return { data: [], error: null };
 
     try {
       const { data, error } = await supabaseClient.getVisits(customerId);
+      const authError = await requireSession();
+      if (authError) return { data: [], error: authError };
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('visit_history')
+        .select('id, customer_id, visit_date')
+        .eq('customer_id', customerId)
+        .eq('is_deleted', false)
+        .order('visit_date', { ascending: false });
+
+      if (error) throw withAuthErrorHandling(error, authError.message);
       return { data, error: null };
     } catch (error) {
       console.error('❌ [visitService] getVisits 오류:', error.message);
@@ -38,11 +53,11 @@ export const visitService = {
     }
   },
 
-  /**
-   * 방문 기록 수정
-   */
   async updateVisit(visitId, updates) {
     try {
+      const authError = await requireSession();
+      if (authError) return { data: null, error: authError };
+
       await this.syncLocalVisitFields(visitId, updates);
 
       const serverPayload = {};
@@ -53,7 +68,7 @@ export const visitService = {
       if (Object.keys(serverPayload).length > 0) {
         const { data, error } = await supabaseClient.updateVisit(visitId, serverPayload);
 
-        if (error) throw error;
+        if (error) throw withAuthErrorHandling(error, authError.message);
         updatedServerData = data;
       }
 
@@ -64,34 +79,35 @@ export const visitService = {
     }
   },
 
-  /**
-   * 새 방문 기록 생성
-   */
   async createVisit(visitData) {
     try {
       const serverPayload = {
         customer_id: visitData.customer_id,
-        visit_date: visitData.visit_date
+        visit_date: visitData.visit_date,
       };
 
-      // 게스트 모드: 서버 저장 차단
       if (visitData.customer_id === 'guest') {
         return { data: null, error: 'Guest cannot save to server' };
       }
 
       const { data, error } = await supabaseClient.createVisit(serverPayload);
+      const authError = await requireSession();
+      if (authError) return { data: null, error: authError };
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('visit_history')
+        .insert(serverPayload)
+        .select()
+        .single();
+
+      if (error) throw withAuthErrorHandling(error, authError.message);
 
       if (visitData.card_image) await storage.saveCardImage(data.id, visitData.card_image);
       if (visitData.card_review) await storage.saveCardReview(data.id, visitData.card_review);
       if (visitData.title) await storage.saveCardTitle(data.id, visitData.title);
       if (visitData.ai_insight) await storage.saveCardAIInsight(data.id, visitData.ai_insight);
 
-      return {
-        data: { ...data, is_manual: false },
-        error: null
-      };
+      return { data: { ...data, is_manual: false }, error: null };
     } catch (error) {
       console.error('❌ [visitService] createVisit 오류:', error);
       return { data: null, error };
@@ -100,8 +116,17 @@ export const visitService = {
 
   async getVisit(visitId) {
     const { data, error } = await supabaseClient.getVisit(visitId);
+    const authError = await requireSession();
+    if (authError) return { data: null, error: authError };
 
-    if (error) return { data: null, error };
+    const { data, error } = await supabase
+      .from('visit_history')
+      .select('id, customer_id, visit_date')
+      .eq('id', visitId)
+      .eq('is_deleted', false)
+      .single();
+
+    if (error) return { data: null, error: withAuthErrorHandling(error, authError.message) };
 
     return {
       data: {
@@ -110,22 +135,25 @@ export const visitService = {
         card_image: await storage.getCardImage(visitId),
         card_review: await storage.getCardReview(visitId),
         title: await storage.getCardTitle(visitId),
-        ai_insight: await storage.getCardAIInsight(visitId)
+        ai_insight: await storage.getCardAIInsight(visitId),
       },
-      error: null
+      error: null,
     };
   },
 
-  /**
-   * 방문 기록 삭제
-   */
   async deleteVisit(visitId) {
     try {
       const { error } = await supabaseClient.softDeleteVisit(visitId);
+      const authError = await requireSession();
+      if (authError) return { error: authError };
 
-      if (error) throw error;
+      const { error } = await supabase
+        .from('visit_history')
+        .update({ is_deleted: true })
+        .eq('id', visitId);
 
-      // 로컬 스토리지 정리
+      if (error) throw withAuthErrorHandling(error, authError.message);
+
       await storage.deleteCardImage(visitId);
       await storage.deleteCardReview(visitId);
       await storage.deleteCardTitle(visitId);
@@ -139,20 +167,27 @@ export const visitService = {
   },
 
   async getCustomerStats(customerId) {
-    // 게스트 모드: 기본 스탯 반환
     if (customerId === 'guest') {
       return { data: { current_stamps: 0, visit_count: 0 }, error: null };
     }
 
     try {
       const { data, error } = await supabaseClient.getCustomerStats(customerId);
+      const authError = await requireSession();
+      if (authError) return { data: null, error: authError };
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('customers')
+        .select('current_stamps, visit_count')
+        .eq('id', customerId)
+        .single();
+
+      if (error) throw withAuthErrorHandling(error, authError.message);
 
       return { data, error: null };
     } catch (error) {
       console.error('스탬프 정보 조회 실패:', error);
       return { data: null, error };
     }
-  }
+  },
 };
