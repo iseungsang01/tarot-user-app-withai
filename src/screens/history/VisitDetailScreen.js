@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,10 +16,14 @@ import { visitService } from '../../services/visitService';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { TextColors } from '../../constants/Colors';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../../utils/errorHandler';
 
 const LOCAL_STORAGE_KEY = 'offline_visit_history';
+
+const ACTION_VARIANT = {
+    PRIMARY: 'primary',
+    SECONDARY: 'secondary'
+};
 
 const VisitDetailScreen = ({ route, navigation }) => {
     const insets = useSafeAreaInsets();
@@ -229,12 +233,13 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             )}
                         </View>
 
+                        {/* 3차 액션: 부가 기능 */}
                         <View style={[styles.buttonRow, styles.btnRow]}>
                             <CustomButton
                                 title="📸 촬영하기"
                                 onPress={() => onPick('cam')}
+                                variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
-                                textStyle={styles.buttonTextCompact}
                                 numberOfLines={1}
                                 allowFontScaling={false}
                                 ellipsizeMode="tail"
@@ -242,8 +247,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             <CustomButton
                                 title="🖼️ 앨범에서 선택"
                                 onPress={() => onPick('lib')}
+                                variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
-                                textStyle={styles.buttonTextCompact}
                                 numberOfLines={1}
                                 allowFontScaling={false}
                                 ellipsizeMode="tail"
@@ -259,12 +264,13 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             placeholderTextColor={theme.placeholder}
                         />
 
+                        {/* 3차 액션: 부가 기능 */}
                         <View style={[styles.buttonRow, styles.voiceRow]}>
                             <CustomButton
                                 title="🎙️ 녹음 메모 추가"
                                 onPress={insertVoiceMemoMarker}
+                                variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
-                                textStyle={styles.buttonTextCompact}
                                 numberOfLines={1}
                                 allowFontScaling={false}
                                 ellipsizeMode="tail"
@@ -272,9 +278,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             <CustomButton
                                 title="📎 녹음 업로드"
                                 onPress={insertVoiceMemoMarker}
-                                variant="secondary"
+                                variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
-                                textStyle={styles.buttonTextCompact}
                                 numberOfLines={1}
                                 allowFontScaling={false}
                                 ellipsizeMode="tail"
@@ -282,10 +287,11 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         </View>
 
 
-                        <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}>
+                        {/* 2차 액션: 편집 보조 */}
+                        <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}> 
                             <View style={styles.polishHeaderRow}>
                                 <Text style={[styles.polishTitle, { color: theme.c }]}>🪄 AI 문장 다듬기</Text>
-                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} style={styles.polishBtn} textStyle={styles.buttonTextCompact} />
+                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} variant={ACTION_VARIANT.SECONDARY} style={styles.polishBtn} />
                             </View>
                             {!!polishError && <Text style={styles.polishError}>⚠️ {polishError}</Text>}
                             {!!polishedReview && (
@@ -302,11 +308,13 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
                         <AISummaryPanel reviewText={effectiveReview} visitDate={s.visit_date} initialResult={aiInsight} onResult={handleAIResult} onClear={clearAIInsight} />
 
+                        {/* 1차 액션: 저장 */}
                         <CustomButton
                             title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")}
                             onPress={onSave}
                             loading={s.saving}
-                            style={[styles.saveBtn, { backgroundColor: theme.btn }]}
+                            variant={ACTION_VARIANT.PRIMARY}
+                            style={styles.saveBtn}
                         />
 
                     </ScrollView>
@@ -324,8 +332,6 @@ const styles = StyleSheet.create({
     delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
     placeholderContainer: { alignItems: 'center' },
     placeholderText: { fontSize: 34, marginBottom: 8 },
-    placeholderSubText: { color: TextColors.subTextStrong, fontSize: 13 },
-    btnRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
     placeholderSubText: { color: '#888', fontSize: 13 },
     buttonRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch', minHeight: 50 },
     btnRow: { marginBottom: 14 },
@@ -343,8 +349,7 @@ const styles = StyleSheet.create({
     compareWrap: { marginTop: 8, flexDirection: 'row', gap: 8 },
     versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 7, alignItems: 'center' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
-    versionChipText: { color: '#FFF', fontSize: 11, fontWeight: '600' },
-    buttonTextCompact: { fontSize: 13 }
+    versionChipText: { color: '#FFF', fontSize: 11, fontWeight: '600' }
 });
 
 export default VisitDetailScreen;

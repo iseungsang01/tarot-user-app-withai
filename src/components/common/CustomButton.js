@@ -26,31 +26,28 @@ export const CustomButton = ({
   allowFontScaling,
   ellipsizeMode,
 }) => {
-  const getColors = () => {
-    switch (variant) {
-      case 'primary':
-        return Gradients.button;
-      case 'danger':
-        return Gradients.red;
-      case 'secondary':
-        return ['rgba(138, 43, 226, 0.3)', 'rgba(138, 43, 226, 0.5)'];
-      default:
-        return Gradients.button;
-    }
+  const VARIANT_TOKENS = {
+    primary: {
+      gradient: Gradients.button,
+      borderColor: Colors.gold,
+      borderWidth: 2,
+      textWeight: '800',
+    },
+    secondary: {
+      gradient: ['rgba(138, 43, 226, 0.18)', 'rgba(138, 43, 226, 0.32)'],
+      borderColor: 'rgba(204, 153, 255, 0.72)',
+      borderWidth: 1,
+      textWeight: '600',
+    },
+    danger: {
+      gradient: Gradients.red,
+      borderColor: Colors.redSoft,
+      borderWidth: 2,
+      textWeight: '700',
+    },
   };
 
-  const getBorderColor = () => {
-    switch (variant) {
-      case 'primary':
-        return Colors.gold;
-      case 'danger':
-        return Colors.redSoft;
-      case 'secondary':
-        return Colors.purpleLight;
-      default:
-        return Colors.gold;
-    }
-  };
+  const tokens = VARIANT_TOKENS[variant] || VARIANT_TOKENS.primary;
 
   return (
     <TouchableOpacity
@@ -60,12 +57,12 @@ export const CustomButton = ({
       style={style}
     >
       <LinearGradient
-        colors={getColors()}
+        colors={tokens.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
           styles.button,
-          { borderColor: getBorderColor() },
+          { borderColor: tokens.borderColor, borderWidth: tokens.borderWidth },
           disabled && styles.disabled
         ]}
       >
@@ -73,7 +70,7 @@ export const CustomButton = ({
           <ActivityIndicator color="white" />
         ) : (
           <Text
-            style={[styles.text, textStyle]}
+            style={[styles.text, { fontWeight: tokens.textWeight }, textStyle]}
             numberOfLines={numberOfLines}
             allowFontScaling={allowFontScaling}
             ellipsizeMode={ellipsizeMode}
