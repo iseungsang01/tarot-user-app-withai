@@ -177,17 +177,6 @@ export const createPermissionError = (permission) => {
   };
 };
 
-/**
- * 스토리지 에러 생성
- * @param {string} operation - 'SAVE_FAILED' | 'LOAD_FAILED'
- * @returns {object} { type, title, message, icon }
- */
-export const createStorageError = (operation) => {
-  return {
-    type: ERROR_TYPES.STORAGE,
-    ...ERROR_MESSAGES[ERROR_TYPES.STORAGE][operation],
-  };
-};
 
 /**
  * 에러를 Alert로 표시

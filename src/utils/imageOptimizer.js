@@ -76,56 +76,6 @@ export const compressImage = async (uri, options = {}) => {
   }
 };
 
-/**
- * 여러 이미지를 배치로 압축
- * @param {Array<string>} uris - 이미지 URI 배열
- * @param {object} options - 압축 옵션
- * @returns {Promise<Array<object>>} 압축된 이미지 배열
- */
-export const compressImages = async (uris, options = {}) => {
-  try {
-    console.log('📸 [ImageOptimizer] 배치 압축 시작:', uris.length, '개');
-    
-    const results = await Promise.all(
-      uris.map(uri => compressImage(uri, options))
-    );
-    
-    console.log('✅ [ImageOptimizer] 배치 압축 완료');
-    return results;
-  } catch (error) {
-    console.error('❌ [ImageOptimizer] 배치 압축 오류:', error);
-    throw error;
-  }
-};
-
-/**
- * Base64를 URI로 변환 (필요 시)
- * @param {string} base64 - Base64 문자열
- * @param {string} filename - 저장할 파일명
- * @returns {Promise<string>} 변환된 URI
- */
-export const base64ToUri = async (base64, filename = 'temp_image.jpg') => {
-  try {
-    console.log('🔄 [ImageOptimizer] Base64 → URI 변환 시작');
-    
-    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-    
-    // Base64 데이터 추출 (data:image/jpeg;base64, 제거)
-    const base64Data = base64.includes(',') 
-      ? base64.split(',')[1] 
-      : base64;
-    
-    await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    
-    console.log('✅ [ImageOptimizer] 변환 완료:', fileUri);
-    return fileUri;
-  } catch (error) {
-    console.error('❌ [ImageOptimizer] Base64 → URI 변환 오류:', error);
-    throw error;
-  }
-};
 
 /**
  * 이미지 크기 계산 (KB, MB)
@@ -142,27 +92,6 @@ export const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-/**
- * 이미지가 압축이 필요한지 확인
- * @param {string} uri - 이미지 URI
- * @param {number} maxSizeBytes - 최대 크기 (bytes)
- * @returns {Promise<boolean>} 압축 필요 여부
- */
-export const needsCompression = async (uri, maxSizeBytes = 1024 * 1024) => {
-  try {
-    const info = await FileSystem.getInfoAsync(uri);
-    const needsCompress = info.size > maxSizeBytes;
-    
-    console.log('🔍 [ImageOptimizer] 압축 필요 여부:', needsCompress);
-    console.log('📊 [ImageOptimizer] 현재 크기:', formatFileSize(info.size));
-    console.log('📊 [ImageOptimizer] 최대 크기:', formatFileSize(maxSizeBytes));
-    
-    return needsCompress;
-  } catch (error) {
-    console.error('❌ [ImageOptimizer] 압축 필요 여부 확인 오류:', error);
-    return false;
-  }
-};
 
 /**
  * 이미지 캐시 정리
@@ -192,26 +121,5 @@ export const clearImageCache = async () => {
     console.log('✅ [ImageOptimizer] 캐시 정리 완료');
   } catch (error) {
     console.error('❌ [ImageOptimizer] 캐시 정리 오류:', error);
-  }
-};
-
-/**
- * 이미지 메타데이터 추출
- * @param {string} uri - 이미지 URI
- * @returns {Promise<object>} { size, exists, uri }
- */
-export const getImageMetadata = async (uri) => {
-  try {
-    const info = await FileSystem.getInfoAsync(uri);
-    
-    return {
-      size: info.size,
-      sizeFormatted: formatFileSize(info.size),
-      exists: info.exists,
-      uri: info.uri,
-    };
-  } catch (error) {
-    console.error('❌ [ImageOptimizer] 메타데이터 추출 오류:', error);
-    return null;
   }
 };

@@ -14,12 +14,6 @@ export const APP_INFO = {
   description: '타로 카드 선택 및 스탬프 적립 앱',
 };
 
-export const STAMP_CONFIG = {
-  maxStamps: 10,
-  stampsPerVisit: 1,
-  couponReward: 1,
-};
-
 export const ERROR_MESSAGES = {
   network: '네트워크 연결을 확인해주세요.',
   server: '서버 오류가 발생했습니다.',
