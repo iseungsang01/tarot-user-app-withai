@@ -391,3 +391,116 @@ VALUES
   ('admin_id', 'admin', '관리자 로그인 아이디'),
   ('admin_password', extensions.crypt('p1o2m3n4', extensions.gen_salt('bf')), '관리자 인증용 비밀번호 (해시저장)')
 ON CONFLICT (key) DO NOTHING;
+
+-- ==========================================
+-- AI Proxy 보안/제한 저장소
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.ai_proxy_rate_limits (
+  id bigserial PRIMARY KEY,
+  dimension text NOT NULL,
+  identifier text NOT NULL,
+  bucket_type text NOT NULL CHECK (bucket_type IN ('minute', 'hour')),
+  bucket_start timestamptz NOT NULL,
+  request_count integer NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (dimension, identifier, bucket_type, bucket_start)
+);
+
+CREATE TABLE IF NOT EXISTS public.ai_proxy_token_quotas (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL,
+  day_bucket date NOT NULL,
+  month_bucket text NOT NULL,
+  token_count bigint NOT NULL DEFAULT 0,
+  request_count integer NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, day_bucket, month_bucket)
+);
+
+ALTER TABLE public.ai_proxy_rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_proxy_token_quotas ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service role can manage ai_proxy_rate_limits"
+ON public.ai_proxy_rate_limits
+AS PERMISSIVE
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "service role can manage ai_proxy_token_quotas"
+ON public.ai_proxy_token_quotas
+AS PERMISSIVE
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION public.increment_ai_proxy_rate_limit(
+  p_dimension text,
+  p_identifier text,
+  p_bucket_type text,
+  p_bucket_start timestamptz,
+  p_limit integer
+)
+RETURNS TABLE(allowed boolean, current_count integer)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_count integer;
+BEGIN
+  INSERT INTO public.ai_proxy_rate_limits (dimension, identifier, bucket_type, bucket_start, request_count)
+  VALUES (p_dimension, p_identifier, p_bucket_type, p_bucket_start, 1)
+  ON CONFLICT (dimension, identifier, bucket_type, bucket_start)
+  DO UPDATE
+    SET request_count = public.ai_proxy_rate_limits.request_count + 1,
+        updated_at = now()
+  RETURNING request_count INTO v_count;
+
+  RETURN QUERY SELECT (v_count <= p_limit), v_count;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.apply_ai_proxy_token_usage(
+  p_user_id uuid,
+  p_day_bucket date,
+  p_month_bucket text,
+  p_used_tokens bigint,
+  p_daily_limit bigint,
+  p_monthly_limit bigint
+)
+RETURNS TABLE(allowed boolean, daily_total bigint, monthly_total bigint)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_daily_total bigint;
+  v_monthly_total bigint;
+BEGIN
+  INSERT INTO public.ai_proxy_token_quotas (user_id, day_bucket, month_bucket, token_count, request_count)
+  VALUES (p_user_id, p_day_bucket, p_month_bucket, p_used_tokens, 1)
+  ON CONFLICT (user_id, day_bucket, month_bucket)
+  DO UPDATE
+    SET token_count = public.ai_proxy_token_quotas.token_count + EXCLUDED.token_count,
+        request_count = public.ai_proxy_token_quotas.request_count + 1,
+        updated_at = now();
+
+  SELECT COALESCE(SUM(token_count), 0)
+    INTO v_daily_total
+  FROM public.ai_proxy_token_quotas
+  WHERE user_id = p_user_id
+    AND day_bucket = p_day_bucket;
+
+  SELECT COALESCE(SUM(token_count), 0)
+    INTO v_monthly_total
+  FROM public.ai_proxy_token_quotas
+  WHERE user_id = p_user_id
+    AND month_bucket = p_month_bucket;
+
+  RETURN QUERY SELECT (v_daily_total <= p_daily_limit AND v_monthly_total <= p_monthly_limit), v_daily_total, v_monthly_total;
+END;
+$$;
