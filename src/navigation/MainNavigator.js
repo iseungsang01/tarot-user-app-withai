@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -77,7 +77,7 @@ const tabIcon = (emoji, hasNotification = false) => () => <TabIcon emoji={emoji}
 const TabNavigator = () => {
   const { hasAnyUnread } = useNotifications();
   const insets = useSafeAreaInsets();
-  const { showCoachMarks, completeCoachMarks } = useUI();
+  const { showCoachMarks, coachMarksSessionId, completeCoachMarks } = useUI();
   const [stepIndex, setStepIndex] = useState(0);
   const [frames, setFrames] = useState({});
   const navRef = useRef(null);
@@ -120,8 +120,46 @@ const TabNavigator = () => {
     setFrames((prev) => ({ ...prev, [key]: normalizedFrame }));
   };
 
+
+  useEffect(() => {
+    if (!showCoachMarks || !coachMarksSessionId) return;
+
+    setStepIndex(0);
+    setFrames({});
+    zeroFrameCountsRef.current = {};
+
+    requestAnimationFrame(() => {
+      captureTabRootOffset();
+    });
+  }, [showCoachMarks, coachMarksSessionId, captureTabRootOffset]);
+
   const stepsWithFrame = useMemo(() => COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] })), [frames]);
-  const isCoachVisible = showCoachMarks && !!stepsWithFrame[stepIndex]?.frame;
+  const currentStep = stepsWithFrame[stepIndex];
+  const isCoachVisible = showCoachMarks && !!currentStep?.frame;
+
+  useEffect(() => {
+    if (!showCoachMarks) return;
+    if (currentStep?.frame) return;
+
+    const retryFrameCapture = requestAnimationFrame(() => {
+      captureTabRootOffset();
+    });
+
+    const fallbackTimer = setTimeout(() => {
+      if (!stepsWithFrame[stepIndex]?.frame) {
+        console.warn('[CoachMarks] Missing step frame. Completing guide safely.', {
+          stepIndex,
+          stepKey: stepsWithFrame[stepIndex]?.key,
+        });
+        completeCoachMarks();
+      }
+    }, 300);
+
+    return () => {
+      cancelAnimationFrame(retryFrameCapture);
+      clearTimeout(fallbackTimer);
+    };
+  }, [showCoachMarks, currentStep, stepIndex, stepsWithFrame, captureTabRootOffset, completeCoachMarks]);
 
   const finishCoach = () => {
     completeCoachMarks();

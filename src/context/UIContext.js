@@ -8,6 +8,7 @@ export const UIContext = createContext();
 export const UIProvider = ({ children }) => {
   const { customer } = useContext(AuthContext);
   const [showCoachMarks, setShowCoachMarks] = useState(false);
+  const [coachMarksSessionId, setCoachMarksSessionId] = useState(null);
   const [uiLoading, setUiLoading] = useState(true);
 
   useEffect(() => {
@@ -34,15 +35,24 @@ export const UIProvider = ({ children }) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.COACH_MARKS, 'true');
       setShowCoachMarks(false);
+      setCoachMarksSessionId(null);
     } catch (error) {
       console.error('UIContext.completeCoachMarks error:', error);
     }
   }, []);
 
-  const triggerCoachMarks = useCallback(() => setShowCoachMarks(true), []);
+  const startCoachMarks = useCallback((sessionId) => {
+    const nextSessionId = sessionId ?? `${Date.now()}`;
+    setCoachMarksSessionId(nextSessionId);
+    setShowCoachMarks(true);
+  }, []);
+
+  const triggerCoachMarks = useCallback((sessionId) => startCoachMarks(sessionId), [startCoachMarks]);
 
   return (
-    <UIContext.Provider value={{ showCoachMarks, uiLoading, completeCoachMarks, triggerCoachMarks }}>
+    <UIContext.Provider
+      value={{ showCoachMarks, coachMarksSessionId, uiLoading, completeCoachMarks, startCoachMarks, triggerCoachMarks }}
+    >
       {children}
     </UIContext.Provider>
   );
