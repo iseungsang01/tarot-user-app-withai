@@ -129,6 +129,16 @@ CREATE TABLE public.app_configs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- [로그인 시도 추적]
+CREATE TABLE public.login_attempt_tracker (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    phone_hash text NOT NULL,
+    ip_device_hash text NOT NULL,
+    failed_attempts integer NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
+    lock_expires_at timestamptz,
+    last_failed_at timestamptz,
+    updated_at timestamptz NOT NULL DEFAULT NOW(),
+    UNIQUE (phone_hash, ip_device_hash)
 -- [비밀번호 변경 감사 로그]
 CREATE TABLE public.customer_password_audit_logs (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -147,6 +157,8 @@ CREATE INDEX idx_coupon_history_customer ON coupon_history(customer_id);
 CREATE INDEX idx_bug_reports_customer ON bug_reports(customer_id);
 CREATE INDEX idx_vote_responses_customer ON vote_responses(customer_id);
 CREATE INDEX idx_notices_pinned_published ON notices(is_pinned, is_published) WHERE is_published = true;
+CREATE INDEX idx_login_attempt_tracker_phone_hash ON login_attempt_tracker(phone_hash);
+CREATE INDEX idx_login_attempt_tracker_lock_expires_at ON login_attempt_tracker(lock_expires_at);
 CREATE INDEX idx_customer_password_audit_customer ON customer_password_audit_logs(customer_id, changed_at DESC);
 
 -- ==========================================
@@ -160,6 +172,42 @@ ALTER TABLE bug_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vote_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE login_attempt_tracker ENABLE ROW LEVEL SECURITY;
+
+-- 공통 RLS 정책 (데모용으로 모두 허용되어 있으나 실제 운영 시 보안 강화 필요)
+CREATE POLICY "Allow All Select" ON customers FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON customers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON customers FOR UPDATE USING (true);
+
+CREATE POLICY "Allow All Select" ON visit_history FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON visit_history FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON visit_history FOR UPDATE USING (true);
+CREATE POLICY "Allow All Delete" ON visit_history FOR DELETE USING (true);
+
+CREATE POLICY "Allow All Select" ON coupon_history FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON coupon_history FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON coupon_history FOR UPDATE USING (true);
+CREATE POLICY "Allow All Delete" ON coupon_history FOR DELETE USING (true);
+
+CREATE POLICY "Allow All Select" ON notices FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON notices FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON notices FOR UPDATE USING (true);
+CREATE POLICY "Allow All Delete" ON notices FOR DELETE USING (true);
+
+CREATE POLICY "Allow All Select" ON bug_reports FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON bug_reports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON bug_reports FOR UPDATE USING (true);
+CREATE POLICY "Allow All Delete" ON bug_reports FOR DELETE USING (true);
+
+CREATE POLICY "Allow All Select" ON votes FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON votes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON votes FOR UPDATE USING (true);
+CREATE POLICY "Allow All Delete" ON votes FOR DELETE USING (true);
+
+CREATE POLICY "Allow All Select" ON vote_responses FOR SELECT USING (true);
+CREATE POLICY "Allow All Insert" ON vote_responses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow All Update" ON vote_responses FOR UPDATE USING (true);
+CREATE POLICY "Allow All Delete" ON vote_responses FOR DELETE USING (true);
 ALTER TABLE customer_password_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 고객 정보: 본인 데이터만 접근 가능
@@ -246,6 +294,11 @@ BEGIN
   );
 END;
 $$;
+
+CREATE POLICY "No Direct Access login_attempt_tracker" ON login_attempt_tracker
+FOR ALL
+USING (false)
+WITH CHECK (false);
 
 -- ==========================================
 -- 5. RPC 함수 (Security Definer)
@@ -392,7 +445,8 @@ $$;
 -- [기능] 고객 로그인
 CREATE OR REPLACE FUNCTION public.login_customer(
     p_phone text,
-    p_password text
+    p_password text,
+    p_client_fingerprint text DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -401,18 +455,151 @@ SET search_path = public, extensions
 AS $$
 DECLARE
     v_customer public.customers%ROWTYPE;
+    v_phone_hash text;
+    v_device_hash text;
+    v_phone_lock_expires_at timestamptz;
+    v_device_lock_expires_at timestamptz;
+    v_lock_expires_at timestamptz;
+    v_max_failed_attempts integer := 5;
+    v_lock_minutes integer := 5;
 BEGIN
+    v_phone_hash := encode(extensions.digest(p_phone, 'sha256'), 'hex');
+    v_device_hash := encode(extensions.digest(COALESCE(NULLIF(trim(p_client_fingerprint), ''), 'unknown'), 'sha256'), 'hex');
+
+    SELECT lock_expires_at
+    INTO v_phone_lock_expires_at
+    FROM public.login_attempt_tracker
+    WHERE phone_hash = v_phone_hash
+      AND ip_device_hash = '__phone__';
+
+    SELECT lock_expires_at
+    INTO v_device_lock_expires_at
+    FROM public.login_attempt_tracker
+    WHERE phone_hash = v_phone_hash
+      AND ip_device_hash = v_device_hash;
+
+    v_lock_expires_at := GREATEST(
+        COALESCE(v_phone_lock_expires_at, '-infinity'::timestamptz),
+        COALESCE(v_device_lock_expires_at, '-infinity'::timestamptz)
+    );
+
+    IF v_lock_expires_at > NOW() THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'locked', true,
+            'lock_expires_at', v_lock_expires_at,
+            'message', '로그인 시도가 많아 잠시 제한되었습니다. 잠시 후 다시 시도해주세요.'
+        );
+    END IF;
+
     SELECT * INTO v_customer
     FROM public.customers
     WHERE phone_number = p_phone AND deleted_at IS NULL;
 
     IF v_customer.id IS NULL THEN
+        INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
+        VALUES (
+            v_phone_hash,
+            '__phone__',
+            1,
+            NULL,
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (phone_hash, ip_device_hash)
+        DO UPDATE SET
+            failed_attempts = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.failed_attempts
+                ELSE public.login_attempt_tracker.failed_attempts + 1
+            END,
+            lock_expires_at = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.lock_expires_at
+                WHEN public.login_attempt_tracker.failed_attempts + 1 >= v_max_failed_attempts THEN NOW() + make_interval(mins => v_lock_minutes)
+                ELSE NULL
+            END,
+            last_failed_at = NOW(),
+            updated_at = NOW();
+
+        INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
+        VALUES (
+            v_phone_hash,
+            v_device_hash,
+            1,
+            NULL,
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (phone_hash, ip_device_hash)
+        DO UPDATE SET
+            failed_attempts = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.failed_attempts
+                ELSE public.login_attempt_tracker.failed_attempts + 1
+            END,
+            lock_expires_at = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.lock_expires_at
+                WHEN public.login_attempt_tracker.failed_attempts + 1 >= v_max_failed_attempts THEN NOW() + make_interval(mins => v_lock_minutes)
+                ELSE NULL
+            END,
+            last_failed_at = NOW(),
+            updated_at = NOW();
+
         RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
     END IF;
 
     IF v_customer.password = extensions.crypt(p_password, v_customer.password) THEN
+        DELETE FROM public.login_attempt_tracker
+        WHERE phone_hash = v_phone_hash
+          AND ip_device_hash IN ('__phone__', v_device_hash);
+
+        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
         RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname, 'must_change_password', v_customer.must_change_password);
     ELSE
+        INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
+        VALUES (
+            v_phone_hash,
+            '__phone__',
+            1,
+            NULL,
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (phone_hash, ip_device_hash)
+        DO UPDATE SET
+            failed_attempts = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.failed_attempts
+                ELSE public.login_attempt_tracker.failed_attempts + 1
+            END,
+            lock_expires_at = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.lock_expires_at
+                WHEN public.login_attempt_tracker.failed_attempts + 1 >= v_max_failed_attempts THEN NOW() + make_interval(mins => v_lock_minutes)
+                ELSE NULL
+            END,
+            last_failed_at = NOW(),
+            updated_at = NOW();
+
+        INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
+        VALUES (
+            v_phone_hash,
+            v_device_hash,
+            1,
+            NULL,
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (phone_hash, ip_device_hash)
+        DO UPDATE SET
+            failed_attempts = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.failed_attempts
+                ELSE public.login_attempt_tracker.failed_attempts + 1
+            END,
+            lock_expires_at = CASE
+                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.lock_expires_at
+                WHEN public.login_attempt_tracker.failed_attempts + 1 >= v_max_failed_attempts THEN NOW() + make_interval(mins => v_lock_minutes)
+                ELSE NULL
+            END,
+            last_failed_at = NOW(),
+            updated_at = NOW();
+
         RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
     END IF;
 END;
@@ -476,6 +663,7 @@ $$;
 
 -- 실행 권한 부여
 GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
