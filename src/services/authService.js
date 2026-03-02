@@ -20,19 +20,12 @@ export const authService = {
   async login(phoneNumber, password) {
     try {
       const guard = await getLoginGuard();
-      const now = Date.now();
-
-      if (guard.lockUntil && now < guard.lockUntil) {
-        const remainSeconds = Math.ceil((guard.lockUntil - now) / 1000);
-        return {
-          data: null,
-          error: { message: `로그인 시도가 많아 잠시 제한되었습니다. ${remainSeconds}초 후 다시 시도해주세요.` },
-        };
-      }
+      const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
       const { data: resultData, error: rpcError } = await supabase.rpc('login_customer', {
         p_phone: phoneNumber.trim(),
         p_password: password,
+        p_client_fingerprint: clientFingerprint,
       });
 
       if (rpcError) {
@@ -42,15 +35,17 @@ export const authService = {
 
       if (!resultData || resultData.success === false) {
         const failedAttempts = (guard.failedAttempts || 0) + 1;
-        const lockUntil = failedAttempts >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0;
+        const serverLockUntil = resultData?.lock_expires_at ? new Date(resultData.lock_expires_at).getTime() : 0;
+        const lockUntil = serverLockUntil || (failedAttempts >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0);
+
+        // 클라이언트 가드는 UX 보조(버튼 비활성화) 용도이며, 보안 판단은 서버 응답을 따른다.
         await saveLoginGuard({ failedAttempts, lockUntil });
 
         return {
           data: null,
           error: {
-            message: lockUntil
-              ? '로그인 실패 횟수가 누적되어 5분간 잠금됩니다.'
-              : resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.',
+            message: resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.',
+            lockedUntil: serverLockUntil || null,
           },
         };
       }

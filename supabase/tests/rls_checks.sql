@@ -59,3 +59,48 @@ from pg_proc
 where proname = 'increment_ai_usage';
 -- 4) AI 사용량 로직 비활성화 이후 참조 함수 확인(수동 점검)
 -- drop function if exists public.increment_ai_usage(uuid);
+
+-- 5) 로그인 시도 제한 시나리오 점검 (동일 번호 다중 시도 / 분산 시도)
+-- 주의: 테스트 DB에서만 실행
+
+do $$
+declare
+  v_phone text := '010-9999-9999';
+  v_result jsonb;
+  i integer;
+  v_phone_hash text;
+begin
+  v_phone_hash := encode(extensions.digest(v_phone, 'sha256'), 'hex');
+
+  -- 초기화
+  delete from public.login_attempt_tracker where phone_hash = v_phone_hash;
+
+  -- 동일 번호 + 동일 디바이스 실패 누적
+  for i in 1..5 loop
+    v_result := public.login_customer(v_phone, 'wrong-password', 'ipA-deviceA');
+  end loop;
+
+  if coalesce((v_result->>'locked')::boolean, false) is not true then
+    raise notice '5회 직후 lock 응답은 다음 시도에 반영될 수 있습니다. 1회 추가 검증 수행';
+    v_result := public.login_customer(v_phone, 'wrong-password', 'ipA-deviceA');
+  end if;
+
+  if coalesce((v_result->>'locked')::boolean, false) is not true then
+    raise exception '동일 번호 다중 시도 잠금 미동작: %', v_result;
+  end if;
+
+  -- 동일 번호 + 분산 디바이스 시도 시에도 phone 단위 잠금 공유
+  v_result := public.login_customer(v_phone, 'wrong-password', 'ipB-deviceB');
+  if coalesce((v_result->>'locked')::boolean, false) is not true then
+    raise exception '분산 시도 잠금 미동작: %', v_result;
+  end if;
+
+  raise notice '로그인 시도 제한 시나리오 검증 완료';
+end
+$$;
+
+-- 참고 조회
+select phone_hash, ip_device_hash, failed_attempts, lock_expires_at
+from public.login_attempt_tracker
+order by updated_at desc
+limit 10;
