@@ -26,6 +26,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, aut
 -- [고객 테이블]
 CREATE TABLE public.customers (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    auth_email text NOT NULL,
     phone_number varchar(13) NOT NULL,
     nickname varchar(20),
     password text NOT NULL,
@@ -46,6 +47,7 @@ CREATE TABLE public.customers (
 
 -- 유효 유저 중 전화번호 유니크 제한
 CREATE UNIQUE INDEX idx_customers_phone_active ON customers(phone_number) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_customers_auth_email_active ON customers(auth_email) WHERE deleted_at IS NULL;
 
 -- [방문 및 스탬프 적립 이력]
 CREATE TABLE public.visit_history (
@@ -404,7 +406,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.register_customer(
     p_phone text,
     p_password text,
-    p_nickname text DEFAULT NULL
+    p_nickname text DEFAULT NULL,
+    p_auth_user_id uuid DEFAULT NULL,
+    p_auth_email text DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -414,6 +418,7 @@ AS $$
 DECLARE
     v_customer_id uuid;
     v_nickname text;
+    v_auth_email text;
 BEGIN
     -- 전화번호 형식 검증
     IF p_phone !~ '^\d{3}-\d{3,4}-\d{4}$' THEN
@@ -430,10 +435,11 @@ BEGIN
     END IF;
 
     v_nickname := COALESCE(NULLIF(p_nickname, ''), '유저_' || right(p_phone, 4));
+    v_auth_email := COALESCE(NULLIF(trim(p_auth_email), ''), regexp_replace(p_phone, '[^0-9]', '', 'g') || '@phone.local');
 
     -- 데이터 삽입
-    INSERT INTO public.customers (phone_number, password, nickname, must_change_password)
-    VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname, false)
+    INSERT INTO public.customers (id, auth_email, phone_number, password, nickname, must_change_password)
+    VALUES (COALESCE(p_auth_user_id, gen_random_uuid()), v_auth_email, p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname, false)
     RETURNING id INTO v_customer_id;
 
     RETURN jsonb_build_object('success', true, 'id', v_customer_id);
@@ -543,7 +549,7 @@ BEGIN
             last_failed_at = NOW(),
             updated_at = NOW();
 
-        RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
+        RETURN jsonb_build_object('success', false, 'reason', 'ACCOUNT_NOT_FOUND', 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
     END IF;
 
     IF v_customer.password = extensions.crypt(p_password, v_customer.password) THEN
@@ -551,8 +557,7 @@ BEGIN
         WHERE phone_hash = v_phone_hash
           AND ip_device_hash IN ('__phone__', v_device_hash);
 
-        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
-        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname, 'must_change_password', v_customer.must_change_password);
+        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'auth_email', v_customer.auth_email, 'nickname', v_customer.nickname, 'must_change_password', v_customer.must_change_password);
     ELSE
         INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
         VALUES (
@@ -600,7 +605,7 @@ BEGIN
             last_failed_at = NOW(),
             updated_at = NOW();
 
-        RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
+        RETURN jsonb_build_object('success', false, 'reason', 'INVALID_PASSWORD', 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
     END IF;
 END;
 $$;
@@ -662,7 +667,7 @@ END;
 $$;
 
 -- 실행 권한 부여
-GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text, uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;

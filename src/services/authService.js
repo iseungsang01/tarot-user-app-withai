@@ -14,16 +14,11 @@ const getLoginGuard = async () => (await storage.get(LOGIN_GUARD_KEY)) || { ...d
 const saveLoginGuard = async (guard) => storage.save(LOGIN_GUARD_KEY, guard);
 const resetLoginGuard = async () => storage.remove(LOGIN_GUARD_KEY);
 
-const buildLoginIdentifiers = (phoneNumber, payload) => {
-  const normalizedPhone = phoneNumber?.trim() || '';
-  const candidates = [
-    payload?.auth_email,
-    payload?.email,
-    payload?.identifier,
-    normalizedPhone,
-  ].filter(Boolean);
+const normalizePhone = (phoneNumber = '') => phoneNumber.replace(/\D/g, '');
 
-  return [...new Set(candidates)];
+const buildAuthEmailFromPhone = (phoneNumber = '') => {
+  const normalizedPhone = normalizePhone(phoneNumber);
+  return normalizedPhone ? `${normalizedPhone}@phone.local` : '';
 };
 
 const fetchCustomerProfile = async (customerId) => {
@@ -38,34 +33,6 @@ const fetchCustomerProfile = async (customerId) => {
   } catch {
     return null;
   }
-};
-
-const establishSupabaseSession = async ({ phoneNumber, password, rpcPayload }) => {
-  const accessToken = rpcPayload?.access_token;
-  const refreshToken = rpcPayload?.refresh_token;
-
-  if (accessToken && refreshToken) {
-    const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-    if (error) {
-      return { ok: false, error: normalizeAuthError(error, '로그인 세션을 복구하지 못했습니다. 다시 로그인해주세요.') };
-    }
-    return { ok: true, error: null };
-  }
-
-  const identifiers = buildLoginIdentifiers(phoneNumber, rpcPayload);
-  for (const identifier of identifiers) {
-    const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
-    if (!error) return { ok: true, error: null };
-  }
-
-  return {
-    ok: false,
-    error: {
-      message: '로그인에는 성공했지만 인증 세션을 만들지 못했습니다. 다시 로그인해주세요.',
-      code: 'AUTH_SESSION_REQUIRED',
-      requiresReLogin: true,
-    },
-  };
 };
 
 const loginCustomerRpc = async ({ phone, password, clientFingerprint }) => {
@@ -95,41 +62,57 @@ export const authService = {
   async login(phoneNumber, password) {
     try {
       const guard = await getLoginGuard();
-      const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
+      const normalizedPhone = phoneNumber.trim();
+      const authEmail = buildAuthEmailFromPhone(normalizedPhone);
 
-      const { data: resultData, error: rpcError } = await loginCustomerRpc({
-        phone: phoneNumber.trim(),
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: authEmail,
         password,
-        clientFingerprint,
       });
 
-      if (rpcError) {
-        console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: '서버 연결 중 오류가 발생했습니다.' } };
-      }
+      if (signInError) {
+        const clientFingerprint = `${normalizedPhone}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
+        const { data: resultData, error: rpcError } = await loginCustomerRpc({
+          phone: normalizedPhone,
+          password,
+          clientFingerprint,
+        });
 
-      if (!resultData || resultData.success === false) {
+        if (rpcError) {
+          console.error('❌ 로그인 진단 RPC 에러:', rpcError);
+          return { data: null, error: { message: '서버 연결 중 오류가 발생했습니다.' } };
+        }
+
         const failedAttempts = (guard.failedAttempts || 0) + 1;
         const serverLockUntil = resultData?.lock_expires_at ? new Date(resultData.lock_expires_at).getTime() : 0;
         const lockUntil = serverLockUntil || (failedAttempts >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0);
-
         await saveLoginGuard({ failedAttempts, lockUntil });
 
+        if (resultData?.reason === 'ACCOUNT_NOT_FOUND') {
+          return { data: null, error: { message: '가입되지 않은 계정입니다. 회원가입 후 이용해주세요.' } };
+        }
+
+        if (resultData?.reason === 'INVALID_PASSWORD') {
+          return {
+            data: null,
+            error: {
+              message: '비밀번호가 일치하지 않습니다.',
+              lockedUntil: serverLockUntil || null,
+            },
+          };
+        }
+
+        console.error('❌ 세션 수립 실패:', signInError);
         return {
           data: null,
           error: {
-            message: resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.',
-            lockedUntil: serverLockUntil || null,
+            ...normalizeAuthError(signInError, '로그인 세션을 만들지 못했습니다. 다시 시도해주세요.'),
+            code: 'AUTH_SESSION_FAILED',
           },
         };
       }
 
-      const sessionResult = await establishSupabaseSession({ phoneNumber, password, rpcPayload: resultData });
-      if (!sessionResult.ok) {
-        return { data: null, error: sessionResult.error };
-      }
-
-      const realUUID = resultData.id;
+      const realUUID = signInData?.user?.id;
       if (!realUUID) return { data: null, error: { message: '로그인 데이터 오류' } };
 
       const customerData = await this.refreshCustomer(realUUID);
@@ -218,15 +201,35 @@ export const authService = {
 
   async register(phoneNumber, password, nickname = '') {
     try {
+      const normalizedPhone = phoneNumber.trim();
+      const authEmail = buildAuthEmailFromPhone(normalizedPhone);
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: authEmail,
+        password,
+      });
+
+      if (signUpError) {
+        console.error('❌ Auth 회원가입 에러:', signUpError);
+        return { data: null, error: normalizeAuthError(signUpError, '회원가입에 실패했습니다.') };
+      }
+
+      const authUserId = signUpData?.user?.id;
+      if (!authUserId) {
+        return { data: null, error: { message: '인증 계정 생성에 실패했습니다.' } };
+      }
+
       const { data: resultData, error: rpcError } = await supabaseClient.registerCustomer({
-        p_phone: phoneNumber.trim(),
+        p_phone: normalizedPhone,
         p_password: password,
         p_nickname: nickname,
+        p_auth_user_id: authUserId,
+        p_auth_email: authEmail,
       });
 
       if (rpcError) {
         console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: '서버 연결 중 오류가 발생했습니다.' } };
+        return { data: null, error: { message: '회원 프로필 생성 중 오류가 발생했습니다.' } };
       }
 
       if (!resultData || resultData.success === false) {
@@ -236,11 +239,13 @@ export const authService = {
         };
       }
 
-      // 회원가입 직후에도 동일한 세션 경로 사용
-      const loginResult = await this.login(phoneNumber, password);
-      if (loginResult.error) return { data: null, error: loginResult.error };
+      const customerData = await this.refreshCustomer(authUserId);
+      if (!customerData) {
+        return { data: null, error: { message: '회원가입은 완료되었지만 프로필을 불러오지 못했습니다.' } };
+      }
 
-      return { data: loginResult.data, error: null };
+      await resetLoginGuard();
+      return { data: customerData, error: null };
     } catch (error) {
       console.error('❌ 시스템 에러:', error);
       return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
