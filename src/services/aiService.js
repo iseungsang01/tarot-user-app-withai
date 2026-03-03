@@ -3,7 +3,6 @@
  * AI 서비스 호출 (Supabase Edge Function 프록시 - Google Gemini 기반)
  */
 
-import { supabaseClient } from './supabaseClient';
 import { ensureAuthenticatedSession, supabase } from './supabase';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
@@ -23,12 +22,6 @@ const stringifyError = (errorValue) => {
 
 const callAIProxy = async (messages, options = {}, task = 'chat') => {
     try {
-        const { data, error } = await supabaseClient.invokeAIProxy({
-            task,
-            messages,
-            options: {
-                temperature: options.temperature ?? 0.7,
-                maxTokens: options.maxTokens ?? 1000,
         const authState = await ensureAuthenticatedSession();
         if (!authState.ok) {
             return {

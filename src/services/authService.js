@@ -143,8 +143,6 @@ export const authService = {
       const sessionStatus = await ensureAuthenticatedSession();
       if (!sessionStatus.ok) return null;
 
-      const { data, error } = await supabase.from('customers').select('*').eq('id', customerId).maybeSingle();
-
       if (error) {
         console.error('❌ 정보 갱신 에러:', error.message);
         return null;
