@@ -1,14 +1,8 @@
 import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
 
-const reloginError = (message = '인증이 만료되었습니다. 다시 로그인해주세요.') => ({
-  message,
-  requiresReLogin: true,
-  isAuthError: true,
-});
-
 const requireSession = async () => {
   const state = await ensureAuthenticatedSession();
-  return state.ok ? null : reloginError(state.error?.message);
+  return state.ok ? null : state.error;
 };
 
 /**
@@ -82,7 +76,7 @@ export const customerService = {
 
       return { success: true, error: null };
     } catch (error) {
-      return { success: false, error: withAuthErrorHandling(error, reloginError().message) };
+      return { success: false, error: withAuthErrorHandling(error, '인증이 만료되었습니다. 다시 로그인해주세요.') };
     }
   },
 };
