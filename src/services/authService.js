@@ -54,16 +54,39 @@ const establishSupabaseSession = async ({ phoneNumber, password, rpcPayload }) =
   };
 };
 
+const loginCustomerRpc = async ({ phone, password, clientFingerprint }) => {
+  const primaryPayload = {
+    p_phone: phone,
+    p_password: password,
+    p_client_fingerprint: clientFingerprint,
+  };
+
+  const primaryResult = await supabaseClient.loginCustomer(primaryPayload);
+  if (!primaryResult.error) return primaryResult;
+
+  const isFingerprintSignatureMismatch =
+    primaryResult.error?.code === 'PGRST202'
+    && primaryResult.error?.message?.includes('public.login_customer')
+    && primaryResult.error?.details?.includes('p_client_fingerprint');
+
+  if (!isFingerprintSignatureMismatch) return primaryResult;
+
+  return supabaseClient.loginCustomer({
+    p_phone: phone,
+    p_password: password,
+  });
+};
+
 export const authService = {
   async login(phoneNumber, password) {
     try {
       const guard = await getLoginGuard();
       const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
-      const { data: resultData, error: rpcError } = await supabaseClient.loginCustomer({
-        p_phone: phoneNumber.trim(),
-        p_password: password,
-        p_client_fingerprint: clientFingerprint,
+      const { data: resultData, error: rpcError } = await loginCustomerRpc({
+        phone: phoneNumber.trim(),
+        password,
+        clientFingerprint,
       });
 
       if (rpcError) {
