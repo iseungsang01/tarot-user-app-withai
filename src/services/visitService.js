@@ -34,18 +34,12 @@ export const visitService = {
     if (customerId === 'guest') return { data: [], error: null };
 
     try {
-      const { data, error } = await supabaseClient.getVisits(customerId);
       const authError = await requireSession();
       if (authError) return { data: [], error: authError };
 
-      const { data, error } = await supabase
-        .from('visit_history')
-        .select('id, customer_id, visit_date')
-        .eq('customer_id', customerId)
-        .eq('is_deleted', false)
-        .order('visit_date', { ascending: false });
+      const { data, error } = await supabaseClient.getVisits(customerId);
 
-      if (error) throw withAuthErrorHandling(error, authError.message);
+      if (error) throw withAuthErrorHandling(error, authError?.message);
       return { data, error: null };
     } catch (error) {
       console.error('❌ [visitService] getVisits 오류:', error.message);
@@ -81,26 +75,21 @@ export const visitService = {
 
   async createVisit(visitData) {
     try {
+      if (visitData.customer_id === 'guest') {
+        return { data: null, error: 'Guest cannot save to server' };
+      }
+
+      const authError = await requireSession();
+      if (authError) return { data: null, error: authError };
+
       const serverPayload = {
         customer_id: visitData.customer_id,
         visit_date: visitData.visit_date,
       };
 
-      if (visitData.customer_id === 'guest') {
-        return { data: null, error: 'Guest cannot save to server' };
-      }
-
       const { data, error } = await supabaseClient.createVisit(serverPayload);
-      const authError = await requireSession();
-      if (authError) return { data: null, error: authError };
 
-      const { data, error } = await supabase
-        .from('visit_history')
-        .insert(serverPayload)
-        .select()
-        .single();
-
-      if (error) throw withAuthErrorHandling(error, authError.message);
+      if (error) throw withAuthErrorHandling(error, authError?.message);
 
       if (visitData.card_image) await storage.saveCardImage(data.id, visitData.card_image);
       if (visitData.card_review) await storage.saveCardReview(data.id, visitData.card_review);
@@ -115,44 +104,39 @@ export const visitService = {
   },
 
   async getVisit(visitId) {
-    const { data, error } = await supabaseClient.getVisit(visitId);
-    const authError = await requireSession();
-    if (authError) return { data: null, error: authError };
+    try {
+      const authError = await requireSession();
+      if (authError) return { data: null, error: authError };
 
-    const { data, error } = await supabase
-      .from('visit_history')
-      .select('id, customer_id, visit_date')
-      .eq('id', visitId)
-      .eq('is_deleted', false)
-      .single();
+      const { data, error } = await supabaseClient.getVisit(visitId);
 
-    if (error) return { data: null, error: withAuthErrorHandling(error, authError.message) };
+      if (error) return { data: null, error: withAuthErrorHandling(error, authError?.message) };
 
-    return {
-      data: {
-        ...data,
-        is_manual: false,
-        card_image: await storage.getCardImage(visitId),
-        card_review: await storage.getCardReview(visitId),
-        title: await storage.getCardTitle(visitId),
-        ai_insight: await storage.getCardAIInsight(visitId),
-      },
-      error: null,
-    };
+      return {
+        data: {
+          ...data,
+          is_manual: false,
+          card_image: await storage.getCardImage(visitId),
+          card_review: await storage.getCardReview(visitId),
+          title: await storage.getCardTitle(visitId),
+          ai_insight: await storage.getCardAIInsight(visitId),
+        },
+        error: null,
+      };
+    } catch (error) {
+      console.error('❌ [visitService] getVisit 오류:', error);
+      return { data: null, error };
+    }
   },
 
   async deleteVisit(visitId) {
     try {
-      const { error } = await supabaseClient.softDeleteVisit(visitId);
       const authError = await requireSession();
       if (authError) return { error: authError };
 
-      const { error } = await supabase
-        .from('visit_history')
-        .update({ is_deleted: true })
-        .eq('id', visitId);
+      const { error } = await supabaseClient.softDeleteVisit(visitId);
 
-      if (error) throw withAuthErrorHandling(error, authError.message);
+      if (error) throw withAuthErrorHandling(error, authError?.message);
 
       await storage.deleteCardImage(visitId);
       await storage.deleteCardReview(visitId);
@@ -172,17 +156,12 @@ export const visitService = {
     }
 
     try {
-      const { data, error } = await supabaseClient.getCustomerStats(customerId);
       const authError = await requireSession();
       if (authError) return { data: null, error: authError };
 
-      const { data, error } = await supabase
-        .from('customers')
-        .select('current_stamps, visit_count')
-        .eq('id', customerId)
-        .single();
+      const { data, error } = await supabaseClient.getCustomerStats(customerId);
 
-      if (error) throw withAuthErrorHandling(error, authError.message);
+      if (error) throw withAuthErrorHandling(error, authError?.message);
 
       return { data, error: null };
     } catch (error) {
