@@ -26,6 +26,20 @@ const buildLoginIdentifiers = (phoneNumber, payload) => {
   return [...new Set(candidates)];
 };
 
+const fetchCustomerProfile = async (customerId) => {
+  if (!customerId) return null;
+
+  try {
+    const { data, error } = await supabaseClient.getCustomerById(customerId);
+    if (error || !data) return null;
+
+    await storage.save(CUSTOMER_KEY, data);
+    return data;
+  } catch {
+    return null;
+  }
+};
+
 const establishSupabaseSession = async ({ phoneNumber, password, rpcPayload }) => {
   const accessToken = rpcPayload?.access_token;
   const refreshToken = rpcPayload?.refresh_token;
@@ -54,16 +68,39 @@ const establishSupabaseSession = async ({ phoneNumber, password, rpcPayload }) =
   };
 };
 
+const loginCustomerRpc = async ({ phone, password, clientFingerprint }) => {
+  const primaryPayload = {
+    p_phone: phone,
+    p_password: password,
+    p_client_fingerprint: clientFingerprint,
+  };
+
+  const primaryResult = await supabaseClient.loginCustomer(primaryPayload);
+  if (!primaryResult.error) return primaryResult;
+
+  const isFingerprintSignatureMismatch =
+    primaryResult.error?.code === 'PGRST202'
+    && primaryResult.error?.message?.includes('public.login_customer')
+    && primaryResult.error?.details?.includes('p_client_fingerprint');
+
+  if (!isFingerprintSignatureMismatch) return primaryResult;
+
+  return supabaseClient.loginCustomer({
+    p_phone: phone,
+    p_password: password,
+  });
+};
+
 export const authService = {
   async login(phoneNumber, password) {
     try {
       const guard = await getLoginGuard();
       const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
-      const { data: resultData, error: rpcError } = await supabaseClient.loginCustomer({
-        p_phone: phoneNumber.trim(),
-        p_password: password,
-        p_client_fingerprint: clientFingerprint,
+      const { data: resultData, error: rpcError } = await loginCustomerRpc({
+        phone: phoneNumber.trim(),
+        password,
+        clientFingerprint,
       });
 
       if (rpcError) {
@@ -88,13 +125,17 @@ export const authService = {
       }
 
       const sessionResult = await establishSupabaseSession({ phoneNumber, password, rpcPayload: resultData });
-      if (!sessionResult.ok) return { data: null, error: sessionResult.error };
 
       const realUUID = resultData.id;
       if (!realUUID) return { data: null, error: { message: '로그인 데이터 오류' } };
 
-      const customerData = await this.refreshCustomer(realUUID);
+      const customerData = sessionResult.ok
+        ? await this.refreshCustomer(realUUID)
+        : await fetchCustomerProfile(realUUID);
+
       if (!customerData) {
+        if (!sessionResult.ok) return { data: null, error: sessionResult.error };
+
         const missingSession = await ensureAuthenticatedSession();
         return {
           data: null,
