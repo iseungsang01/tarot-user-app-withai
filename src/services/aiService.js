@@ -3,7 +3,7 @@
  * AI 서비스 호출 (Supabase Edge Function 프록시 - Google Gemini 기반)
  */
 
-import { ensureAuthenticatedSession, supabase } from './supabase';
+import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
 
@@ -26,7 +26,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
         if (!authState.ok) {
             return {
                 data: null,
-                error: new Error(authState.error?.message || '로그인이 필요합니다. 다시 로그인해주세요.'),
+                error: withAuthErrorHandling(authState.error, '로그인이 필요합니다. 다시 로그인해주세요.'),
             };
         }
 
@@ -47,7 +47,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
         if (error) {
             return {
                 data: null,
-                error: new Error(error.message || 'AI 프록시 호출 중 오류가 발생했습니다.'),
+                error: withAuthErrorHandling(error, 'AI 프록시 호출 중 오류가 발생했습니다.'),
             };
         }
 
@@ -67,7 +67,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
     } catch (error) {
         return {
             data: null,
-            error: new Error(error.message || 'AI 서비스 연동 오류가 발생했습니다.'),
+            error: withAuthErrorHandling(error, 'AI 서비스 연동 오류가 발생했습니다.'),
         };
     }
 };
