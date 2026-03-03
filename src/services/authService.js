@@ -125,17 +125,16 @@ export const authService = {
       }
 
       const sessionResult = await establishSupabaseSession({ phoneNumber, password, rpcPayload: resultData });
+      if (!sessionResult.ok) {
+        return { data: null, error: sessionResult.error };
+      }
 
       const realUUID = resultData.id;
       if (!realUUID) return { data: null, error: { message: '로그인 데이터 오류' } };
 
-      const customerData = sessionResult.ok
-        ? await this.refreshCustomer(realUUID)
-        : await fetchCustomerProfile(realUUID);
+      const customerData = await this.refreshCustomer(realUUID);
 
       if (!customerData) {
-        if (!sessionResult.ok) return { data: null, error: sessionResult.error };
-
         const missingSession = await ensureAuthenticatedSession();
         return {
           data: null,
