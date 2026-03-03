@@ -6,6 +6,11 @@ import { Colors } from '../../constants/Colors';
 /**
  * 전역 에러 표시 컴포넌트
  * 화면 상단에 에러 토스트 메시지 표시
+ *
+ * 에러 흐름:
+ *   서비스/유틸 → errorEmitter.emit()
+ *   → ErrorContext(구독) → setError()
+ *   → GlobalErrorDisplay(useError) → 렌더링
  */
 export const GlobalErrorDisplay = () => {
   const { error, hideError } = useError();
@@ -13,14 +18,12 @@ export const GlobalErrorDisplay = () => {
 
   useEffect(() => {
     if (error) {
-      // 에러 표시: 위에서 아래로 슬라이드
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
     } else {
-      // 에러 숨김: 아래에서 위로 슬라이드
       Animated.timing(slideAnim, {
         toValue: -100,
         duration: 300,

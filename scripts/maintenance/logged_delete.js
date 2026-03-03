@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const logFile = 'delete_log.txt';
 
-const baseDir = 'c:/tarot-user-app-withai/src/screens';
+const projectRoot = path.resolve(__dirname, '..', '..');
+const baseDir = path.join(projectRoot, 'src', 'screens');
+const logFile = path.join(projectRoot, 'delete_log.txt');
+
 const files = [
     'AIChatHistoryScreen.js',
     'BugReportDetailScreen.js',
@@ -37,4 +39,4 @@ files.forEach(f => {
 });
 
 fs.writeFileSync(logFile, logContent);
-console.log('Done.');
+console.log('Done. Log written to:', logFile);

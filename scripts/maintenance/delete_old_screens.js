@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const screensDir = 'c:/tarot-user-app-withai/src/screens';
+const projectRoot = path.resolve(__dirname, '..', '..');
+const screensDir = path.join(projectRoot, 'src', 'screens');
+
 const filesToDelete = [
     'AIChatHistoryScreen.js',
     'BugReportDetailScreen.js',

@@ -1,8 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = 'c:/tarot-user-app-withai/src';
-const appJsPath = 'c:/tarot-user-app-withai/App.js';
+// 스크립트 위치: scripts/maintenance/update_context.js
+// 프로젝트 루트는 두 단계 상위 디렉토리
+const projectRoot = path.resolve(__dirname, '..', '..');
+const srcDir = path.join(projectRoot, 'src');
+const appJsPath = path.join(projectRoot, 'App.js');
 
 function walk(dir, callback) {
     fs.readdirSync(dir).forEach(f => {
@@ -22,8 +25,6 @@ const replaceImports = (filePath) => {
             .replace(/['"]\.\.\/\.\.\/context\/ErrorContext['"]/g, "'../../context/AppContext'")
             .replace(/['"]\.\/context\/AuthContext['"]/g, "'./context/AppContext'")
             .replace(/['"]\.\/context\/ErrorContext['"]/g, "'./context/AppContext'")
-
-            // also replace in App.js root file
             .replace(/['"]\.\/src\/context\/AuthContext['"]/g, "'./src/context/AppContext'")
             .replace(/['"]\.\/src\/context\/ErrorContext['"]/g, "'./src/context/AppContext'");
 

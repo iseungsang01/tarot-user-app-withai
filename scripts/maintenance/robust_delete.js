@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const baseDir = 'c:/tarot-user-app-withai/src/screens';
+const projectRoot = path.resolve(__dirname, '..', '..');
+const baseDir = path.join(projectRoot, 'src', 'screens');
+
 const files = [
     'AIChatHistoryScreen.js',
     'BugReportDetailScreen.js',

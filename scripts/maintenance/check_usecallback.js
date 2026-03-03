@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+const projectRoot = path.resolve(__dirname, '..', '..');
+const srcDir = path.join(projectRoot, 'src');
+
 function walk(dir) {
     const files = fs.readdirSync(dir);
     for (const file of files) {
@@ -13,12 +16,10 @@ function walk(dir) {
                 const importMatch = content.match(/import\s+.*\{[^}]*useCallback[^}]*\}.*from\s+['"]react['"]/);
                 const reactNamespaceMatch = content.match(/import\s+\*\s+as\s+React\s+from\s+['"]react['"]/);
                 const reactDefaultMatch = content.match(/import\s+React\s+from\s+['"]react['"]/);
-                const reactNoImport = !importMatch && !reactNamespaceMatch && !reactDefaultMatch;
 
-                // If it uses plain 'useCallback' (not React.useCallback)
                 const usesPlain = content.match(/(?<!\.)useCallback/);
 
-                if (usesPlain && !importMatch) {
+                if (usesPlain && !importMatch && !reactNamespaceMatch && !reactDefaultMatch) {
                     console.log(`Potential issue in ${fullPath}: uses plain useCallback but doesn't import it.`);
                 }
             }
@@ -26,4 +27,4 @@ function walk(dir) {
     }
 }
 
-walk('c:/tarot-user-app-withai/src');
+walk(srcDir);

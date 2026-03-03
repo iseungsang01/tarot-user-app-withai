@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = 'c:/tarot-user-app-withai/src';
+const projectRoot = path.resolve(__dirname, '..', '..');
+const srcDir = path.join(projectRoot, 'src');
 const compDir = path.join(srcDir, 'components');
 
 const stripImports = (content) => {
@@ -11,19 +12,6 @@ const stripImports = (content) => {
 // 1. HistoryComponents.js
 const historyFilterBar = fs.readFileSync(path.join(compDir, 'history/HistoryFilterBar.js'), 'utf8');
 const historyHeader = fs.readFileSync(path.join(compDir, 'history/HistoryHeader.js'), 'utf8');
-
-const historyContent = `import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { DrawerTheme, CommonStyles } from '../constants'; // actually CommonStyles is in styles!
-import { CommonStyles as stylesCommon } from '../styles'; // Let's just fix the imports globally below
-
-${stripImports(historyFilterBar)}
-
-${stripImports(historyHeader)}
-`.replace(/from '\.\.\/\.\.\/constants\/DrawerTheme'/g, "from '../constants'")
-    .replace(/from '\.\.\/\.\.\/styles\/CommonStyles'/g, "from '../styles'")
-    .replace(/DrawerTheme/g, 'DrawerTheme') // it's okay
-    .replace(/stylesCommon/g, 'CommonStyles'); // wait, I just dumped imports... let's rewrite cleanly.
 
 fs.writeFileSync(path.join(compDir, 'HistoryComponents.js'), `import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -88,19 +76,14 @@ const replaceImports = (filePath) => {
             .replace(/import\s+\{([^}]+)\}\s+from\s+['"](?:\.\.\/)*components\/history\/([^'"]+)['"]/g, "import {$1} from '../components/HistoryComponents'")
             .replace(/import\s+\{([^}]+)\}\s+from\s+['"](?:\.\.\/)*components\/vote\/([^'"]+)['"]/g, "import {$1} from '../components/VoteComponents'")
             .replace(/import\s+\{([^}]+)\}\s+from\s+['"](?:\.\.\/)*components\/Setting([^'"]+)['"]/g, "import {$1} from '../components/SettingComponents'")
-            // Relative paths inside components directory:
             .replace(/import\s+\{([^}]+)\}\s+from\s+['"]\.\/history\/([^'"]+)['"]/g, "import {$1} from './HistoryComponents'")
             .replace(/import\s+\{([^}]+)\}\s+from\s+['"]\.\/vote\/([^'"]+)['"]/g, "import {$1} from './VoteComponents'")
-            .replace(/import\s+\{([^}]+)\}\s+from\s+['"]\.\/Setting([^'"]+)['"]/g, "import {$1} from './SettingComponents'")
-        // For VoteDetail importing VoteResultBar inside the same file now, we need to remove that import if it exists.
-        // Wait, the stripImports took care of the imports inside VoteComponents.js! This walk is just for the rest of the app.
+            .replace(/import\s+\{([^}]+)\}\s+from\s+['"]\.\/Setting([^'"]+)['"]/g, "import {$1} from './SettingComponents'");
 
-        // Let's refine the regex for components import
         newContent = newContent
             .replace(/from\s+['"]\.\.\/components\/history\/(HistoryFilterBar|HistoryHeader)['"]/g, "from '../components/HistoryComponents'")
             .replace(/from\s+['"]\.\.\/components\/vote\/(VoteDetail|VoteList|VoteResultBar)['"]/g, "from '../components/VoteComponents'")
             .replace(/from\s+['"]\.\.\/components\/(SettingDeleteAccount|SettingPasswordForm|SettingReportManager)['"]/g, "from '../components/SettingComponents'")
-
             .replace(/from\s+['"]\.\/history\/(HistoryFilterBar|HistoryHeader)['"]/g, "from './HistoryComponents'")
             .replace(/from\s+['"]\.\/vote\/(VoteDetail|VoteList|VoteResultBar)['"]/g, "from './VoteComponents'")
             .replace(/from\s+['"]\.\/(SettingDeleteAccount|SettingPasswordForm|SettingReportManager)['"]/g, "from './SettingComponents'");
