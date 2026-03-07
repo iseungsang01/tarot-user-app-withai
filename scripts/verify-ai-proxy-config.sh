@@ -3,7 +3,16 @@ set -euo pipefail
 
 WORKFLOW_FILE=".github/workflows/security-ci.yml"
 
-if ! rg -n "AI_PROXY_REQUIRE_AUTH:\s*true" "$WORKFLOW_FILE" >/dev/null; then
+search_in_workflow() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -n "$pattern" "$WORKFLOW_FILE" >/dev/null
+  else
+    grep -nE "$pattern" "$WORKFLOW_FILE" >/dev/null
+  fi
+}
+
+if ! search_in_workflow "AI_PROXY_REQUIRE_AUTH:[[:space:]]*true"; then
   echo "❌ security-ci workflow must set AI_PROXY_REQUIRE_AUTH=true"
   exit 1
 fi
@@ -16,7 +25,7 @@ required_refs=(
 )
 
 for ref in "${required_refs[@]}"; do
-  if ! rg -n "${ref}" "$WORKFLOW_FILE" >/dev/null; then
+  if ! search_in_workflow "${ref}"; then
     echo "❌ security-ci workflow missing ${ref} secret/env reference"
     exit 1
   fi
