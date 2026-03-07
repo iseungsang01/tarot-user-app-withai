@@ -24,6 +24,11 @@ test('visitService: CRUD 핵심 시나리오', async () => {
   };
 
   const { visitService } = loadModule('src/services/visitService.js', {
+    './supabase': {
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'test-token' }, error: null }),
+      withAuthErrorHandling: (error) => error,
+      supabase: {},
+    },
     './supabaseClient': { supabaseClient },
     '../utils/storage': { storage: mockedStorage },
   });
