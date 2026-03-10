@@ -1,60 +1,61 @@
-# 현재 프로젝트 문제점 분석 리포트
+# 프로젝트에서 우선 수정할 만한 부분
 
-점검 일시: 2026-03-02 UTC
+점검 일시: 2026-03-10 UTC
 
-## 1) 즉시 해결이 필요한 문제 (High)
+## 1) 우선순위 높음
 
-### 1-1. `npm run typecheck` 실패 (Edge Function 타입 해석 실패)
-- 증상: `supabase/functions/ai-proxy/index.ts`의 URL import(`https://esm.sh/...`)를 로컬 TypeScript가 모듈로 해석하지 못해 전체 타입체크가 실패합니다.
-- 영향: CI/배포 전 정적 검증이 깨진 상태로 남아, 회귀(regression)를 조기에 탐지하기 어렵습니다.
-- 재현 명령: `npm run typecheck`
-- 로그 핵심: `Cannot find module 'https://esm.sh/@supabase/supabase-js@2.49.8'`
-- 관련 파일: `package.json`, `supabase/functions/ai-proxy/index.ts`
+### 1-1. `typecheck`가 환경 의존으로 깨짐 (`deno` 미설치)
+- 현재 `npm run typecheck`는 `typecheck:edge` 단계에서 `deno check`를 호출합니다.
+- 로컬/CI에 `deno`가 없으면 타입체크가 즉시 실패해, PR 품질 게이트로 쓰기 어렵습니다.
+- 재현: `npm run typecheck` → `sh: 1: deno: not found`
+- 관련 파일: `package.json`
+- 권장 수정:
+  - CI에 `deno` 설치 단계를 명시하거나,
+  - `pretypecheck`에서 `deno` 존재 여부를 검사해 안내 메시지를 명확히 출력,
+  - 앱 타입체크(`typecheck:app`)와 엣지 타입체크(`typecheck:edge`)를 파이프라인에서 분리.
 
-### 1-2. 실제 단위/통합 테스트 부재
-- `test` 스크립트는 현재 `security-check` 래퍼이며, 앱 로직/훅/서비스에 대한 자동 테스트가 없습니다.
-- 영향: 기능 추가/리팩터링 시 수동 검증 의존도가 높고, 복잡한 비즈니스 로직에서 장애 위험이 큽니다.
-- 관련 파일: `package.json`, `scripts/security-check.sh`
+### 1-2. 에러 전파 경로가 이원화/불일치
+- 실제 앱은 `src/context/ErrorContext.js`를 사용하고, 이 구현은 `global.showGlobalError`에 의존합니다.
+- 반면 `src/utils/ErrorContext.js`는 `errorEmitter` 기반으로 작성되어 있으나 현재 사용되지 않습니다.
+- 즉, 에러 처리 아키텍처가 두 버전으로 공존해 유지보수 시 혼선이 발생합니다.
+- 관련 파일: `App.js`, `src/context/ErrorContext.js`, `src/utils/ErrorContext.js`, `src/utils/errorHandler.js`
+- 권장 수정:
+  - 하나의 방식으로 통일(권장: `errorEmitter` 기반),
+  - 미사용 `ErrorContext` 파일 제거 또는 통합,
+  - `global.*` 의존 제거.
 
-## 2) 중기 개선 필요 문제 (Medium)
+## 2) 우선순위 중간
 
-### 2-1. 보안 점검 범위가 매우 제한적
-- `scripts/security-check.sh`는 2개 규칙(클라이언트 AI 키 참조 금지, 구 파일 존재 여부)만 검사합니다.
-- 영향: 민감정보 노출 패턴, 위험 API 사용, 권한/정책 누락 등 다수 리스크를 놓칠 수 있습니다.
+### 2-1. 런타임 `console.log`가 과다하여 운영 로그 노이즈 발생
+- 사용자 동작/파일 I/O 경로에 디버깅 로그가 많이 남아 있습니다.
+- 특히 이미지 저장/삭제, 에러 표시, 모달 액션 등 빈도 높은 경로에서 노이즈가 큽니다.
+- 관련 파일 예시: `src/utils/storage.js`, `src/utils/imageOptimizer.js`, `src/components/fortune/TarotCardModal.js`, `src/context/ErrorContext.js`
+- 권장 수정:
+  - `__DEV__` 가드 또는 로거 레벨(`debug/info/warn/error`) 도입,
+  - 개인정보/민감정보가 섞일 수 있는 payload 로그 제거.
 
-### 2-2. AI 프록시 입력 검증이 느슨함
-- `messages` 배열 존재 여부만 확인하고, 각 메시지의 `role/content` 스키마 및 길이 제한 검증이 없습니다.
-- 영향: 비정상 입력으로 인한 예외/비용 증가/예측 불가능 응답 가능성이 있습니다.
-- 관련 파일: `supabase/functions/ai-proxy/index.ts`
-
-### 2-3. 대용량 유틸 파일로 인한 유지보수성 저하
-- `src/utils/storage.js`가 600+ 라인으로 파일 책임이 과도하게 집중되어 있습니다.
-- 영향: 변경 영향도 파악/리뷰/테스트 작성이 어려워지고 결합도가 상승합니다.
+### 2-2. `storage.js` 단일 파일 책임 과다 (638 lines)
+- 이미지 저장/삭제, 리뷰 저장, 캐시 정리, 공지 읽음 처리 등 서로 다른 책임이 한 파일에 집중되어 있습니다.
+- 변경 영향도 파악이 어렵고 테스트 분리가 어렵습니다.
 - 관련 파일: `src/utils/storage.js`
+- 권장 수정:
+  - `storage/imageStorage.js`, `storage/reviewStorage.js`, `storage/cacheMaintenance.js` 등으로 분리,
+  - 공통 키/직렬화 로직만 별도 유틸로 추출.
 
-## 3) 운영/환경 이슈 (Low)
+## 3) 우선순위 낮음 (하지만 누적되면 피로도 큼)
 
-### 3-1. npm 환경 경고 상시 발생
-- 모든 npm 실행 시 `Unknown env config "http-proxy"` 경고가 반복 출력됩니다.
-- 영향: CI 로그 가독성 저하 및 실제 오류 식별 지연 가능.
-
-### 3-2. `npm audit` 수행 불가 (레지스트리 403)
-- 현재 환경에서 npm advisory API 호출이 403으로 차단되어 취약점 스캔 자동화가 동작하지 않습니다.
-- 영향: 의존성 취약점의 조기 탐지가 제한됩니다.
-
-## 4) 권장 우선순위 액션 플랜
-
-1. **타입체크 복구**: Edge Function 타입체크 전략을 Deno 친화적으로 분리(예: `deno check` 기반)하거나 TS 설정에서 URL import 해석 정책을 명확화.
-2. **테스트 체계 도입**: 서비스 레이어(`src/services/*`)부터 최소 스모크 테스트/회귀 테스트 추가.
-3. **보안 체크 확장**: 시크릿 패턴 스캔, 위험 API 사용 점검, CI에서 Supabase 정책/마이그레이션 정합성 검증 추가.
-4. **구조 개선**: `storage.js`를 이미지/리뷰/캐시/정리 로직 단위로 분리.
-5. **환경 정리**: npm proxy 설정 정리 및 audit 대체 경로(Snyk/GitHub Dependabot/사내 미러) 마련.
+### 3-1. npm 경고 상시 출력 (`Unknown env config "http-proxy"`)
+- `npm run typecheck`, `npm test` 실행 시 반복적으로 경고가 출력됩니다.
+- 실제 오류 탐지 가독성을 떨어뜨립니다.
+- 권장 수정:
+  - 사용자/CI 환경의 npm config에서 `http-proxy` 설정 키 정리,
+  - 팀 공통 실행 환경(.npmrc/CI 환경변수) 표준화.
 
 ---
 
-## 실행한 점검 명령
-- `npm run typecheck` (실패: Edge Function URL import 타입 해석 오류)
-- `npm run security-check` (성공)
-- `npm audit --omit=dev --audit-level=high` (실패: advisory API 403)
-- `rg -n "TODO|FIXME|HACK|@ts-ignore|any\b|console\.log|AI_PROXY_REQUIRE_AUTH|SUPABASE|OPENAI|GEMINI|http://" src supabase App.js scripts --glob '!node_modules/**'`
-- `wc -l App.js src/**/*.js supabase/functions/ai-proxy/index.ts`
+## 이번 점검에서 실행한 명령
+- `npm run typecheck` (실패: `deno` 실행 파일 미존재)
+- `npm test` (성공)
+- `rg -n "TODO|FIXME|HACK|@ts-ignore|console\.log\(" src supabase App.js test scripts --glob '!node_modules/**'`
+- `rg -n "global\.showGlobalError|errorEmitter" src App.js`
+- `wc -l src/utils/storage.js src/context/ErrorContext.js src/utils/ErrorContext.js src/components/fortune/TarotCardModal.js src/utils/imageOptimizer.js`
