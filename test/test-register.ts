@@ -1,8 +1,4 @@
-import * as dotenv from 'dotenv';
-dotenv.config();
-
-// Delay import to ensure env is loaded
-const { authService } = await import('./src/services/authService.js');
+import { authService } from '../src/services/authService.js';
 
 async function testRegistration() {
   const phone = '010-8888-8888';

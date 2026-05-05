@@ -3,8 +3,6 @@ export { LoadingSpinner } from './common/LoadingSpinner';
 export { CustomButton } from './common/CustomButton';
 export { ErrorBoundary } from './common/ErrorBoundary';
 export { GlobalErrorDisplay } from './common/GlobalErrorDisplay';
-export { DrawerUnit } from './common/DrawerUnit';
-export { DrawerChest } from './common/DrawerChest';
 export { TarotCardModal } from './fortune/TarotCardModal';
 export { NoticeCard } from './notice/NoticeCard';
 export { CouponCard } from './settings/CouponCard';

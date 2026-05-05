@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { authService } = require('./src/services/authService.js');
+const { authService } = require('../src/services/authService.js');
 
 async function testRegistration() {
   const phone = '010-0000-0000';
