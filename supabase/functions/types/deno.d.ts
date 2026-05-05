@@ -1,7 +1,3 @@
-declare namespace Deno {
-  namespace env {
-    function get(key: string): string | undefined;
-  }
-
-  function serve(handler: (req: Request) => Response | Promise<Response>): void;
-}
+// Deno runtime globals are provided by Deno's built-in lib types.
+// Keep this file for optional project-specific augmentations only.
+export {};

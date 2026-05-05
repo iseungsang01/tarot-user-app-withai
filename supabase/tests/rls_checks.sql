@@ -24,10 +24,10 @@ order by tablename, policyname;
 -- owner_a: 11111111-1111-1111-1111-111111111111
 -- owner_b: 22222222-2222-2222-2222-222222222222
 
-insert into public.customers (id, phone_number, password, nickname)
+insert into public.customers (id, auth_email, phone_number, password, nickname)
 values
-  ('11111111-1111-1111-1111-111111111111', '010-1111-1111', crypt('pw', gen_salt('bf')), 'owner_a'),
-  ('22222222-2222-2222-2222-222222222222', '010-2222-2222', crypt('pw', gen_salt('bf')), 'owner_b')
+  ('11111111-1111-1111-1111-111111111111', '01011111111@phone.local', '010-1111-1111', crypt('pw', gen_salt('bf')), 'owner_a'),
+  ('22222222-2222-2222-2222-222222222222', '01022222222@phone.local', '010-2222-2222', crypt('pw', gen_salt('bf')), 'owner_b')
 on conflict do nothing;
 
 insert into public.visit_history (customer_id)

@@ -1,16 +1,10 @@
 import { supabaseClient } from './supabaseClient';
-import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
+import { ensureAuthenticatedSession, withAuthErrorHandling } from './supabase';
 import { storage } from '../utils/storage';
-
-const authFailure = (message = '인증이 만료되었습니다. 다시 로그인해주세요.') => ({
-  message,
-  requiresReLogin: true,
-  isAuthError: true,
-});
 
 const requireSession = async () => {
   const session = await ensureAuthenticatedSession();
-  return session.ok ? null : authFailure(session.error?.message);
+  return session.ok ? null : session.error;
 };
 
 export const visitService = {

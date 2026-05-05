@@ -1,5 +1,8 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { Alert } from 'react-native';
 import { authService } from '../services/authService';
+import { setGlobalAuthErrorHandler, supabase } from '../services/supabase';
+import { resetAuthNoticeState, shouldDisplayAuthNotice } from '../utils/authErrorNotice';
 import { logError } from '../utils/errorHandler';
 
 export const AuthContext = createContext();
@@ -7,6 +10,20 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const handleAuthFailure = useCallback(async (authError = {}) => {
+    try {
+      await authService.logout();
+      setCustomer(null);
+
+      const message = authError?.message || '인증이 만료되었습니다. 다시 로그인해주세요.';
+      if (shouldDisplayAuthNotice(message)) {
+        Alert.alert('로그인 필요', message);
+      }
+    } catch (error) {
+      logError('AuthContext.handleAuthFailure', error);
+    }
+  }, []);
 
   const initializeAuth = useCallback(async () => {
     try {
@@ -23,10 +40,33 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, [initializeAuth]);
 
+  useEffect(() => {
+    setGlobalAuthErrorHandler(handleAuthFailure);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setCustomer(null);
+        return;
+      }
+
+      if (event === 'TOKEN_REFRESHED' && !session?.access_token) {
+        handleAuthFailure({ message: '세션 갱신에 실패했습니다. 다시 로그인해주세요.' });
+      }
+    });
+
+    return () => {
+      setGlobalAuthErrorHandler(null);
+      subscription?.unsubscribe();
+    };
+  }, [handleAuthFailure]);
+
   const login = async (phoneNumber, password) => {
     try {
       const { data, error } = await authService.login(phoneNumber, password);
       if (data) setCustomer(data);
+      if (data) resetAuthNoticeState();
       return { data, error };
     } catch (error) {
       logError('AuthContext.login', error, { phoneNumber });
@@ -58,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const guestUser = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
       setCustomer(guestUser);
+      resetAuthNoticeState();
       return { data: guestUser, error: null };
     } catch (error) {
       logError('AuthContext.guestLogin', error);

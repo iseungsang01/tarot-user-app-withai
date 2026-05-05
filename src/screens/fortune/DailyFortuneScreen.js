@@ -240,6 +240,10 @@ const DailyFortuneScreen = () => {
 
         } catch (error) {
             console.error('Pick card error:', error);
+            if (error?.isAuthError || error?.requiresReLogin) {
+                setIsPickingCard(false);
+                return;
+            }
             Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다.');
             setIsPickingCard(false);
         } finally {
