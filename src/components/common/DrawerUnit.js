@@ -1,101 +1,93 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ImageBackground } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { LocalSvg } from 'react-native-svg/css';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { toDisplayImageUri } from '../../utils/imageUri';
 
-/**
- * 서랍 정면(Unit) 컴포넌트
- * @param {object} visit - 방문 기록 데이터 (is_manual 필드 포함)
- * @param {function} onSelectCard - 클릭 시 호출될 함수
- * @param {function} onLongPress - 롱프레스 시 호출될 함수
- * @param {boolean} selectionMode - 다중 선택 모드 여부
- * @param {boolean} isSelected - 현재 선택된 상태
- */
+const brassHandleAsset = require('../../../assets/tarot-cellar/brass-handle-b.svg');
+
 export const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode, isSelected }) => {
-  // is_manual: false(서버기록) -> Wood 테마
-  // is_manual: true(개인메모) -> Navy 테마
+  const isPlaceholder = visit.isPlaceholder === true;
   const isManualMode = visit.is_manual === true;
   const isOnMode = !isManualMode;
-
-  // 작성 여부 판단 (내용이나 이미지가 있으면 작성된 서랍)
   const isWritten = !!(visit.card_review && visit.card_review.trim()) || !!visit.card_image;
-  const title = visit.title || visit.drawer_title || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 24) || (isManualMode ? '개인 메모 제목 없음' : '상담 기록 제목 없음');
-  const imageUri = toDisplayImageUri(visit.card_image);
-
-  // 테마 설정 분기
-  const theme = {
-    mid: isOnMode ? DrawerTheme.woodMid : DrawerTheme.navyMid,
-    light: isOnMode ? DrawerTheme.woodLight : DrawerTheme.navyLight,
-    dark: isOnMode ? DrawerTheme.woodDark : DrawerTheme.navyDark,
-  };
-
-  // 날짜 포맷 (예: 2026.01.12)
-  const displayDate = visit.visit_date ?
-    visit.visit_date.split('T')[0].split('-').map(Number).join('.') : '';
+  const title = visit.title
+    || visit.drawer_title
+    || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 28)
+    || (isManualMode ? 'Private note' : 'Unread record');
+  const displayDate = visit.visit_date
+    ? visit.visit_date.split('T')[0].split('-').join(' · ')
+    : '';
+  const status = isPlaceholder || isWritten ? 'SEALED' : isManualMode ? 'PRIVATE' : 'EMPTY';
 
   return (
-    <View style={[styles.drawerWrapper, { borderBottomColor: DrawerTheme.woodDark }]}>
+    <View style={styles.drawerWrapper}>
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => onSelectCard(visit)}
         onLongPress={onLongPress}
         delayLongPress={500}
         style={[
-          styles.drawerFront,
-          { backgroundColor: theme.mid, borderTopColor: theme.light },
-          // 서버 기록(Wood)인데 아직 내용을 적지 않았다면 약간 투명하게 처리
-          (isOnMode && !isWritten) && { opacity: 0.7 },
-          // ✅ 선택된 상태일 때 강조 효과
+          styles.drawer,
+          (isOnMode && !isWritten && !isPlaceholder) && styles.unwrittenDrawer,
           isSelected && styles.selectedDrawer
         ]}
       >
-        <View style={styles.bezel}>
-          {/* ✅ 선택 모드일 때 체크박스 표시 */}
+        <ImageBackground
+          source={require('../../../assets/tarot-cellar/drawer-walnut.png')}
+          resizeMode="cover"
+          style={StyleSheet.absoluteFill}
+          imageStyle={styles.drawerTexture}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.05)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.28)']}
+            locations={[0, 0.52, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.34)', 'transparent', 'transparent', 'rgba(0,0,0,0.34)']}
+            locations={[0, 0.18, 0.82, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </ImageBackground>
+
+        <View style={styles.drawerInnerFrame}>
           {selectionMode && (
             <View style={styles.checkboxContainer}>
-              <View style={[
-                styles.checkbox,
-                isSelected && styles.checkboxActive
-              ]}>
+              <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
                 {isSelected && <Text style={styles.checkmark}>✓</Text>}
               </View>
             </View>
           )}
 
-          {/* 날짜 표시: 모든 서랍의 공통 요소 */}
-          <Text style={[styles.dateText, { color: DrawerTheme.goldBright }]}>{displayDate}</Text>
+          <View style={styles.drawerMainRow}>
+            <View style={styles.drawerLeft}>
+              <View style={styles.sealedPlaque}>
+                <Text numberOfLines={1} style={styles.sealedText}>{status}</Text>
+              </View>
+            </View>
 
-          <View style={styles.titleRow}>
-            {imageUri ? <Image source={{ uri: imageUri }} style={styles.thumbnail} /> : <Text style={styles.folderEmoji}>{isManualMode ? '📁' : '🃏'}</Text>}
-            <Text numberOfLines={1} style={styles.titleText}>{title}</Text>
+            <View style={styles.drawerCenter}>
+              <LocalSvg
+                asset={brassHandleAsset}
+                style={styles.brassHandle}
+                width={92}
+                height={34}
+              />
+            </View>
+
+            <View style={styles.drawerRight}>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.drawerDate}>
+                {displayDate}
+              </Text>
+            </View>
           </View>
 
-          {/* 인디케이터: 서버 기록(Wood)이면서 미작성일 때만 'EMPTY' 표시 */}
-          {isOnMode && !isWritten && !selectionMode && (
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>EMPTY</Text>
-            </View>
-          )}
-
-          {/* 개인 메모(Navy)일 때는 펜 아이콘 인디케이터 추가 */}
-          {isManualMode && !selectionMode && (
-            <View style={styles.statusBadge}>
-              <Text style={[styles.statusText, { color: DrawerTheme.navyLight }]}>PRIVATE</Text>
-            </View>
-          )}
-
-          {/* 공통 황동 손잡이 디자인 */}
-          {!selectionMode && (
-            <View style={styles.knobSystem}>
-              <View style={[styles.knobPlate, { backgroundColor: theme.dark, opacity: 0.5 }]} />
-              <View style={[styles.knobHandle, { backgroundColor: DrawerTheme.goldBrass, borderColor: DrawerTheme.goldDark }]} />
-            </View>
-          )}
-
-          {/* ✅ 선택 모드일 때는 선택 표시 */}
-          {selectionMode && (
-            <View style={styles.selectionIndicator}>
-              <Text style={styles.selectionText}>{isSelected ? '선택됨' : '탭하여 선택'}</Text>
+          {!isPlaceholder && (
+            <View style={styles.drawerMetaRow}>
+              <Text numberOfLines={1} style={styles.drawerTitle}>{title}</Text>
             </View>
           )}
         </View>
@@ -104,146 +96,146 @@ export const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, select
   );
 });
 
+const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+
 const styles = StyleSheet.create({
   drawerWrapper: {
-    borderBottomWidth: 3
+    width: '100%',
+    marginBottom: 9,
+    borderBottomWidth: 4,
+    borderBottomColor: 'rgba(5,2,1,0.92)',
   },
-  drawerFront: {
-    height: 100,
-    padding: 8,
-    borderTopWidth: 1.5,
-    borderBottomWidth: 5,
-    borderBottomColor: 'rgba(0,0,0,0.3)'
+  drawer: {
+    width: '100%',
+    height: 118,
+    borderRadius: 6,
+    padding: 9,
+    borderTopWidth: 1,
+    borderBottomWidth: 4,
+    borderTopColor: 'rgba(200,163,64,0.28)',
+    borderBottomColor: 'rgba(0,0,0,0.66)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.42,
+    shadowRadius: 14,
+    elevation: 6,
   },
-  // ✅ 선택된 서랍 강조 효과
+  drawerTexture: {
+    opacity: 0.95,
+  },
+  unwrittenDrawer: {
+    opacity: 0.78,
+  },
   selectedDrawer: {
     borderWidth: 2,
-    borderColor: DrawerTheme.goldBrass,
-    shadowColor: DrawerTheme.goldBrass,
+    borderColor: DrawerTheme.brassHighlight,
+    shadowColor: DrawerTheme.brassHighlight,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.5,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 7,
   },
-  bezel: {
+  drawerInnerFrame: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 2,
-    justifyContent: 'center',
-    alignItems: 'center'
+    borderColor: 'rgba(200,163,64,0.58)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    paddingHorizontal: 7,
+    paddingVertical: 7,
   },
-  dateText: {
-    position: 'absolute',
-    bottom: 8,
-    right: 12,
-    fontSize: 12,
-    fontWeight: 'bold',
-    fontFamily: Platform.OS === 'ios' ? 'Times New Roman' : 'serif',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2
-  },
-  titleRow: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    left: 54,
+  drawerMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    minHeight: 56,
+    minWidth: 0,
   },
-  thumbnail: {
-    width: 34,
-    height: 34,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+  drawerLeft: {
+    width: 92,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
-  folderEmoji: {
-    fontSize: 20,
-  },
-  titleText: {
-    color: '#FFF',
+  drawerCenter: {
     flex: 1,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  statusBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.2)'
-  },
-  statusText: {
-    color: '#AAA',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1
-  },
-  knobSystem: {
+    minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 15
   },
-  knobPlate: {
-    width: 34,
-    height: 6,
-    borderRadius: 1,
-    position: 'absolute'
+  drawerRight: {
+    width: 118,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
-  knobHandle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2
+  sealedPlaque: {
+    maxWidth: 82,
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(224,184,90,0.72)',
+    backgroundColor: 'rgba(31,18,12,0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  // ✅ 체크박스 스타일
+  sealedText: {
+    color: DrawerTheme.brightGold,
+    fontSize: 11,
+    fontFamily: serif,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  brassHandle: {
+    width: 92,
+    height: 34,
+    opacity: 0.96,
+  },
+  drawerDate: {
+    color: DrawerTheme.brightGold,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '700',
+    fontFamily: serif,
+    letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.72)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  drawerMetaRow: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(200,163,64,0.18)',
+  },
+  drawerTitle: {
+    color: 'rgba(244,232,208,0.78)',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   checkboxContainer: {
     position: 'absolute',
-    top: 10,
-    left: 12,
-    zIndex: 10,
+    top: 5,
+    left: 5,
+    zIndex: 3,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderColor: 'rgba(224,184,90,0.45)',
+    backgroundColor: 'rgba(9,0,13,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxActive: {
-    borderColor: DrawerTheme.goldBrass,
-    backgroundColor: DrawerTheme.goldBrass,
+    borderColor: DrawerTheme.brassHighlight,
+    backgroundColor: DrawerTheme.brass,
   },
   checkmark: {
-    fontSize: 16,
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-
-  // ✅ 선택 인디케이터
-  selectionIndicator: {
-    marginTop: 10,
-  },
-  selectionText: {
-    fontSize: 11,
-    color: '#AAA',
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    fontSize: 14,
+    color: DrawerTheme.bgBlackCherry,
+    fontWeight: '900',
   },
 });

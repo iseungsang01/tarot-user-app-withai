@@ -1,0 +1,20 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ornament moon">
+  <g stroke="#C8A340" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- subtle arcana ring -->
+    <circle cx="32" cy="32" r="22" opacity="0.42" stroke-dasharray="2.2 5.2"/>
+    <path d="M32 7.5v4.2M32 52.3v4.2M7.5 32h4.2M52.3 32h4.2" opacity="0.62"/>
+    <path d="M14.7 14.7l2.9 2.9M46.4 46.4l2.9 2.9M49.3 14.7l-2.9 2.9M17.6 46.4l-2.9 2.9" opacity="0.34"/>
+
+    <!-- central crescent moon -->
+    <path d="M39.8 17.9C31.7 20.1 25.7 27.5 25.7 36.3c0 5.6 2.4 10.6 6.3 14.1C21.9 49.6 14 41.2 14 31c0-10.7 8.7-19.4 19.4-19.4 2.2 0 4.3.4 6.4 1.1Z"/>
+
+    <!-- restrained occult geometry -->
+    <circle cx="32" cy="32" r="3.2" opacity="0.72"/>
+    <path d="M32 22.8v4.1M32 37.1v4.1M22.8 32h4.1M37.1 32h4.1" opacity="0.48"/>
+    <path d="M26.1 26.1l2.7 2.7M35.2 35.2l2.7 2.7M37.9 26.1l-2.7 2.7M28.8 35.2l-2.7 2.7" opacity="0.34"/>
+
+    <!-- tiny premium star points -->
+    <path d="M32 3.8l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1 1-2.2Z" opacity="0.8"/>
+    <path d="M32 53.8l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z" opacity="0.58"/>
+  </g>
+</svg>

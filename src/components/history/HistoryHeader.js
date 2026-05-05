@@ -1,7 +1,10 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { LocalSvg } from 'react-native-svg/css';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { CommonStyles } from '../../styles/CommonStyles';
+
+const moonOrnamentAsset = require('../../../assets/tarot-cellar/ornament-moon.svg');
 
 export const HistoryHeader = ({
     stats,
@@ -25,81 +28,193 @@ export const HistoryHeader = ({
     };
 
     return (
-        <View style={{ width: '100%', alignItems: 'center' }}>
-            <View style={styles.header}>
-                <View style={styles.titleRow}>
-                    <Text style={styles.title}>DRAWERS</Text>
-                </View>
-                <View style={styles.headerDivider} />
+        <View style={styles.wrap}>
+            <LocalSvg
+                asset={moonOrnamentAsset}
+                style={styles.titleOrnament}
+                width={48}
+                height={48}
+            />
 
-                <View style={styles.statsContainer}>
-                    <TouchableOpacity
-                        ref={stampRef}
-                        style={styles.statUnit}
-                        onPress={() => {
-                            onNavigateStamp?.();
-                            onCoachAdvanceStamp?.();
-                        }}
-                        onLayout={() => captureRefFrame(stampRef, onCaptureStampFrame)}
-                        onPressIn={() => captureRefFrame(stampRef, onCaptureStampFrame)}
-                    >
-                        <Text style={styles.statLabel}>스탬프</Text>
-                        <Text style={[styles.statValue, { color: DrawerTheme.goldBright }]}>{stats.current_stamps}/10</Text>
-                    </TouchableOpacity>
-                    <View style={styles.divider} />
-                    <View style={styles.statUnit}>
-                        <Text style={styles.statLabel}>방문 횟수</Text>
-                        <Text style={styles.statValue}>{stats.visit_count}</Text>
-                    </View>
-                    <View style={styles.divider} />
-                    <TouchableOpacity
-                        ref={couponRef}
-                        style={styles.statUnit}
-                        onPress={() => {
-                            onNavigateCoupon?.();
-                            onCoachAdvanceCoupon?.();
-                        }}
-                        onLayout={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
-                        onPressIn={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
-                    >
-                        <Text style={styles.statLabel}>보유 쿠폰</Text>
-                        <Text style={[styles.statValue, { color: DrawerTheme.goldBright }]}>{couponCount}</Text>
-                    </TouchableOpacity>
-                </View>
+            <View style={styles.titleStack}>
+                <Text style={styles.titleShadow}>TAROT CELLAR</Text>
+                <Text style={styles.title}>TAROT CELLAR</Text>
             </View>
+
+            <View style={styles.titleRule}>
+                <View style={styles.ruleLine} />
+                <View style={styles.ruleStar} />
+                <View style={styles.ruleLine} />
+            </View>
+
+            <LinearGradient
+                colors={['rgba(18,0,24,0.96)', 'rgba(34,5,31,0.92)', 'rgba(9,0,13,0.98)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.statsContainer}
+            >
+                <View style={styles.cornerMark} />
+                <TouchableOpacity
+                    ref={stampRef}
+                    style={styles.statUnit}
+                    onPress={() => {
+                        onNavigateStamp?.();
+                        onCoachAdvanceStamp?.();
+                    }}
+                    onLayout={() => captureRefFrame(stampRef, onCaptureStampFrame)}
+                    onPressIn={() => captureRefFrame(stampRef, onCaptureStampFrame)}
+                >
+                    <Text style={styles.statLabel}>스탬프</Text>
+                    <Text style={styles.statValue}>{stats.current_stamps}/10</Text>
+                </TouchableOpacity>
+                <View style={styles.divider} />
+                <View style={styles.statUnit}>
+                    <Text style={styles.statLabel}>방문 기록</Text>
+                    <Text style={styles.statValue}>{stats.visit_count}</Text>
+                </View>
+                <View style={styles.divider} />
+                <TouchableOpacity
+                    ref={couponRef}
+                    style={styles.statUnit}
+                    onPress={() => {
+                        onNavigateCoupon?.();
+                        onCoachAdvanceCoupon?.();
+                    }}
+                    onLayout={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
+                    onPressIn={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
+                >
+                    <Text style={styles.statLabel}>보유 쿠폰</Text>
+                    <Text style={[styles.statValue, styles.goldValue]}>{couponCount}</Text>
+                </TouchableOpacity>
+                <View style={[styles.cornerMark, styles.cornerMarkRight]} />
+            </LinearGradient>
         </View>
     );
 };
 
+const serif = Platform.OS === 'ios' ? 'Cochin' : 'serif';
+
 const styles = StyleSheet.create({
-    header: {
-        ...CommonStyles.headerBoard,
+    wrap: {
+        width: '100%',
+        alignItems: 'center',
+        paddingTop: 0,
         paddingBottom: 10,
     },
-    titleRow: CommonStyles.titleRow,
-    title: CommonStyles.title,
-    headerDivider: {
-        ...CommonStyles.headerDivider,
-        marginBottom: 5,
+    titleOrnament: {
+        width: 48,
+        height: 48,
+        marginBottom: 4,
+        opacity: 0.92,
+        tintColor: DrawerTheme.brightGold,
+    },
+    titleStack: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    titleShadow: {
+        position: 'absolute',
+        top: 2,
+        color: '#4A2D12',
+        fontFamily: serif,
+        fontSize: 35,
+        fontWeight: '700',
+        letterSpacing: 2.5,
+        opacity: 0.58,
+    },
+    title: {
+        color: DrawerTheme.antiqueGold,
+        fontFamily: serif,
+        fontSize: 35,
+        fontWeight: '700',
+        letterSpacing: 2.5,
+        textShadowColor: 'rgba(200,163,64,0.22)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 5,
+    },
+    titleRule: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 5,
+        marginBottom: 12,
+    },
+    ruleLine: {
+        width: 94,
+        height: 1,
+        backgroundColor: 'rgba(184,135,53,0.58)',
+    },
+    ruleStar: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.46)',
+        backgroundColor: 'rgba(224,184,90,0.18)',
     },
     statsContainer: {
         flexDirection: 'row',
         width: '100%',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 5,
-        backgroundColor: DrawerTheme.navyDark,
-        borderWidth: 1.5,
-        borderColor: DrawerTheme.woodFrame,
-        borderRadius: 10,
-        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.72)',
+        minHeight: 96,
+        borderRadius: 8,
+        paddingVertical: 12,
+        borderTopWidth: 2,
+        borderBottomWidth: 2,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.34,
+        shadowRadius: 12,
+        elevation: 5,
     },
     statUnit: {
         alignItems: 'center',
         flex: 1,
-        paddingVertical: 1,
+        minHeight: 62,
+        justifyContent: 'center',
     },
-    statLabel: { fontSize: 9, marginBottom: 2, fontWeight: 'bold', color: DrawerTheme.woodLight, opacity: 0.95 },
-    statValue: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
-    divider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(210, 166, 121, 0.28)' },
+    statLabel: {
+        fontSize: 11,
+        marginBottom: 6,
+        fontWeight: '700',
+        color: DrawerTheme.antiqueGold,
+        fontFamily: serif,
+        letterSpacing: 0.5,
+    },
+    statValue: {
+        fontSize: 29,
+        color: DrawerTheme.ivory,
+        fontWeight: '700',
+        fontFamily: serif,
+        textShadowColor: 'rgba(0,0,0,0.72)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 3,
+    },
+    goldValue: {
+        color: DrawerTheme.brightGold,
+    },
+    divider: {
+        width: 1,
+        height: 70,
+        backgroundColor: 'rgba(200,163,64,0.42)',
+    },
+    cornerMark: {
+        position: 'absolute',
+        left: 12,
+        top: 10,
+        width: 22,
+        height: 22,
+        borderLeftWidth: 1,
+        borderTopWidth: 1,
+        borderColor: 'rgba(224,184,90,0.58)',
+    },
+    cornerMarkRight: {
+        left: undefined,
+        right: 12,
+        transform: [{ rotate: '90deg' }],
+    },
 });

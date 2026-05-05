@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 // Deploy example: supabase functions deploy ai-proxy
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
-const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-3-12b-it';
+const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-4-E2B-it';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() ?? '';
@@ -157,6 +157,33 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'messages는 1개 이상 필요합니다.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    for (const msg of messages) {
+      if (!msg || typeof msg !== 'object') {
+        return new Response(
+          JSON.stringify({ error: '각 메시지는 객체여야 합니다.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
+        return new Response(
+          JSON.stringify({ error: '유효하지 않은 role입니다 (user, assistant, system 중 하나).' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      if (typeof msg.content !== 'string' || msg.content.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: '메시지 content가 비어 있거나 문자열이 아닙니다.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      if (msg.content.length > 50000) {
+        return new Response(
+          JSON.stringify({ error: '메시지 길이가 너무 깁니다 (최대 50000자).' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
     }
 
     const deviceId = req.headers.get('x-device-id')?.trim() || body?.deviceId || 'unknown-device';

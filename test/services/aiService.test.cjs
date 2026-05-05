@@ -9,6 +9,14 @@ test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async 
 
   const { summarizeReview } = loadModule('src/services/aiService.js', {
     './supabaseClient': { supabaseClient },
+    './supabase': { 
+      supabase: { 
+        functions: { 
+          invoke: async () => ({ data: { data: '일반 텍스트 응답', usage: {}, provider: 'mock' }, error: null }) 
+        } 
+      }, 
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'mock_token' } }) 
+    },
   });
 
   const result = await summarizeReview('상담 기록 메모');

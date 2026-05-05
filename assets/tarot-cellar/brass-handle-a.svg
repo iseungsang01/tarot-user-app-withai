@@ -1,0 +1,76 @@
+<svg width="184" height="48" viewBox="0 0 184 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Antique brass drawer pull handle">
+  <defs>
+    <linearGradient id="brassMain" x1="18" y1="10" x2="166" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6F4E1E"/>
+      <stop offset="0.18" stop-color="#C8A340"/>
+      <stop offset="0.34" stop-color="#E0B85A"/>
+      <stop offset="0.52" stop-color="#9B7A35"/>
+      <stop offset="0.72" stop-color="#D4A94A"/>
+      <stop offset="1" stop-color="#5A3B16"/>
+    </linearGradient>
+    <linearGradient id="brassDark" x1="24" y1="8" x2="160" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2B1A0A"/>
+      <stop offset="0.5" stop-color="#8A6428"/>
+      <stop offset="1" stop-color="#1D1107"/>
+    </linearGradient>
+    <linearGradient id="brassEdge" x1="42" y1="16" x2="142" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3A240E"/>
+      <stop offset="0.25" stop-color="#B58A38"/>
+      <stop offset="0.5" stop-color="#F0C96A"/>
+      <stop offset="0.75" stop-color="#A47B32"/>
+      <stop offset="1" stop-color="#33200D"/>
+    </linearGradient>
+    <radialGradient id="knobGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(44 20) rotate(52) scale(14 10)">
+      <stop offset="0" stop-color="#F2CF74"/>
+      <stop offset="0.42" stop-color="#B98C38"/>
+      <stop offset="1" stop-color="#3B250E"/>
+    </radialGradient>
+    <filter id="softShadow" x="8" y="4" width="168" height="44" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.6" flood-color="#000000" flood-opacity="0.48"/>
+    </filter>
+    <filter id="innerPatina" x="0" y="0" width="184" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="17" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.72  0 0 0 0 0.54  0 0 0 0 0.21  0 0 0 .16 0" result="patina"/>
+      <feBlend in="SourceGraphic" in2="patina" mode="multiply"/>
+    </filter>
+    <clipPath id="handleClip">
+      <path d="M45 24C45 15.72 51.72 9 60 9H124C132.28 9 139 15.72 139 24C139 32.28 132.28 39 124 39H60C51.72 39 45 32.28 45 24Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- transparent background intentionally omitted -->
+  <g filter="url(#softShadow)">
+    <!-- left mounting rosette -->
+    <ellipse cx="40" cy="24" rx="18" ry="15" fill="url(#brassDark)"/>
+    <ellipse cx="40" cy="24" rx="14.5" ry="11.5" fill="url(#knobGlow)" filter="url(#innerPatina)"/>
+    <ellipse cx="40" cy="24" rx="7.5" ry="6" fill="#5F3D18" opacity="0.75"/>
+    <ellipse cx="37.5" cy="20.8" rx="4.8" ry="2.5" fill="#E0B85A" opacity="0.55"/>
+    <circle cx="40" cy="24" r="2.1" fill="#2A1909" opacity="0.72"/>
+
+    <!-- right mounting rosette -->
+    <ellipse cx="144" cy="24" rx="18" ry="15" fill="url(#brassDark)"/>
+    <ellipse cx="144" cy="24" rx="14.5" ry="11.5" fill="url(#knobGlow)" filter="url(#innerPatina)" transform="rotate(180 144 24)"/>
+    <ellipse cx="144" cy="24" rx="7.5" ry="6" fill="#5F3D18" opacity="0.75"/>
+    <ellipse cx="141.5" cy="20.8" rx="4.8" ry="2.5" fill="#E0B85A" opacity="0.55"/>
+    <circle cx="144" cy="24" r="2.1" fill="#2A1909" opacity="0.72"/>
+
+    <!-- handle body -->
+    <path d="M45 24C45 15.72 51.72 9 60 9H124C132.28 9 139 15.72 139 24C139 32.28 132.28 39 124 39H60C51.72 39 45 32.28 45 24Z" fill="url(#brassMain)" filter="url(#innerPatina)"/>
+    <g clip-path="url(#handleClip)">
+      <path d="M49 17C58 13.5 73 12 92 12C111 12 126 13.5 135 17" stroke="#F1D17A" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
+      <path d="M50 32C62 35.5 78 36.7 92 36.7C106 36.7 122 35.5 134 32" stroke="#2E1C0A" stroke-width="2.4" stroke-linecap="round" opacity="0.38"/>
+      <path d="M58 24C67 20.4 78.8 18.7 92 18.7C105.2 18.7 117 20.4 126 24" stroke="#6E4718" stroke-width="6" stroke-linecap="round" opacity="0.44"/>
+      <path d="M60 21.5C68 18.9 79.2 17.5 92 17.5C104.8 17.5 116 18.9 124 21.5" stroke="#F0C96A" stroke-width="1.4" stroke-linecap="round" opacity="0.42"/>
+    </g>
+
+    <!-- bevel outlines -->
+    <path d="M45 24C45 15.72 51.72 9 60 9H124C132.28 9 139 15.72 139 24C139 32.28 132.28 39 124 39H60C51.72 39 45 32.28 45 24Z" stroke="url(#brassEdge)" stroke-width="1.4"/>
+    <path d="M52 24C52 19.03 56.03 15 61 15H123C127.97 15 132 19.03 132 24C132 28.97 127.97 33 123 33H61C56.03 33 52 28.97 52 24Z" stroke="#3A240E" stroke-width="1" opacity="0.42"/>
+
+    <!-- subtle antique screw-slot cuts -->
+    <path d="M34.5 24H45.5" stroke="#2B1908" stroke-width="1.4" stroke-linecap="round" opacity="0.62"/>
+    <path d="M138.5 24H149.5" stroke="#2B1908" stroke-width="1.4" stroke-linecap="round" opacity="0.62"/>
+    <path d="M35.5 21.2C38.4 18.9 42.1 18.9 44.5 21.2" stroke="#E0B85A" stroke-width="0.8" stroke-linecap="round" opacity="0.35"/>
+    <path d="M139.5 21.2C142.4 18.9 146.1 18.9 148.5 21.2" stroke="#E0B85A" stroke-width="0.8" stroke-linecap="round" opacity="0.35"/>
+  </g>
+</svg>

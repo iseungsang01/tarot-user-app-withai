@@ -1,0 +1,12 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="archive drawer icon">
+  <g stroke="#C8A340" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.2 7.4h13.6a1.15 1.15 0 0 1 1.15 1.15v9.65a1.15 1.15 0 0 1-1.15 1.15H5.2a1.15 1.15 0 0 1-1.15-1.15V8.55A1.15 1.15 0 0 1 5.2 7.4Z"/>
+    <path d="M6.25 4.65h11.5c.5 0 .92.4.92.92V7.4H5.33V5.57c0-.52.42-.92.92-.92Z"/>
+    <path d="M4.05 12.75h15.9"/>
+    <path d="M9.15 10.15h5.7"/>
+    <path d="M9.55 15.85h4.9"/>
+    <path d="M12 2.85v1.8"/>
+    <path d="M8.85 2.95l.8 1.55" opacity=".75"/>
+    <path d="M15.15 2.95l-.8 1.55" opacity=".75"/>
+  </g>
+</svg>

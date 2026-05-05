@@ -1,0 +1,15 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="celestial compass tune icon">
+  <g stroke="#C8A340" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="6.85"/>
+    <circle cx="12" cy="12" r="2.05"/>
+    <path d="M12 3.35v2.1"/>
+    <path d="M12 18.55v2.1"/>
+    <path d="M3.35 12h2.1"/>
+    <path d="M18.55 12h2.1"/>
+    <path d="m8.15 15.85 2.1-4.95 5.6-2.75-2.1 4.95-5.6 2.75Z"/>
+    <path d="m6.1 6.1 1.2 1.2" opacity=".75"/>
+    <path d="m16.7 16.7 1.2 1.2" opacity=".75"/>
+    <path d="m17.9 6.1-1.2 1.2" opacity=".75"/>
+    <path d="m7.3 16.7-1.2 1.2" opacity=".75"/>
+  </g>
+</svg>

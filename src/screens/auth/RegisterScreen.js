@@ -53,17 +53,15 @@ const RegisterScreen = ({ navigation }) => {
             const { data, error } = await register(phone, password, nickname);
 
             if (data) {
-                Alert.alert('가입 완료', '회원가입이 완료되었습니다. 로그인해주세요.', [
-                    { text: '확인', onPress: () => navigation.navigate('Login') }
-                ]);
+                // 가입 성공 시 AuthContext에서 상태가 업데이트되며 MainNavigator로 자동 전환됩니다.
             } else {
                 setMessage({ text: error?.message || '회원가입에 실패했습니다.', type: 'error' });
+                setLoading(false); // 에러 발생 시에만 로딩 해제
             }
         } catch (error) {
             console.error('Register Error:', error);
             setMessage({ text: '오류가 발생했습니다. 다시 시도해주세요.', type: 'error' });
-        } finally {
-            setLoading(false);
+            setLoading(false); // 에러 발생 시에만 로딩 해제
         }
     };
 

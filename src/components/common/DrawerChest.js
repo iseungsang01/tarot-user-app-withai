@@ -1,37 +1,47 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
-/**
- * 서랍장 틀 컴포넌트
- * @param {boolean} isManualMode - 현재 개인 메모(OFF) 모드인지 여부
- */
 export const DrawerChest = ({ children, isManualMode }) => {
-  // 모드에 따른 색상 결정
-  const frameColor = isManualMode ? DrawerTheme.navyLight : DrawerTheme.woodFrame;
-  const bodyColor = isManualMode ? '#10171E' : DrawerTheme.woodDark;
+  const sideTint = isManualMode ? 'rgba(42,6,44,0.7)' : 'rgba(31,18,12,0.82)';
 
   return (
     <View style={styles.chestContainer}>
-      {/* 가구 상판 몰딩 */}
-      <View style={[styles.topMolding, { backgroundColor: frameColor }]} />
-      <View style={[styles.topSubMolding, { backgroundColor: bodyColor }]} />
+      <View style={styles.backLip} />
+      <LinearGradient
+        colors={['#120806', DrawerTheme.walnutLight, DrawerTheme.walnutDark, DrawerTheme.walnutLight, '#120806']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.topMolding}
+      />
+      <LinearGradient
+        colors={['#120A06', DrawerTheme.walnutLight, '#120A06']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.topSubMolding}
+      />
 
-      <View style={[
-        styles.mainBody,
-        { borderColor: frameColor, backgroundColor: bodyColor }
-      ]}>
-        {/* 서랍들이 쌓이는 중심부 */}
-        <View style={[styles.drawerContent, { backgroundColor: bodyColor }]}>
-          {children}
-        </View>
-      </View>
+      <LinearGradient
+        colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.mainBody}
+      >
+        <View style={styles.sideRailLeft} />
+        <View style={styles.sideRailRight} />
+        <View style={styles.drawerContent}>{children}</View>
+      </LinearGradient>
 
-      {/* 가구 하단 받침 */}
-      <View style={[styles.bottomMolding, { backgroundColor: frameColor }]} />
+      <LinearGradient
+        colors={['#120A06', DrawerTheme.walnutLight, '#120A06']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.bottomMolding}
+      />
       <View style={styles.legsRow}>
-        <View style={[styles.leg, { backgroundColor: frameColor }]} />
-        <View style={[styles.leg, { backgroundColor: frameColor }]} />
+        <View style={styles.leg} />
+        <View style={styles.leg} />
       </View>
     </View>
   );
@@ -40,53 +50,86 @@ export const DrawerChest = ({ children, isManualMode }) => {
 const styles = StyleSheet.create({
   chestContainer: {
     width: '100%',
-    maxWidth: 460,
-    alignSelf: 'center',
-    marginVertical: 10
+    marginTop: 8,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  backLip: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#1A0E08',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(224,184,90,0.24)',
   },
   topMolding: {
     width: '100%',
-    height: 10,
-    alignSelf: 'center',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 3
+    height: 11,
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+    borderTopWidth: 1,
+    borderColor: 'rgba(224,184,90,0.34)',
   },
   topSubMolding: {
     width: '100%',
     height: 8,
-    alignSelf: 'center'
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(0,0,0,0.62)',
   },
   mainBody: {
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderColor: 'rgba(12,6,4,0.92)',
+    overflow: 'hidden',
+  },
+  sideRailLeft: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 4,
+    width: 2,
+    backgroundColor: 'rgba(224,184,90,0.22)',
+  },
+  sideRailRight: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 4,
+    width: 2,
+    backgroundColor: 'rgba(224,184,90,0.22)',
   },
   drawerContent: {
-    paddingTop: 5,
-    paddingBottom: 10
+    paddingTop: 6,
+    paddingBottom: 7,
+    paddingHorizontal: 3,
   },
   bottomMolding: {
-    width: '108%',
-    marginLeft: '-4%',
+    width: '100%',
     height: 12,
-    alignSelf: 'center',
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+    borderTopWidth: 1,
+    borderColor: 'rgba(224,184,90,0.22)',
   },
   legsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 32,
-    marginTop: -2
+    paddingHorizontal: 34,
+    marginTop: -2,
   },
   leg: {
     width: 22,
-    height: 20,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10
+    height: 18,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: DrawerTheme.walnutDark,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: 'rgba(224,184,90,0.2)',
   },
 });

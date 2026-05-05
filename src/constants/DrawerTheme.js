@@ -1,34 +1,47 @@
-/**
- * Tarot Archive & Note Project Theme
- * 고풍스러운 서재의 서랍장을 모티브로 한 테마 시스템
- */
-
 export const DrawerTheme = {
-  // 🪵 [WOOD THEME] - 타로 기록이 있는 서랍 (ON 상태)
-  woodLight: '#D2A679',   // 서랍 상단 모서리 하이라이트 (빛받는 부분)
-  woodMid: '#8B5A2B',    // 서랍 전면 메인 원목색
-  woodDark: '#2A1B12',   // 서랍 사이의 깊은 틈새 및 내부 그림자
-  woodFrame: '#4E342E',  // 가구 전체를 감싸는 묵직한 외곽 프레임
+  bgBlackPurple: '#09000D',
+  bgDeepPurple: '#140018',
+  bgWine: '#22051F',
+  bgBlackCherry: '#120008',
 
-  // 🟦 [NAVY THEME] - 일반 메모만 있는 서랍 (OFF 상태)
-  navyLight: '#5A6A8E',  // 네이비 서랍 하이라이트
-  navyMid: '#3C4E60',   // 네이비 서랍 전면 메인색
-  navyDark: '#1E2836',  // 네이비 서랍 깊은 음영
+  antiqueGold: '#C8A340',
+  brightGold: '#E0C168',
+  mutedGold: '#9B7A35',
+  darkGold: '#6F4E1E',
 
-  // ⚜️ [METALIC POINT] - 공통 금속 장식 (손잡이 및 명판)
-  goldBrass: '#D4AF37',  // 앤틱 황동 손잡이 메인색
-  goldDark: '#B8860B',   // 손잡이 음영 및 테두리 (입체감)
-  goldBright: '#FFD700', // ✨ 날짜 텍스트 및 강조 포인트용
+  walnutDark: '#1F120C',
+  walnut: '#321D12',
+  walnutLight: '#4B2B18',
 
-  // 🌫️ [EFFECTS] - 그림자 및 오버레이
-  shadow: 'rgba(0,0,0,0.6)',
-  overlay: 'rgba(0,0,0,0.85)',
-  glass: 'rgba(255,255,255,0.1)', // 유리 질감 효과
+  brass: '#B88735',
+  brassHighlight: '#E0B85A',
 
-  // 텍스트 색상
-  textMain: '#FFFFFF',
-  textMuted: '#A0A0A0',
-  textDark: '#1A0F0A',
+  ivory: '#F4E8D0',
+  mutedIvory: '#CDBB96',
+  mutedPurple: '#8E7A9A',
+  burgundy: '#4A0F2B',
+  velvetPurple: '#2A062C',
+
+  woodLight: '#4B2B18',
+  woodMid: '#321D12',
+  woodDark: '#1F120C',
+  woodFrame: '#6F4E1E',
+
+  navyLight: '#8E7A9A',
+  navyMid: '#2A062C',
+  navyDark: '#140018',
+
+  goldBrass: '#C8A340',
+  goldDark: '#6F4E1E',
+  goldBright: '#E0C168',
+
+  shadow: 'rgba(0,0,0,0.72)',
+  overlay: 'rgba(0,0,0,0.88)',
+  glass: 'rgba(244,232,208,0.08)',
+
+  textMain: '#F4E8D0',
+  textMuted: '#CDBB96',
+  textDark: '#120008',
 };
 
 export default DrawerTheme;

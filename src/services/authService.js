@@ -16,11 +16,14 @@ const resetLoginGuard = async () => storage.remove(LOGIN_GUARD_KEY);
 
 const buildLoginIdentifiers = (phoneNumber, payload) => {
   const normalizedPhone = phoneNumber?.trim() || '';
+  const fakeEmail = `${normalizedPhone.replace(/\D/g, '')}@tarot-app.com`;
+  
   const candidates = [
     payload?.auth_email,
     payload?.email,
     payload?.identifier,
     normalizedPhone,
+    fakeEmail,
   ].filter(Boolean);
 
   return [...new Set(candidates)];
@@ -41,22 +44,34 @@ const fetchCustomerProfile = async (customerId) => {
 };
 
 const establishSupabaseSession = async ({ phoneNumber, password, rpcPayload }) => {
+  // 이미 활성화된 세션이 있는지 먼저 확인
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData?.session?.access_token) {
+    return { ok: true, error: null };
+  }
+
   const accessToken = rpcPayload?.access_token;
   const refreshToken = rpcPayload?.refresh_token;
 
   if (accessToken && refreshToken) {
     const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
     if (error) {
+      console.error('❌ 세션 복구 에러:', error);
       return { ok: false, error: normalizeAuthError(error, '로그인 세션을 복구하지 못했습니다. 다시 로그인해주세요.') };
     }
     return { ok: true, error: null };
   }
 
   const identifiers = buildLoginIdentifiers(phoneNumber, rpcPayload);
+  let lastAuthError = null;
+
   for (const identifier of identifiers) {
     const { error } = await supabase.auth.signInWithPassword({ email: identifier, password });
     if (!error) return { ok: true, error: null };
+    lastAuthError = error;
   }
+
+  console.error('❌ Supabase Auth 로그인 실패 (signInWithPassword):', lastAuthError);
 
   return {
     ok: false,
@@ -94,12 +109,13 @@ const loginCustomerRpc = async ({ phone, password, clientFingerprint }) => {
 export const authService = {
   async login(phoneNumber, password) {
     try {
+      const paddedPassword = password.length < 6 ? password.padEnd(6, '0') : password;
       const guard = await getLoginGuard();
       const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
       const { data: resultData, error: rpcError } = await loginCustomerRpc({
         phone: phoneNumber.trim(),
-        password,
+        password: paddedPassword,
         clientFingerprint,
       });
 
@@ -124,7 +140,7 @@ export const authService = {
         };
       }
 
-      const sessionResult = await establishSupabaseSession({ phoneNumber, password, rpcPayload: resultData });
+      const sessionResult = await establishSupabaseSession({ phoneNumber, password: paddedPassword, rpcPayload: resultData });
       if (!sessionResult.ok) {
         return { data: null, error: sessionResult.error };
       }
@@ -218,9 +234,31 @@ export const authService = {
 
   async register(phoneNumber, password, nickname = '') {
     try {
+      const paddedPassword = password.length < 6 ? password.padEnd(6, '0') : password;
+      const normalizedPhone = phoneNumber.trim();
+      const fakeEmail = `${normalizedPhone.replace(/\D/g, '')}@tarot-app.com`;
+
+      // 1. Supabase Auth (auth.users) 회원가입으로 세션 생성 기반 마련
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: fakeEmail,
+        password: paddedPassword,
+      });
+
+      if (authError) {
+        console.error('❌ Auth API 에러:', authError);
+        return { data: null, error: { message: authError.message || '인증 서버(Auth) 회원가입에 실패했습니다.' } };
+      }
+
+      const newUserId = authData?.user?.id;
+      if (!newUserId) {
+        return { data: null, error: { message: '인증 사용자 ID를 가져오지 못했습니다. 확인 이메일 발송이 켜져있을 수 있습니다.' } };
+      }
+
+      // 2. 고객 DB(public.customers) 가입
       const { data: resultData, error: rpcError } = await supabaseClient.registerCustomer({
-        p_phone: phoneNumber.trim(),
-        p_password: password,
+        p_id: newUserId,
+        p_phone: normalizedPhone,
+        p_password: paddedPassword,
         p_nickname: nickname,
       });
 
@@ -237,7 +275,7 @@ export const authService = {
       }
 
       // 회원가입 직후에도 동일한 세션 경로 사용
-      const loginResult = await this.login(phoneNumber, password);
+      const loginResult = await this.login(normalizedPhone, password); // We keep original password here because login() will pad it again
       if (loginResult.error) return { data: null, error: loginResult.error };
 
       return { data: loginResult.data, error: null };

@@ -30,7 +30,7 @@ function loadModule(filePath, mocks = {}) {
     if (Object.prototype.hasOwnProperty.call(mocks, request)) return mocks[request];
     const resolved = resolveFile(dirname, request);
     if (Object.prototype.hasOwnProperty.call(mocks, resolved)) return mocks[resolved];
-    if (resolved.endsWith('.js') && resolved.startsWith('/')) {
+    if (resolved.endsWith('.js') && path.isAbsolute(resolved)) {
       return loadModule(resolved, mocks);
     }
     return require(request);

@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (phoneNumber, password, nickname) => {
     try {
       const { data, error } = await authService.register(phoneNumber, password, nickname);
+      if (data) setCustomer(data); // 가입 즉시 로그인 상태로 전환
       return { data, error };
     } catch (error) {
       logError('AuthContext.register', error, { phoneNumber });

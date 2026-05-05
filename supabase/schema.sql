@@ -139,6 +139,8 @@ CREATE TABLE public.login_attempt_tracker (
     last_failed_at timestamptz,
     updated_at timestamptz NOT NULL DEFAULT NOW(),
     UNIQUE (phone_hash, ip_device_hash)
+);
+
 -- [비밀번호 변경 감사 로그]
 CREATE TABLE public.customer_password_audit_logs (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -286,11 +288,7 @@ BEGIN
   END IF;
 
   RETURN (
-    char_length(p_password) >= 8
-    AND p_password ~ '[A-Z]'
-    AND p_password ~ '[a-z]'
-    AND p_password ~ '[0-9]'
-    AND p_password ~ '[^A-Za-z0-9]'
+    char_length(p_password) >= 6
   );
 END;
 $$;
@@ -402,6 +400,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- [기능] 고객 회원가입
 CREATE OR REPLACE FUNCTION public.register_customer(
+    p_id uuid,
     p_phone text,
     p_password text,
     p_nickname text DEFAULT NULL
@@ -426,14 +425,14 @@ BEGIN
     END IF;
 
     IF NOT public.validate_password_complexity(p_password) THEN
-        RETURN jsonb_build_object('success', false, 'message', '비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.');
+        RETURN jsonb_build_object('success', false, 'message', '비밀번호는 6자 이상이어야 합니다.');
     END IF;
 
     v_nickname := COALESCE(NULLIF(p_nickname, ''), '유저_' || right(p_phone, 4));
 
     -- 데이터 삽입
-    INSERT INTO public.customers (phone_number, password, nickname, must_change_password)
-    VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname, false)
+    INSERT INTO public.customers (id, phone_number, password, nickname)
+    VALUES (p_id, p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname)
     RETURNING id INTO v_customer_id;
 
     RETURN jsonb_build_object('success', true, 'id', v_customer_id);
@@ -496,7 +495,7 @@ BEGIN
     FROM public.customers
     WHERE phone_number = p_phone AND deleted_at IS NULL;
 
-    IF v_customer.id IS NULL THEN
+    IF v_customer.id IS NULL OR v_customer.password != extensions.crypt(p_password, v_customer.password) THEN
         INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
         VALUES (
             v_phone_hash,
@@ -546,62 +545,11 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
     END IF;
 
-    IF v_customer.password = extensions.crypt(p_password, v_customer.password) THEN
-        DELETE FROM public.login_attempt_tracker
-        WHERE phone_hash = v_phone_hash
-          AND ip_device_hash IN ('__phone__', v_device_hash);
+    DELETE FROM public.login_attempt_tracker
+    WHERE phone_hash = v_phone_hash
+      AND ip_device_hash IN ('__phone__', v_device_hash);
 
-        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
-        RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname, 'must_change_password', v_customer.must_change_password);
-    ELSE
-        INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
-        VALUES (
-            v_phone_hash,
-            '__phone__',
-            1,
-            NULL,
-            NOW(),
-            NOW()
-        )
-        ON CONFLICT (phone_hash, ip_device_hash)
-        DO UPDATE SET
-            failed_attempts = CASE
-                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.failed_attempts
-                ELSE public.login_attempt_tracker.failed_attempts + 1
-            END,
-            lock_expires_at = CASE
-                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.lock_expires_at
-                WHEN public.login_attempt_tracker.failed_attempts + 1 >= v_max_failed_attempts THEN NOW() + make_interval(mins => v_lock_minutes)
-                ELSE NULL
-            END,
-            last_failed_at = NOW(),
-            updated_at = NOW();
-
-        INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
-        VALUES (
-            v_phone_hash,
-            v_device_hash,
-            1,
-            NULL,
-            NOW(),
-            NOW()
-        )
-        ON CONFLICT (phone_hash, ip_device_hash)
-        DO UPDATE SET
-            failed_attempts = CASE
-                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.failed_attempts
-                ELSE public.login_attempt_tracker.failed_attempts + 1
-            END,
-            lock_expires_at = CASE
-                WHEN COALESCE(public.login_attempt_tracker.lock_expires_at, '-infinity'::timestamptz) > NOW() THEN public.login_attempt_tracker.lock_expires_at
-                WHEN public.login_attempt_tracker.failed_attempts + 1 >= v_max_failed_attempts THEN NOW() + make_interval(mins => v_lock_minutes)
-                ELSE NULL
-            END,
-            last_failed_at = NOW(),
-            updated_at = NOW();
-
-        RETURN jsonb_build_object('success', false, 'message', '전화번호 또는 비밀번호가 일치하지 않습니다.');
-    END IF;
+    RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
 END;
 $$;
 
@@ -641,12 +589,11 @@ SET search_path = public, extensions
 AS $$
 BEGIN
   IF NOT public.validate_password_complexity(new_password) THEN
-    RAISE EXCEPTION '비밀번호는 8자 이상, 영문 대/소문자, 숫자, 특수문자를 포함해야 합니다.';
+    RAISE EXCEPTION '비밀번호는 6자 이상이어야 합니다.';
   END IF;
 
   UPDATE public.customers
-  SET password = extensions.crypt(new_password, extensions.gen_salt('bf')),
-      must_change_password = false
+  SET password = extensions.crypt(new_password, extensions.gen_salt('bf'))
   WHERE id = customer_uuid
     AND deleted_at IS NULL;
 
@@ -662,9 +609,8 @@ END;
 $$;
 
 -- 실행 권한 부여
-GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.register_customer(uuid, text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.login_customer(text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
 
