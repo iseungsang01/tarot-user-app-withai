@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION public.get_customer_stats(p_session_token text)
+CREATE OR REPLACE FUNCTION public.get_customer_stats(p_session_token text)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -9,7 +9,7 @@ DECLARE
   v_token_hash text;
 BEGIN
   IF p_session_token IS NULL OR length(trim(p_session_token)) = 0 THEN
-    RETURN jsonb_build_object('success', false, 'message', '세션 토큰이 없습니다.');
+    RETURN jsonb_build_object('success', false, 'message', 'Missing session token.');
   END IF;
 
   v_token_hash := encode(extensions.digest(p_session_token, 'sha256'), 'hex');
@@ -23,7 +23,7 @@ BEGIN
     AND c.deleted_at IS NULL;
 
   IF v_customer.id IS NULL THEN
-    RETURN jsonb_build_object('success', false, 'message', '세션이 만료되었거나 회원 정보를 찾을 수 없습니다.');
+    RETURN jsonb_build_object('success', false, 'message', 'Session expired or customer not found.');
   END IF;
 
   UPDATE public.customer_sessions

@@ -1,1 +1,0 @@
-param([Parameter(ValueFromPipeline=$true)][string]$InputString); process { if ($InputString) { $global:fullInput += $InputString + "`n" } } end { if ($global:fullInput) { echo $global:fullInput | npx tsx scripts/agent.ts } $global:fullInput = $null }
