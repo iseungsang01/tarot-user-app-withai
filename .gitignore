@@ -85,3 +85,9 @@ web-build/
 # SQL & Database Docs
 SupabaseSQL.md
 
+
+# Local agent/runtime state
+.omx/
+
+# Supabase local CLI state
+supabase/.temp/

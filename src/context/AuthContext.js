@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { authService } from '../services/authService';
-import { setGlobalAuthErrorHandler, supabase } from '../services/supabase';
+import { setGlobalAuthErrorHandler } from '../services/supabase';
 import { resetAuthNoticeState, shouldDisplayAuthNotice } from '../utils/authErrorNotice';
 import { logError } from '../utils/errorHandler';
 
@@ -43,22 +43,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     setGlobalAuthErrorHandler(handleAuthFailure);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setCustomer(null);
-        return;
-      }
-
-      if (event === 'TOKEN_REFRESHED' && !session?.access_token) {
-        handleAuthFailure({ message: '세션 갱신에 실패했습니다. 다시 로그인해주세요.' });
-      }
-    });
-
     return () => {
       setGlobalAuthErrorHandler(null);
-      subscription?.unsubscribe();
     };
   }, [handleAuthFailure]);
 

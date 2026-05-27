@@ -10,7 +10,7 @@ if (!hasSupabaseConfig) {
 }
 
 const AUTH_ERROR_CODES = new Set(['PGRST301', '401', '403']);
-const REFRESH_THRESHOLD_SECONDS = 60;
+const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
 
 let globalAuthErrorHandler = null;
 let cachedSupabaseClient = null;
@@ -57,9 +57,17 @@ export const isAuthContextError = (error) => {
     message.includes('jwt')
     || message.includes('not authenticated')
     || message.includes('unauthorized')
-    || message.includes('permission denied')
     || message.includes('auth')
   );
+};
+
+const getCustomerRpcSession = async () => {
+  try {
+    const rawSession = await AsyncStorage.getItem(CUSTOMER_SESSION_KEY);
+    return rawSession ? JSON.parse(rawSession) : null;
+  } catch {
+    return null;
+  }
 };
 
 export const withAuthErrorHandling = (error, defaultMessage) => {
@@ -94,34 +102,18 @@ export const ensureAuthenticatedSession = async () => {
     return { ok: false, error: normalizedError };
   };
 
-  const attemptRefresh = async (fallbackMessage) => {
-    const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
-
-    if (refreshError || !refreshedData?.session?.access_token) {
-      return reportAndFail(refreshError, fallbackMessage);
-    }
-
-    return { ok: true, session: refreshedData.session, error: null };
-  };
-
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error) {
-    return reportAndFail(error);
+  const customerSession = await getCustomerRpcSession();
+  if (customerSession?.token) {
+    return {
+      ok: true,
+      session: {
+        access_token: customerSession.token,
+        customer_id: customerSession.customerId,
+        type: 'customer_rpc_session',
+      },
+      error: null,
+    };
   }
 
-  const session = data?.session;
-  if (!session?.access_token) {
-    return attemptRefresh('인증 세션이 없어 자동 복구를 시도했지만 실패했습니다. 다시 로그인해주세요.');
-  }
-
-  const expiresAt = Number(session.expires_at || 0);
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const shouldRefresh = expiresAt > 0 && expiresAt - nowSeconds <= REFRESH_THRESHOLD_SECONDS;
-
-  if (shouldRefresh) {
-    return attemptRefresh('세션 만료 복구에 실패했습니다. 다시 로그인해주세요.');
-  }
-
-  return { ok: true, session, error: null };
+  return reportAndFail(null, '저장된 고객 세션이 없습니다. 다시 로그인해주세요.');
 };

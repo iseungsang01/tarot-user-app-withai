@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const STORAGE_KEYS = {
   CUSTOMER: 'tarot_customer',
+  CUSTOMER_SESSION: 'tarot_customer_session',
   SAVED_PHONE: 'saved_phone',
   REMEMBER_ME: 'remember_me',
   SELECTED_CARDS: 'selected_cards',

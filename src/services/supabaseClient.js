@@ -9,6 +9,14 @@ export const supabaseClient = {
     return supabase.rpc('register_customer', payload);
   },
 
+  getMyProfile(payload) {
+    return supabase.rpc('get_my_profile', payload);
+  },
+
+  logoutCustomer(payload) {
+    return supabase.rpc('logout_customer', payload);
+  },
+
   updateMyNickname(payload) {
     return supabase.rpc('update_my_nickname', payload);
   },
