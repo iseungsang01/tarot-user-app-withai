@@ -67,6 +67,26 @@ export const supabaseClient = {
     return supabase.rpc('get_customer_stats', payload);
   },
 
+  getMyVoteResponses(payload) {
+    return supabase.rpc('get_my_vote_responses', payload);
+  },
+
+  getMyVoteResponse(payload) {
+    return supabase.rpc('get_my_vote_response', payload);
+  },
+
+  submitVoteResponse(payload) {
+    return supabase.rpc('submit_vote_response', payload);
+  },
+
+  cancelVoteResponse(payload) {
+    return supabase.rpc('cancel_vote_response', payload);
+  },
+
+  getVoteSummary(payload) {
+    return supabase.rpc('get_vote_summary', payload);
+  },
+
   invokeAIProxy(body) {
     return supabase.functions.invoke('ai-proxy', { body });
   },

@@ -39,7 +39,7 @@ const settleWithin = async (operation, timeoutMs = LOGOUT_REMOTE_TIMEOUT_MS) => 
   let timeoutId;
   try {
     return await Promise.race([
-      operation.catch(() => null),
+      Promise.resolve(operation).catch(() => null),
       new Promise((resolve) => {
         timeoutId = setTimeout(() => resolve(null), timeoutMs);
       }),

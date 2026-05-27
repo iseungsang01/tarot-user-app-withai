@@ -125,18 +125,22 @@ Deno.serve(async (req) => {
     let userId: string | null = null;
     if (token) {
       const { data, error } = await authClient.auth.getUser(token);
-      if (error || !data.user) {
-        return new Response(
-          JSON.stringify({ error: '유효하지 않은 인증 토큰입니다.' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+      if (!error && data.user) {
+        userId = data.user.id;
+      } else {
+        const { data: profileData, error: profileError } = await adminClient.rpc('get_my_profile', {
+          p_session_token: token,
+        });
+        const customerId = profileData?.customer?.id || profileData?.id || null;
+        if (!profileError && profileData?.success && customerId) {
+          userId = customerId;
+        }
       }
-      userId = data.user.id;
     }
 
     if (REQUIRE_AUTH && !userId) {
       return new Response(
-        JSON.stringify({ error: '인증된 사용자만 접근할 수 있습니다.' }),
+        JSON.stringify({ error: 'Invalid or expired authentication token.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }

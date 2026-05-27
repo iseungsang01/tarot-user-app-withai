@@ -1,4 +1,24 @@
 import { supabase } from './supabase';
+import { supabaseClient } from './supabaseClient';
+import { storage } from '../utils/storage';
+
+const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
+
+const getCustomerSessionToken = async () => {
+  const session = await storage.get(CUSTOMER_SESSION_KEY);
+  return session?.token || null;
+};
+
+const requireCustomerSessionToken = async () => {
+  const token = await getCustomerSessionToken();
+  if (!token) {
+    const error = new Error('Login is required. Please sign in again.');
+    error.code = 'AUTH_REQUIRED';
+    error.requiresReLogin = true;
+    throw error;
+  }
+  return token;
+};
 
 /**
  * 투표 서비스
@@ -43,19 +63,13 @@ export const voteService = {
   async getMyVote(voteId, customerId) {
     if (customerId === 'guest') return { data: null, error: null };
     try {
-      const { data, error } = await supabase
-        .from('vote_responses')
-        .select('*')
-        .eq('vote_id', voteId)
-        .eq('customer_id', customerId)
-        .single();
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.getMyVoteResponse({
+        p_session_token: token,
+        p_vote_id: voteId,
+      });
 
-      // 데이터가 없어도 에러로 처리하지 않음
-      if (error && error.code === 'PGRST116') {
-        return { data: null, error: null };
-      }
-
-      return { data, error };
+      return { data: data?.id ? data : null, error };
     } catch (error) {
       console.error('Get my vote error:', error);
       return { data: null, error };
@@ -70,10 +84,10 @@ export const voteService = {
   async getMyAllResponses(customerId) {
     if (customerId === 'guest') return { data: {}, error: null };
     try {
-      const { data, error } = await supabase
-        .from('vote_responses')
-        .select('*')
-        .eq('customer_id', customerId);
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.getMyVoteResponses({
+        p_session_token: token,
+      });
 
       if (error) throw error;
 
@@ -101,35 +115,16 @@ export const voteService = {
   async submitVote(voteId, customerId, selectedOptions, existingVoteId = null) {
     if (customerId === 'guest') return { data: null, error: 'Guest cannot vote' };
     try {
-      if (existingVoteId) {
-        // 투표 수정
-        const { data, error } = await supabase
-          .from('vote_responses')
-          .update({
-            selected_options: selectedOptions,
-            voted_at: new Date().toISOString(),
-          })
-          .eq('id', existingVoteId)
-          .select()
-          .single();
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.submitVoteResponse({
+        p_session_token: token,
+        p_vote_id: voteId,
+        p_selected_options: selectedOptions,
+        p_response_id: existingVoteId,
+      });
 
-        if (error) throw error;
-        return { data, error: null };
-      } else {
-        // 새 투표
-        const { data, error } = await supabase
-          .from('vote_responses')
-          .insert({
-            vote_id: voteId,
-            customer_id: customerId,
-            selected_options: selectedOptions,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        return { data, error: null };
-      }
+      if (error) throw error;
+      return { data, error: null };
     } catch (error) {
       console.error('Submit vote error:', error);
       return { data: null, error };
@@ -143,33 +138,11 @@ export const voteService = {
    */
   async getVoteResults(voteId) {
     try {
-      const { data, error } = await supabase
-        .from('vote_responses')
-        .select('selected_options')
-        .eq('vote_id', voteId);
+      const { data, error } = await supabaseClient.getVoteSummary({ p_vote_id: voteId });
 
       if (error) throw error;
 
-      // 각 옵션의 투표 수 집계
-      const results = {};
-      (data || []).forEach((response) => {
-        // 데이터가 배열인지 JSON 문자열인지 확인하여 안전하게 파싱
-        let options = response.selected_options;
-
-        // 만약 문자열로 저장되어 있다면 파싱, 아니면 그대로 사용
-        if (typeof options === 'string') {
-          try { options = JSON.parse(options); } catch (e) { options = []; }
-        }
-        if (!Array.isArray(options)) options = [];
-
-        options.forEach((optionId) => {
-          // 키를 문자열로 통일하여 저장 (숫자 0과 문자 "0" 매칭 문제 방지)
-          const key = String(optionId);
-          results[key] = (results[key] || 0) + 1;
-        });
-      });
-
-      return { data: { results }, error: null };
+      return { data: { results: data?.results || {} }, error: null };
 
     } catch (error) {
       console.error('Get vote results error:', error);
@@ -184,16 +157,13 @@ export const voteService = {
    */
   async getVoteParticipants(voteId) {
     try {
-      const { count, error } = await supabase
-        .from('vote_responses')
-        .select('*', { count: 'exact', head: true })
-        .eq('vote_id', voteId);
+      const { data, error } = await supabaseClient.getVoteSummary({ p_vote_id: voteId });
 
       if (error) throw error;
-      return { data: { count: count || 0 }, error: null };
+      return { data: { count: data?.count || 0 }, error: null };
     } catch (error) {
       console.error('Get vote participants error:', error);
-      return { count: 0, error };
+      return { data: { count: 0 }, error };
     }
   },
 
@@ -206,14 +176,14 @@ export const voteService = {
   async cancelVote(voteId, customerId) {
     if (customerId === 'guest') return { data: null, error: 'Guest cannot cancel vote' };
     try {
-      const { error } = await supabase
-        .from('vote_responses')
-        .delete()
-        .eq('vote_id', voteId)
-        .eq('customer_id', customerId);
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.cancelVoteResponse({
+        p_session_token: token,
+        p_vote_id: voteId,
+      });
 
       if (error) throw error;
-      return { data: true, error: null };
+      return { data: data === true, error: null };
     } catch (error) {
       console.error('Cancel vote error:', error);
       return { data: null, error };

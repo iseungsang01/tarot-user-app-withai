@@ -204,3 +204,32 @@ test('authService: logout clears local session even when remote cleanup fails', 
   assert.equal(await storage.get('tarot_customer'), null);
   assert.equal(await storage.get('auth_login_guard'), null);
 });
+
+
+test('authService: logout tolerates Supabase thenables without catch method', async () => {
+  const storage = createStorageMock();
+  await storage.save('tarot_customer_session', { token: 'saved-token', customerId: 'customer-1' });
+  await storage.save('tarot_customer', { id: 'customer-1' });
+
+  const makeThenable = (value) => ({
+    then: (resolve) => Promise.resolve(resolve(value)),
+  });
+
+  const supabaseClient = {
+    logoutCustomer: (payload) => {
+      assert.deepEqual(payload, { p_session_token: 'saved-token' });
+      return makeThenable({ data: true, error: null });
+    },
+    signOutAuthSession: () => makeThenable({ error: null }),
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  await authService.logout();
+
+  assert.equal(await storage.get('tarot_customer_session'), null);
+  assert.equal(await storage.get('tarot_customer'), null);
+});
