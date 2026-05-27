@@ -17,6 +17,10 @@ export const supabaseClient = {
     return supabase.rpc('logout_customer', payload);
   },
 
+  signOutAuthSession() {
+    return supabase.auth.signOut({ scope: 'local' });
+  },
+
   updateMyNickname(payload) {
     return supabase.rpc('update_my_nickname', payload);
   },

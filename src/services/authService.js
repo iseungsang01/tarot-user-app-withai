@@ -31,6 +31,24 @@ const saveAuthenticatedCustomer = async ({ customer, sessionToken }) => {
 
 const getStoredSession = async () => storage.get(CUSTOMER_SESSION_KEY);
 
+const LOGOUT_REMOTE_TIMEOUT_MS = 1500;
+
+const settleWithin = async (operation, timeoutMs = LOGOUT_REMOTE_TIMEOUT_MS) => {
+  if (!operation || typeof operation.then !== 'function') return null;
+
+  let timeoutId;
+  try {
+    return await Promise.race([
+      operation.catch(() => null),
+      new Promise((resolve) => {
+        timeoutId = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
 const getFailureMessage = (resultData) => {
   if (resultData?.reason === 'INVALID_PASSWORD') return '비밀번호가 일치하지 않습니다.';
   if (resultData?.reason === 'CUSTOMER_NOT_FOUND') return '가입된 회원 정보를 찾을 수 없습니다.';
@@ -97,12 +115,22 @@ export const authService = {
 
   async logout() {
     const session = await getStoredSession();
-    if (session?.token) {
-      await supabaseClient.logoutCustomer({ p_session_token: session.token }).catch(() => null);
-    }
 
     await storage.remove(CUSTOMER_SESSION_KEY);
     await storage.remove(CUSTOMER_KEY);
+    await resetLoginGuard();
+
+    const cleanupTasks = [];
+
+    if (typeof supabaseClient.signOutAuthSession === 'function') {
+      cleanupTasks.push(settleWithin(supabaseClient.signOutAuthSession()));
+    }
+
+    if (session?.token) {
+      cleanupTasks.push(settleWithin(supabaseClient.logoutCustomer({ p_session_token: session.token })));
+    }
+
+    await Promise.all(cleanupTasks);
   },
 
   async getStoredCustomer() {

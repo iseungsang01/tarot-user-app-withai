@@ -61,9 +61,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    setCustomer(null);
+
     try {
       await authService.logout();
-      setCustomer(null);
     } catch (error) {
       logError('AuthContext.logout', error);
     }

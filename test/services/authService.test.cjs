@@ -160,6 +160,10 @@ test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제
       revoked.push(payload);
       return { data: true, error: null };
     },
+    signOutAuthSession: async () => {
+      revoked.push({ auth: 'local' });
+      return { error: null };
+    },
   };
 
   const { authService } = loadModule('src/services/authService.js', {
@@ -169,7 +173,34 @@ test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제
 
   await authService.logout();
 
-  assert.deepEqual(revoked, [{ p_session_token: 'saved-token' }]);
+  assert.deepEqual(revoked, [{ auth: 'local' }, { p_session_token: 'saved-token' }]);
   assert.equal(await storage.get('tarot_customer_session'), null);
   assert.equal(await storage.get('tarot_customer'), null);
+});
+
+test('authService: logout clears local session even when remote cleanup fails', async () => {
+  const storage = createStorageMock();
+  await storage.save('tarot_customer_session', { token: 'saved-token', customerId: 'customer-1' });
+  await storage.save('tarot_customer', { id: 'customer-1' });
+  await storage.save('auth_login_guard', { failedAttempts: 3, lockUntil: 123 });
+
+  const supabaseClient = {
+    logoutCustomer: async () => {
+      throw new Error('network down');
+    },
+    signOutAuthSession: async () => {
+      throw new Error('auth cleanup failed');
+    },
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  await authService.logout();
+
+  assert.equal(await storage.get('tarot_customer_session'), null);
+  assert.equal(await storage.get('tarot_customer'), null);
+  assert.equal(await storage.get('auth_login_guard'), null);
 });
