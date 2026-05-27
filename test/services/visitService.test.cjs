@@ -1,4 +1,4 @@
-const test = require('node:test');
+﻿const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadModule } = require('../helpers/moduleLoader.cjs');
 
@@ -8,7 +8,7 @@ const storage = {
   deleteCardImage: async () => {}, deleteCardReview: async () => {}, deleteCardTitle: async () => {}, deleteCardAIInsight: async () => {},
 };
 
-test('visitService: CRUD 핵심 시나리오', async () => {
+test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
   const calls = { update: null, deleteId: null, saveImage: null };
   const mockedStorage = {
     ...storage,
@@ -46,3 +46,29 @@ test('visitService: CRUD 핵심 시나리오', async () => {
   assert.equal(deleted.error, null);
   assert.equal(calls.deleteId, 10);
 });
+
+test('visitService: customer stats use the stored RPC session token', async () => {
+  const calls = [];
+  const supabaseClient = {
+    getCustomerStats: async (payload) => {
+      calls.push(payload);
+      return { data: { success: true, current_stamps: 4, visit_count: 9 }, error: null };
+    },
+  };
+
+  const { visitService } = loadModule('src/services/visitService.js', {
+    './supabase': {
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'rpc-token' }, error: null }),
+      withAuthErrorHandling: (error) => error,
+      supabase: {},
+    },
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await visitService.getCustomerStats('customer-1');
+
+  assert.deepEqual(calls, [{ p_session_token: 'rpc-token' }]);
+  assert.deepEqual(result, { data: { current_stamps: 4, visit_count: 9 }, error: null });
+});
+

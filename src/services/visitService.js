@@ -7,6 +7,8 @@ const requireSession = async () => {
   return session.ok ? null : session.error;
 };
 
+const getSessionState = async () => ensureAuthenticatedSession();
+
 export const visitService = {
   syncLocalVisitFields: async (visitId, updates) => {
     const localFieldHandlers = {
@@ -150,14 +152,29 @@ export const visitService = {
     }
 
     try {
-      const authError = await requireSession();
-      if (authError) return { data: null, error: authError };
+      const sessionState = await getSessionState();
+      if (!sessionState.ok) return { data: null, error: sessionState.error };
 
-      const { data, error } = await supabaseClient.getCustomerStats(customerId);
+      const { data, error } = await supabaseClient.getCustomerStats({
+        p_session_token: sessionState.session.access_token,
+      });
 
-      if (error) throw withAuthErrorHandling(error, authError?.message);
+      if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
+      if (!data?.success) {
+        const statsError = {
+          message: data?.message || 'Unable to load stamp information.',
+          code: 'CUSTOMER_STATS_FAILED',
+        };
+        throw withAuthErrorHandling(statsError, statsError.message);
+      }
 
-      return { data, error: null };
+      return {
+        data: {
+          current_stamps: data.current_stamps || 0,
+          visit_count: data.visit_count || 0,
+        },
+        error: null,
+      };
     } catch (error) {
       console.error('스탬프 정보 조회 실패:', error);
       return { data: null, error };

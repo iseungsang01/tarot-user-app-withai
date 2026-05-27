@@ -63,8 +63,8 @@ export const supabaseClient = {
     return supabase.from('visit_history').update({ is_deleted: true }).eq('id', visitId);
   },
 
-  getCustomerStats(customerId) {
-    return supabase.from('customers').select('current_stamps, visit_count').eq('id', customerId).single();
+  getCustomerStats(payload) {
+    return supabase.rpc('get_customer_stats', payload);
   },
 
   invokeAIProxy(body) {
