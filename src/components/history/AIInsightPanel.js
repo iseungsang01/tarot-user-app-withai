@@ -14,6 +14,7 @@ import {
     Platform,
 } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TextColors } from '../../constants/Colors';
 import { useSummarizeReview, useAnalyzeHistory } from '../../hooks/useAI';
 
@@ -156,40 +157,47 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
     return (
         <View style={styles.container}>
             {!expanded ? (
-                <TouchableOpacity style={[styles.triggerButton, styles.historyTrigger]} onPress={handleAnalyze} activeOpacity={0.8}>
-                    <Text style={styles.triggerIcon}></Text>
+                <TouchableOpacity style={styles.historyTriggerButton} onPress={handleAnalyze} activeOpacity={0.86}>
+                    <LinearGradient
+                        colors={['rgba(224,184,90,0.16)', 'rgba(31,18,12,0.28)', 'rgba(0,0,0,0.24)']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <Text style={styles.drawerCode}>TOP</Text>
+                    <View style={styles.aiHandle} />
                     <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.triggerText}>전체 상담 AI 종합 분석</Text>
+                            <Text style={styles.historyTriggerText}>ARCHIVE AI LEDGER</Text>
                             <View style={styles.proBadgeMin}>
                                 <Text style={styles.proBadgeMinText}>PRO</Text>
                             </View>
                         </View>
-                        <Text style={styles.triggerSubtext}>{validCount}개의 기록을 분석합니다</Text>
+                        <Text style={styles.historyTriggerSubtext}>{validCount}개의 봉인된 기록을 대조합니다</Text>
                     </View>
-                    <Text style={styles.triggerArrow}>›</Text>
+                    <Text style={styles.historyTriggerArrow}>OPEN</Text>
                 </TouchableOpacity>
             ) : (
-                <View style={styles.panel}>
+                <View style={styles.historyPanel}>
                     <View style={styles.panelHeader}>
-                        <Text style={styles.panelTitle}> 종합 AI 분석</Text>
+                        <Text style={styles.panelTitle}>ARCHIVE AI LEDGER</Text>
                         <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <Text style={styles.closeText}>✕</Text>
+                            <Text style={styles.historyCloseText}>SEAL</Text>
                         </TouchableOpacity>
                     </View>
 
                     {loading && (
                         <View style={styles.loadingArea}>
                             <ActivityIndicator size="small" color={DrawerTheme.goldBright} />
-                            <Text style={styles.loadingText}>{validCount}개의 기록을 종합 분석 중...</Text>
+                            <Text style={styles.loadingText}>{validCount}개의 기록을 대조하는 중...</Text>
                         </View>
                     )}
 
                     {error && !loading && (
                         <View style={styles.errorArea}>
-                            <Text style={styles.errorText}>⚠ {error}</Text>
+                            <Text style={styles.errorText}>! {error}</Text>
                             <TouchableOpacity style={styles.retryButton} onPress={handleAnalyze}>
-                                <Text style={styles.retryText}>다시 시도</Text>
+                                <Text style={styles.retryText}>다시 열기</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -197,13 +205,13 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                     {result && !loading && (
                         <View style={styles.resultArea}>
                             <View style={styles.section}>
-                                <Text style={styles.sectionLabel}> 전체 흐름</Text>
+                                <Text style={styles.sectionLabel}>전체 흐름</Text>
                                 <Text style={styles.sectionContent}>{result.overallSummary}</Text>
                             </View>
 
                             {result.patterns?.length > 0 && (
                                 <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}> 반복 주제</Text>
+                                    <Text style={styles.sectionLabel}>반복 주제</Text>
                                     {result.patterns.map((p, i) => (
                                         <View key={i} style={styles.patternItem}>
                                             <Text style={styles.patternDot}>•</Text>
@@ -215,14 +223,14 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
 
                             {result.growthPoints && (
                                 <View style={[styles.section, styles.growthSection]}>
-                                    <Text style={styles.sectionLabel}> 변화 & 성장</Text>
+                                    <Text style={styles.sectionLabel}>변화와 성장</Text>
                                     <Text style={styles.growthText}>{result.growthPoints}</Text>
                                 </View>
                             )}
 
                             {result.recommendation && (
                                 <View style={[styles.section, styles.adviceSection]}>
-                                    <Text style={styles.sectionLabel}> 향후 상담 방향</Text>
+                                    <Text style={styles.sectionLabel}>다음 상담 방향</Text>
                                     <Text style={styles.adviceText}>{result.recommendation}</Text>
                                 </View>
                             )}
@@ -258,18 +266,65 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         gap: 10,
     },
-    historyTrigger: {
-        borderColor: DrawerTheme.navyLight + '60',
-    },
     triggerIcon: { fontSize: 18 },
     triggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '600' },
     triggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
     triggerArrow: { color: DrawerTheme.goldBright, fontSize: 20, opacity: 0.6 },
+    historyTriggerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(31,18,12,0.9)',
+        borderWidth: 1,
+        borderTopWidth: 1,
+        borderBottomWidth: 4,
+        borderColor: 'rgba(224,184,90,0.72)',
+        borderBottomColor: 'rgba(0,0,0,0.66)',
+        borderRadius: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+        gap: 10,
+        overflow: 'hidden',
+        marginHorizontal: 2,
+        marginBottom: 8,
+    },
+    drawerCode: {
+        minWidth: 38,
+        color: DrawerTheme.bgBlackCherry,
+        backgroundColor: DrawerTheme.brassHighlight,
+        borderRadius: 3,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        overflow: 'hidden',
+        textAlign: 'center',
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+    },
+    aiHandle: {
+        width: 44,
+        height: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(244,232,208,0.52)',
+        backgroundColor: 'rgba(184,135,53,0.72)',
+    },
+    historyTriggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
+    historyTriggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
+    historyTriggerArrow: { color: DrawerTheme.mutedIvory, fontSize: 10, fontWeight: '900', letterSpacing: 0.8, opacity: 0.8 },
     panel: {
         backgroundColor: 'rgba(18,0,8,0.92)',
         borderWidth: 1,
         borderColor: 'rgba(184,135,53,0.46)',
         borderRadius: 14,
+        overflow: 'hidden',
+    },
+    historyPanel: {
+        backgroundColor: 'rgba(18,0,8,0.92)',
+        borderWidth: 1,
+        borderColor: 'rgba(184,135,53,0.46)',
+        borderRadius: 6,
+        borderBottomWidth: 4,
+        borderBottomColor: 'rgba(0,0,0,0.66)',
         overflow: 'hidden',
     },
     panelHeader: {
@@ -289,6 +344,7 @@ const styles = StyleSheet.create({
         fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     },
     closeText: { color: TextColors.subTextMuted, fontSize: 16 },
+    historyCloseText: { color: TextColors.subTextMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
     loadingArea: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
     loadingText: { color: TextColors.subTextStrong, fontSize: 13 },
     errorArea: { padding: 16, gap: 10 },

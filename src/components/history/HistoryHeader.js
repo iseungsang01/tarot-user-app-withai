@@ -37,8 +37,10 @@ export const HistoryHeader = ({
             />
 
             <View style={styles.titleStack}>
-                <Text style={styles.titleShadow}>TAROT CELLAR</Text>
-                <Text style={styles.title}>TAROT CELLAR</Text>
+                <Text style={styles.eyebrow}>SEALED RECORDS</Text>
+                <Text style={styles.titleShadow}>DRAWER ARCHIVE</Text>
+                <Text style={styles.title}>DRAWER ARCHIVE</Text>
+                <Text style={styles.subtitle}>Card Drawer</Text>
             </View>
 
             <View style={styles.titleRule}>
@@ -112,25 +114,40 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    eyebrow: {
+        color: DrawerTheme.mutedIvory,
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 2.2,
+        opacity: 0.76,
+        marginBottom: 2,
+    },
     titleShadow: {
         position: 'absolute',
-        top: 2,
+        top: 20,
         color: '#4A2D12',
         fontFamily: serif,
-        fontSize: 35,
+        fontSize: 24,
         fontWeight: '700',
-        letterSpacing: 2.5,
-        opacity: 0.58,
+        letterSpacing: 2,
+        opacity: 0.45,
     },
     title: {
         color: DrawerTheme.antiqueGold,
         fontFamily: serif,
-        fontSize: 35,
+        fontSize: 24,
         fontWeight: '700',
-        letterSpacing: 2.5,
+        letterSpacing: 2,
         textShadowColor: 'rgba(200,163,64,0.22)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 5,
+    },
+    subtitle: {
+        marginTop: 2,
+        color: DrawerTheme.mutedIvory,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.8,
     },
     titleRule: {
         flexDirection: 'row',

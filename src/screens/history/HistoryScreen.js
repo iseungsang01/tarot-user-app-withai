@@ -112,7 +112,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                     style={styles.manualAddDrawer}
                     onPress={() => navigation.navigate('VisitDetail', { mode: 'manual', is_manual: true })}
                 >
-                    <Text style={styles.manualAddText}>+ 개인 메모 서랍 추가</Text>
+                    <Text style={styles.manualAddText}>+ 개인 서랍 추가</Text>
                 </TouchableOpacity>
             )}
 
@@ -272,7 +272,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';
-    const status = isPlaceholder || isWritten ? 'SEALED' : isManualMode ? 'PRIVATE' : 'EMPTY';
+    const status = isWritten && !isPlaceholder ? 'OPENED' : 'SEALED';
 
     return (
         <View style={styles.drawerWrapper}>
@@ -327,8 +327,8 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
                             <LocalSvg
                                 asset={brassHandleAsset}
                                 style={styles.brassHandle}
-                                width={92}
-                                height={34}
+                                width={76}
+                                height={30}
                             />
                         </View>
 
@@ -339,11 +339,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
                         </View>
                     </View>
 
-                    {!isPlaceholder && (
-                        <View style={styles.drawerMetaRow}>
-                            <Text numberOfLines={1} style={styles.drawerTitle}>{title}</Text>
-                        </View>
-                    )}
+                    {!isPlaceholder && <Text numberOfLines={1} style={styles.drawerTitle}>{title}</Text>}
                 </View>
             </TouchableOpacity>
         </View>
@@ -410,7 +406,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     scrollContainer: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingBottom: 136,
         width: '100%',
         maxWidth: 393,
@@ -524,7 +520,7 @@ const styles = StyleSheet.create({
     },
     drawer: {
         width: '100%',
-        height: 118,
+        minHeight: 98,
         borderRadius: 6,
         padding: 9,
         borderTopWidth: 1,
@@ -564,11 +560,12 @@ const styles = StyleSheet.create({
     drawerMainRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        minHeight: 56,
+        minHeight: 52,
         minWidth: 0,
     },
     drawerLeft: {
-        width: 92,
+        width: '28%',
+        maxWidth: 92,
         alignItems: 'flex-start',
         justifyContent: 'center',
     },
@@ -579,7 +576,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     drawerRight: {
-        width: 118,
+        width: '33%',
+        maxWidth: 118,
         alignItems: 'flex-end',
         justifyContent: 'center',
     },
@@ -602,8 +600,8 @@ const styles = StyleSheet.create({
         letterSpacing: 0.8,
     },
     brassHandle: {
-        width: 92,
-        height: 34,
+        width: 76,
+        height: 30,
         opacity: 0.96,
     },
     drawerDate: {
@@ -617,18 +615,17 @@ const styles = StyleSheet.create({
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 2,
     },
-    drawerMetaRow: {
-        marginTop: 6,
-        paddingTop: 6,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(200,163,64,0.18)',
-    },
     drawerTitle: {
+        position: 'absolute',
+        left: '30%',
+        right: '35%',
+        bottom: 7,
         color: 'rgba(244,232,208,0.78)',
-        fontSize: 11,
+        fontSize: 10,
         lineHeight: 14,
         fontWeight: '600',
         textAlign: 'center',
+        opacity: 0.58,
     },
     checkboxContainer: {
         position: 'absolute',
