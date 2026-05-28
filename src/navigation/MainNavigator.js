@@ -19,9 +19,9 @@ import {
   AIChatHistoryScreen,
   CouponScreen,
   StampScreen,
-  NoticeScreen,
   NoticeDetailScreen,
-  VoteScreen,
+  NewsScreen,
+  TicketScreen,
   BugReportScreen,
   BugReportDetailScreen,
 } from '../screens';
@@ -47,7 +47,7 @@ const STEP_ROUTE_MAP = {
   'home-coupon': 'Home',
   'home-archive-mode': 'Home',
   'home-time-filter': 'Home',
-  'tab-notice': 'Notice',
+  'tab-notice': 'News',
   'tab-settings': 'Settings',
 };
 
@@ -275,15 +275,15 @@ const TabNavigator = () => {
             />
           )}
         </Tab.Screen>
-        <Tab.Screen name="Vote" component={VoteScreen} options={{ tabBarLabel: '티켓', tabBarIcon: tabIcon(TAB_ICONS.ticket) }} />
+        <Tab.Screen name="Ticket" component={TicketScreen} options={{ tabBarLabel: 'TICKET', tabBarIcon: tabIcon(TAB_ICONS.ticket) }} />
         <Tab.Screen
           name="DailyFortune"
           component={DailyFortuneScreen}
           options={{ tabBarLabel: '의식', tabBarIcon: tabIcon(TAB_ICONS.ritual) }}
         />
         <Tab.Screen
-          name="Notice"
-          component={NoticeScreen}
+          name="News"
+          component={NewsScreen}
           options={{
             tabBarLabel: '소식',
             tabBarIcon: tabIcon(TAB_ICONS.notice, hasAnyUnread),
