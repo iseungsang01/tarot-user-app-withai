@@ -1,5 +1,24 @@
 import { supabase } from './supabase';
+import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
+
+const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
+
+const getCustomerSessionToken = async () => {
+  const session = await storage.get(CUSTOMER_SESSION_KEY);
+  return session?.token || null;
+};
+
+const requireCustomerSessionToken = async () => {
+  const token = await getCustomerSessionToken();
+  if (!token) {
+    const error = new Error('Login is required. Please sign in again.');
+    error.code = 'AUTH_REQUIRED';
+    error.requiresReLogin = true;
+    throw error;
+  }
+  return token;
+};
 
 /**
  * 공지사항 및 버그 리포트 서비스
@@ -104,19 +123,15 @@ export const noticeService = {
   async submitReport(reportData) {
     if (reportData.customer_id === 'guest') return { data: null, error: 'Guest cannot submit reports' };
     try {
-      const { data, error } = await supabase
-        .from('bug_reports')
-        .insert({
-          customer_id: reportData.customer_id || null,
-          title: reportData.title,
-          description: reportData.description,
-          report_type: reportData.report_type || '어플 버그',
-          screenshot: reportData.screenshot || null,
-          device_info: reportData.device_info || null,
-          status: '접수',
-        })
-        .select()
-        .single();
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.submitBugReport({
+        p_session_token: token,
+        p_title: reportData.title,
+        p_description: reportData.description,
+        p_report_type: reportData.report_type || '어플 버그',
+        p_screenshot: reportData.screenshot || null,
+        p_device_info: reportData.device_info || null,
+      });
 
       if (error) throw error;
       return { data, error: null };
@@ -134,11 +149,10 @@ export const noticeService = {
   async getMyReports(customerId) {
     if (customerId === 'guest') return { data: [], error: null };
     try {
-      const { data, error } = await supabase
-        .from('bug_reports')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('created_at', { ascending: false });
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.getMyBugReports({
+        p_session_token: token,
+      });
 
       if (error) throw error;
       return { data, error: null };

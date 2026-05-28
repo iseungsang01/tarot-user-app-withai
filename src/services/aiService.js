@@ -20,6 +20,27 @@ const stringifyError = (errorValue) => {
     return String(errorValue);
 };
 
+
+const withFunctionErrorDetails = async (error) => {
+    const response = error?.context;
+    if (!response || typeof response.clone !== 'function') return error;
+
+    try {
+        const payload = await response.clone().json();
+        const message = stringifyError(payload?.error || payload?.message || payload);
+        if (!message) return error;
+
+        const detailedError = new Error(message);
+        detailedError.name = error.name || 'FunctionsHttpError';
+        detailedError.code = error.code;
+        detailedError.status = response.status;
+        detailedError.originalError = error;
+        return detailedError;
+    } catch {
+        return error;
+    }
+};
+
 const callAIProxy = async (messages, options = {}, task = 'chat') => {
     try {
         const authState = await ensureAuthenticatedSession();
@@ -45,9 +66,10 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
         });
 
         if (error) {
+            const detailedError = await withFunctionErrorDetails(error);
             return {
                 data: null,
-                error: withAuthErrorHandling(error, 'AI 프록시 호출 중 오류가 발생했습니다.'),
+                error: withAuthErrorHandling(detailedError, 'AI proxy request failed.'),
             };
         }
 

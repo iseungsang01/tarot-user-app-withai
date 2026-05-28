@@ -87,6 +87,14 @@ export const supabaseClient = {
     return supabase.rpc('get_vote_summary', payload);
   },
 
+  submitBugReport(payload) {
+    return supabase.rpc('submit_bug_report', payload);
+  },
+
+  getMyBugReports(payload) {
+    return supabase.rpc('get_my_bug_reports', payload);
+  },
+
   invokeAIProxy(body) {
     return supabase.functions.invoke('ai-proxy', { body });
   },

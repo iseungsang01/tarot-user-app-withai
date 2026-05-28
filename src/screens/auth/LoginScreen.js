@@ -89,7 +89,7 @@ const LoginScreen = ({ navigation }) => {
                                     value={phone}
                                     onChangeText={handlePhoneChange}
                                     placeholder="010-0000-0000"
-                                    placeholderTextColor="rgba(166, 137, 102, 0.4)"
+                                    placeholderTextColor="rgba(244, 232, 208, 0.62)"
                                     keyboardType="phone-pad"
                                     maxLength={13}
                                     editable={!loading}
@@ -103,7 +103,7 @@ const LoginScreen = ({ navigation }) => {
                                     value={password}
                                     onChangeText={handlePasswordChange}
                                     placeholder="********"
-                                    placeholderTextColor="rgba(166, 137, 102, 0.4)"
+                                    placeholderTextColor="rgba(244, 232, 208, 0.62)"
                                     secureTextEntry
                                     editable={!loading}
                                     onSubmitEditing={handleLogin}
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     mainTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: DrawerTheme.goldBrass,
+        color: DrawerTheme.goldBright,
         letterSpacing: 4,
         fontFamily: Platform.OS === 'ios' ? 'Cochin' : 'serif'
     },
@@ -238,9 +238,10 @@ const styles = StyleSheet.create({
     },
     mainSubtitle: {
         fontSize: 12,
-        color: DrawerTheme.woodLight,
-        opacity: 0.8,
-        letterSpacing: 0.5
+        color: DrawerTheme.textMain,
+        opacity: 1,
+        letterSpacing: 0.5,
+        fontWeight: '600'
     },
 
     // 입력 카드 (HistoryScreen의 대시보드 스타일 계승)
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontSize: 11,
         fontWeight: 'bold',
-        color: DrawerTheme.goldBrass,
+        color: DrawerTheme.goldBright,
         marginBottom: 8,
         paddingLeft: 4,
         letterSpacing: 1.5
@@ -323,17 +324,18 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     subButtonText: {
-        color: DrawerTheme.woodLight,
+        color: DrawerTheme.textMain,
         fontSize: 14,
         textDecorationLine: 'underline',
-        opacity: 0.8,
+        opacity: 1,
+        fontWeight: '600',
     },
     subButtonDivider: {
         width: 1,
         height: 12,
-        backgroundColor: DrawerTheme.woodLight,
+        backgroundColor: DrawerTheme.goldBright,
         marginHorizontal: 10,
-        opacity: 0.3,
+        opacity: 0.7,
     },
 
 
@@ -342,16 +344,16 @@ const styles = StyleSheet.create({
     statusError: { backgroundColor: 'rgba(255, 82, 82, 0.05)', borderColor: 'rgba(255, 82, 82, 0.3)' },
     statusSuccess: { backgroundColor: 'rgba(76, 175, 80, 0.05)', borderColor: 'rgba(76, 175, 80, 0.3)' },
     statusInfo: { backgroundColor: 'rgba(212, 175, 55, 0.05)', borderColor: 'rgba(212, 175, 55, 0.3)' },
-    statusText: { textAlign: 'center', fontSize: 13, color: DrawerTheme.woodLight, fontWeight: '500' },
+    statusText: { textAlign: 'center', fontSize: 13, color: DrawerTheme.textMain, fontWeight: '600' },
 
     footerArea: { alignItems: 'center', marginTop: 30 },
     titleLine: { width: 20, height: 1, backgroundColor: DrawerTheme.woodFrame, marginBottom: 15 },
     footerHelp: {
         fontSize: 12,
-        color: DrawerTheme.woodLight,
+        color: DrawerTheme.textMuted,
         textAlign: 'center',
         lineHeight: 18,
-        opacity: 0.6
+        opacity: 0.95
     },
 });
 
