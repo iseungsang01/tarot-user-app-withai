@@ -1,9 +1,9 @@
 export const Colors = {
-  purpleDark: '#1a0033',
-  purpleMid: '#2d004d',
-  purpleLight: '#8a2be2',
-  purpleLighter: '#9370db',
-  gold: '#ffd700',
+  purpleDark: '#09000D',
+  purpleMid: '#22051F',
+  purpleLight: '#4A0F2B',
+  purpleLighter: '#6F4E1E',
+  gold: '#C8A340',
   lavender: '#e0b0ff',
   red: '#ff4500',
   redSoft: '#ff6b6b',
@@ -12,9 +12,9 @@ export const Colors = {
 };
 
 export const Gradients = {
-  purple: ['#1a0033', '#2d004d'],
-  button: ['#8a2be2', '#9370db'],
-  goldBrown: ['#D4A679', '#B8860B'],
+  purple: ['#09000D', '#22051F'],
+  button: ['#3B0B24', '#17000F'],
+  goldBrown: ['#C7A24B', '#A77A2F', '#7A5522'],
   red: ['#ff6b6b', '#ee5a6f'],
 };
 

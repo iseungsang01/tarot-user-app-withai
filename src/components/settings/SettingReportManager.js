@@ -59,7 +59,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
 
   return (
     <View style={styles.formCard}>
-      <Text style={styles.innerTitle}>📝 앱 버그 접수</Text>
+      <Text style={styles.innerTitle}> 앱 버그 접수</Text>
       <TextInput
         style={styles.input}
         value={reportData.title}
@@ -77,7 +77,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
       />
 
       <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}>📎 스크린샷 첨부 (카메라/앨범)</Text>
+        <Text style={styles.uploadButtonText}> 스크린샷 첨부 (카메라/앨범)</Text>
       </TouchableOpacity>
       {!!reportData.screenshot && (
         <Image
@@ -95,7 +95,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
       />
 
       <View style={styles.sectionDivider} />
-      <Text style={styles.innerTitle}>📋 내 접수 내역 ({myReports.length})</Text>
+      <Text style={styles.innerTitle}> 내 접수 내역 ({myReports.length})</Text>
       {myReports.length === 0 ? (
         <Text style={styles.emptyText}>접수 내역이 없습니다.</Text>
       ) : (
@@ -113,7 +113,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
 
             {item.admin_response && item.admin_response.trim() !== '' && (
               <View style={styles.adminResponseBox}>
-                <Text style={styles.adminResponseLabel}>💬 관리자 답변</Text>
+                <Text style={styles.adminResponseLabel}> 관리자 답변</Text>
                 <Text style={styles.adminResponseText}>{item.admin_response}</Text>
               </View>
             )}

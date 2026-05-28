@@ -1,25 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+﻿import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { VoteCard } from './VoteCard';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { CommonStyles } from '../../styles/CommonStyles';
+import { CellarMark, PremiumCard } from '../common/PremiumUI';
 
 export const VoteList = ({ votes, onSelectVote }) => {
     return (
         <View>
-            <View style={styles.header}>
-                <View style={styles.titleRow}>
-                    <Text style={styles.title}>VOTE BOX</Text>
-                </View>
-                <View style={styles.headerDivider} />
-                <Text style={styles.subtitle}>여러분의 소중한 의견을 들려주세요</Text>
-            </View>
+            <PremiumCard variant="walnut" style={styles.previewCard}>
+                <Text style={styles.previewTitle}>RECENT NOTICE</Text>
+                <Text style={styles.previewText}>의식과 공지의 최신 기록을 이곳에서 확인할 수 있습니다.</Text>
+            </PremiumCard>
 
             {votes.length === 0 ? (
-                <View style={styles.emptyBox}>
-                    <Text style={styles.emptyIcon}>🗳️</Text>
+                <PremiumCard style={styles.emptyBox}>
+                    <CellarMark size={44} />
                     <Text style={styles.emptyText}>진행 중인 투표가 없습니다.</Text>
-                </View>
+                </PremiumCard>
             ) : (
                 votes.map(v => (
                     <VoteCard
@@ -34,12 +31,29 @@ export const VoteList = ({ votes, onSelectVote }) => {
 };
 
 const styles = StyleSheet.create({
-    header: CommonStyles.headerBoard,
-    titleRow: CommonStyles.titleRow,
-    title: CommonStyles.title,
-    headerDivider: CommonStyles.headerDivider,
-    subtitle: CommonStyles.subtitle,
-    emptyBox: { alignItems: 'center', paddingTop: 100, paddingBottom: 40 },
-    emptyIcon: { fontSize: 64, marginBottom: 20, opacity: 0.3 },
-    emptyText: { fontSize: 15, color: DrawerTheme.woodLight, fontStyle: 'italic', opacity: 0.7 }
+    previewCard: {
+        marginBottom: 14,
+    },
+    previewTitle: {
+        color: DrawerTheme.goldBrass,
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 1.2,
+        marginBottom: 6,
+    },
+    previewText: {
+        color: DrawerTheme.ivory,
+        fontSize: 13,
+        lineHeight: 19,
+    },
+    emptyBox: {
+        alignItems: 'center',
+        paddingVertical: 42,
+        gap: 12,
+    },
+    emptyText: {
+        fontSize: 14,
+        color: DrawerTheme.ivory,
+        fontWeight: '700',
+    },
 });

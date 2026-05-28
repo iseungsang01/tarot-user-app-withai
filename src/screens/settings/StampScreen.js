@@ -14,16 +14,16 @@ const { width } = Dimensions.get('window');
 const STAMP_SIZE = (width - 124) / 5;
 
 const tarotCards = [
-    { emoji: '🃏', name: 'The Fool' },
-    { emoji: '🎩', name: 'The Magician' },
-    { emoji: '👸', name: 'The Empress' },
-    { emoji: '🤴', name: 'The Emperor' },
-    { emoji: '⚖️', name: 'Justice' },
-    { emoji: '🌙', name: 'The Moon' },
-    { emoji: '☀️', name: 'The Sun' },
-    { emoji: '🕯️', name: 'The Hermit' },
-    { emoji: '🎭', name: 'The Lovers' },
-    { emoji: '🔱', name: 'The Devil' }
+    { emoji: '', name: 'The Fool' },
+    { emoji: '', name: 'The Magician' },
+    { emoji: '', name: 'The Empress' },
+    { emoji: '', name: 'The Emperor' },
+    { emoji: '⚖', name: 'Justice' },
+    { emoji: '', name: 'The Moon' },
+    { emoji: '☀', name: 'The Sun' },
+    { emoji: '', name: 'The Hermit' },
+    { emoji: '', name: 'The Lovers' },
+    { emoji: '', name: 'The Devil' }
 ];
 
 const MAX_STAMPS = 10;
@@ -57,7 +57,7 @@ const StampScreen = () => {
                     <Text style={styles.subtitle}>오늘의 상담이 한 조각의 기록이 됩니다</Text>
                 </View>
 
-                {/* 🏆 Progress Overview Section */}
+                {/*  Progress Overview Section */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.statusBadge}>
@@ -91,7 +91,7 @@ const StampScreen = () => {
                     </View>
                 </View>
 
-                {/* 📜 Main Stamp Card */}
+                {/*  Main Stamp Card */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.collectionBadge}>
@@ -131,7 +131,7 @@ const StampScreen = () => {
                 </View>
 
                 <View style={styles.noticeBox}>
-                    <Text style={styles.noticeTitle}>📜 이용 안내</Text>
+                    <Text style={styles.noticeTitle}> 이용 안내</Text>
                     <View style={styles.noticeContent}>
                         <Text style={styles.noticeText}>• 상담 완료 시 자동으로 스탬프가 적립됩니다.</Text>
                         <Text style={styles.noticeText}>• 10개를 모두 모으면 쿠폰함으로 무료 상담권이 발송됩니다.</Text>

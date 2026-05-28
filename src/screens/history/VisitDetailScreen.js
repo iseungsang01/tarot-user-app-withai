@@ -169,7 +169,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const insertVoiceMemoMarker = () => {
         const now = new Date();
         const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const marker = `\n🎙️ [음성 메모 ${stamp}] `;
+        const marker = `\n [음성 메모 ${stamp}] `;
         up({ review: `${s.review}${marker}` });
         Alert.alert('안내', '실녹음/업로드 기능은 다음 버전에서 제공됩니다. 우선 음성 메모 표시를 빠르게 남길 수 있게 구성했어요.');
     };
@@ -201,7 +201,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 <Text style={styles.whiteText}>← 뒤로</Text>
                             </TouchableOpacity>
                             <Text style={[styles.title, { color: theme.c }]}>
-                                {isOffMode ? '✒️ 개인 메모 작성' : '📝 상담 기록 수정'}
+                                {isOffMode ? '✒ 개인 메모 작성' : ' 상담 기록 수정'}
                             </Text>
                         </View>
 
@@ -228,7 +228,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 </>
                             ) : (
                                 <View style={styles.placeholderContainer}>
-                                    <Text style={[styles.placeholderText, { color: theme.c }]}>📷</Text>
+                                    <Text style={[styles.placeholderText, { color: theme.c }]}></Text>
                                     <Text style={styles.placeholderSubText}>카드를 촬영하거나 선택하세요</Text>
                                 </View>
                             )}
@@ -237,7 +237,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         {/* 3차 액션: 부가 기능 */}
                         <View style={[styles.buttonRow, styles.btnRow]}>
                             <CustomButton
-                                title="📸 촬영하기"
+                                title=" 촬영하기"
                                 onPress={() => onPick('cam')}
                                 variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
@@ -246,7 +246,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 ellipsizeMode="tail"
                             />
                             <CustomButton
-                                title="🖼️ 앨범에서 선택"
+                                title=" 앨범에서 선택"
                                 onPress={() => onPick('lib')}
                                 variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
@@ -268,7 +268,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         {/* 3차 액션: 부가 기능 */}
                         <View style={[styles.buttonRow, styles.voiceRow]}>
                             <CustomButton
-                                title="🎙️ 녹음 메모 추가"
+                                title=" 녹음 메모 추가"
                                 onPress={insertVoiceMemoMarker}
                                 variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
@@ -277,7 +277,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 ellipsizeMode="tail"
                             />
                             <CustomButton
-                                title="📎 녹음 업로드"
+                                title=" 녹음 업로드"
                                 onPress={insertVoiceMemoMarker}
                                 variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
@@ -291,10 +291,10 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         {/* 2차 액션: 편집 보조 */}
                         <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}> 
                             <View style={styles.polishHeaderRow}>
-                                <Text style={[styles.polishTitle, { color: theme.c }]}>🪄 AI 문장 다듬기</Text>
+                                <Text style={[styles.polishTitle, { color: theme.c }]}> AI 문장 다듬기</Text>
                                 <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} variant={ACTION_VARIANT.SECONDARY} style={styles.polishBtn} />
                             </View>
-                            {!!polishError && <Text style={styles.polishError}>⚠️ {polishError}</Text>}
+                            {!!polishError && <Text style={styles.polishError}>⚠ {polishError}</Text>}
                             {!!polishedReview && (
                                 <View style={styles.compareWrap}>
                                     <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'original' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('original')}>

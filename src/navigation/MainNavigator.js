@@ -243,7 +243,7 @@ const TabNavigator = () => {
             shadowRadius: 10,
             elevation: 12,
           },
-          tabBarActiveTintColor: DrawerTheme.brightGold,
+          tabBarActiveTintColor: DrawerTheme.antiqueGold,
           tabBarInactiveTintColor: DrawerTheme.mutedGold,
           tabBarLabelStyle: {
             fontSize: 11,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ff4444',
+    backgroundColor: '#8A2D3B',
     borderWidth: 1,
     borderColor: Colors.purpleMid,
   },

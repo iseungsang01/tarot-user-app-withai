@@ -79,7 +79,7 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
 
                     {error && !loading && (
                         <View style={styles.errorArea}>
-                            <Text style={styles.errorText}>⚠️ {error}</Text>
+                            <Text style={styles.errorText}>⚠ {error}</Text>
                             <TouchableOpacity style={styles.retryButton} onPress={handleAnalyze}>
                                 <Text style={styles.retryText}>다시 시도</Text>
                             </TouchableOpacity>
@@ -104,13 +104,13 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
                             </View>
 
                             <View style={styles.section}>
-                                <Text style={styles.sectionLabel}>📋 요약</Text>
+                                <Text style={styles.sectionLabel}> 요약</Text>
                                 <Text style={styles.sectionContent}>{(result || initialResult).summary}</Text>
                             </View>
 
                             {(result || initialResult).keywords?.length > 0 && (
                                 <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}>🏷️ 키워드</Text>
+                                    <Text style={styles.sectionLabel}> 키워드</Text>
                                     <View style={styles.keywordsRow}>
                                         {(result || initialResult).keywords.map((kw, i) => (
                                             <View key={i} style={styles.keywordChip}>
@@ -123,7 +123,7 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
 
                             {(result || initialResult).advice && (
                                 <View style={[styles.section, styles.adviceSection]}>
-                                    <Text style={styles.sectionLabel}>💡 다음 상담 제안</Text>
+                                    <Text style={styles.sectionLabel}> 다음 상담 제안</Text>
                                     <Text style={styles.adviceText}>{(result || initialResult).advice}</Text>
                                 </View>
                             )}
@@ -157,7 +157,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
         <View style={styles.container}>
             {!expanded ? (
                 <TouchableOpacity style={[styles.triggerButton, styles.historyTrigger]} onPress={handleAnalyze} activeOpacity={0.8}>
-                    <Text style={styles.triggerIcon}>🔍</Text>
+                    <Text style={styles.triggerIcon}></Text>
                     <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.triggerText}>전체 상담 AI 종합 분석</Text>
@@ -172,7 +172,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
             ) : (
                 <View style={styles.panel}>
                     <View style={styles.panelHeader}>
-                        <Text style={styles.panelTitle}>🔍 종합 AI 분석</Text>
+                        <Text style={styles.panelTitle}> 종합 AI 분석</Text>
                         <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                             <Text style={styles.closeText}>✕</Text>
                         </TouchableOpacity>
@@ -187,7 +187,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
 
                     {error && !loading && (
                         <View style={styles.errorArea}>
-                            <Text style={styles.errorText}>⚠️ {error}</Text>
+                            <Text style={styles.errorText}>⚠ {error}</Text>
                             <TouchableOpacity style={styles.retryButton} onPress={handleAnalyze}>
                                 <Text style={styles.retryText}>다시 시도</Text>
                             </TouchableOpacity>
@@ -197,13 +197,13 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                     {result && !loading && (
                         <View style={styles.resultArea}>
                             <View style={styles.section}>
-                                <Text style={styles.sectionLabel}>📖 전체 흐름</Text>
+                                <Text style={styles.sectionLabel}> 전체 흐름</Text>
                                 <Text style={styles.sectionContent}>{result.overallSummary}</Text>
                             </View>
 
                             {result.patterns?.length > 0 && (
                                 <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}>🔄 반복 주제</Text>
+                                    <Text style={styles.sectionLabel}> 반복 주제</Text>
                                     {result.patterns.map((p, i) => (
                                         <View key={i} style={styles.patternItem}>
                                             <Text style={styles.patternDot}>•</Text>
@@ -215,14 +215,14 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
 
                             {result.growthPoints && (
                                 <View style={[styles.section, styles.growthSection]}>
-                                    <Text style={styles.sectionLabel}>🌱 변화 & 성장</Text>
+                                    <Text style={styles.sectionLabel}> 변화 & 성장</Text>
                                     <Text style={styles.growthText}>{result.growthPoints}</Text>
                                 </View>
                             )}
 
                             {result.recommendation && (
                                 <View style={[styles.section, styles.adviceSection]}>
-                                    <Text style={styles.sectionLabel}>💡 향후 상담 방향</Text>
+                                    <Text style={styles.sectionLabel}> 향후 상담 방향</Text>
                                     <Text style={styles.adviceText}>{result.recommendation}</Text>
                                 </View>
                             )}
@@ -250,10 +250,10 @@ const styles = StyleSheet.create({
     triggerButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(18,0,8,0.82)',
         borderWidth: 1,
-        borderColor: DrawerTheme.goldBrass + '60',
-        borderRadius: 12,
+        borderColor: 'rgba(184,135,53,0.52)',
+        borderRadius: 14,
         paddingHorizontal: 14,
         paddingVertical: 12,
         gap: 10,
@@ -266,10 +266,10 @@ const styles = StyleSheet.create({
     triggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
     triggerArrow: { color: DrawerTheme.goldBright, fontSize: 20, opacity: 0.6 },
     panel: {
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: 'rgba(18,0,8,0.92)',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderRadius: 12,
+        borderColor: 'rgba(184,135,53,0.46)',
+        borderRadius: 14,
         overflow: 'hidden',
     },
     panelHeader: {
@@ -279,8 +279,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.08)',
-        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderBottomColor: 'rgba(200,163,64,0.18)',
+        backgroundColor: 'rgba(31,18,12,0.55)',
     },
     panelTitle: {
         color: DrawerTheme.goldBright,
@@ -314,15 +314,15 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
         textTransform: 'uppercase',
     },
-    sectionContent: { color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 21 },
+    sectionContent: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 21 },
     keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
     keywordChip: {
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(31,18,12,0.72)',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
+        borderColor: 'rgba(200,163,64,0.22)',
     },
     keywordText: { color: TextColors.subTextStrong, fontSize: 12 },
     patternItem: { flexDirection: 'row', gap: 6 },
@@ -337,11 +337,11 @@ const styles = StyleSheet.create({
     },
     growthText: { color: TextColors.subTextHigh, fontSize: 14, lineHeight: 20 },
     adviceSection: {
-        backgroundColor: 'rgba(255,193,7,0.06)',
+        backgroundColor: 'rgba(200,163,64,0.08)',
         borderRadius: 8,
         padding: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255,193,7,0.2)',
+        borderColor: 'rgba(200,163,64,0.24)',
     },
     adviceText: { color: TextColors.subTextHigh, fontSize: 14, lineHeight: 20 },
 });

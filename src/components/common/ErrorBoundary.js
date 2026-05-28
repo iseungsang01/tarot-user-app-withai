@@ -36,7 +36,7 @@ export class ErrorBoundary extends React.Component {
         <GradientBackground>
           <View style={styles.container}>
             <View style={styles.card}>
-              <Text style={styles.icon}>⚠️</Text>
+              <Text style={styles.icon}>⚠</Text>
               <Text style={styles.title}>앱에 문제가 발생했습니다</Text>
               <Text style={styles.message}>
                 예상치 못한 오류가 발생했습니다.{'\n'}
@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component {
 
               {__DEV__ && this.state.error && (
                 <View style={styles.errorDetails}>
-                  <Text style={styles.errorDetailsTitle}>📋 개발자 정보:</Text>
+                  <Text style={styles.errorDetailsTitle}> 개발자 정보:</Text>
                   <Text style={styles.errorDetailsText}>
                     {this.state.error.toString()}
                   </Text>

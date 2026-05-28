@@ -1,28 +1,14 @@
 ﻿import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { CommonStyles } from '../../styles/CommonStyles';
-import { CouponCard } from '../../components';
+import { CouponCard, CellarMark, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { couponService } from '../../services/couponService';
 import { handleApiCall } from '../../utils/errorHandler';
 
 const MAX_STAMPS = 10;
-
-const STAMP_IMAGES = [
-  require('../../../assets/card/0. The Fool.png'),
-  require('../../../assets/card/1. The Magician.png'),
-  require('../../../assets/card/2. The High Priestess.png'),
-  require('../../../assets/card/3. The Empress.png'),
-  require('../../../assets/card/4. The Emperor.png'),
-  require('../../../assets/card/5. The Hierophant.png'),
-  require('../../../assets/card/6. The Lovers.png'),
-  require('../../../assets/card/7. Chariot.png'),
-  require('../../../assets/card/8. Strength.png'),
-  require('../../../assets/card/9. The Hermit.png'),
-];
 
 const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
 
@@ -59,18 +45,14 @@ const TicketScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 100 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>TICKET</Text>
-        </View>
-        <View style={styles.headerDivider} />
-        <Text style={styles.subtitle}>Coupons and stamps at a glance</Text>
+    <ScreenContainer safeTop={false} safeBottom={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 108 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
+        showsVerticalScrollIndicator={false}
+      >
+      <PremiumHeaderPanel title="TICKET LEDGER" subtitle="스탬프와 쿠폰을 한눈에 확인하세요" compact>
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryChip}>
@@ -86,27 +68,27 @@ const TicketScreen = ({ navigation }) => {
             <Text style={styles.summaryLabel}>BONUS</Text>
           </View>
         </View>
-      </View>
+      </PremiumHeaderPanel>
 
-      <View style={styles.panel}>
+      <PremiumCard variant="walnut" style={styles.panel}>
         <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>STAMP CARDS</Text>
-          <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `${MAX_STAMPS - currentStamps} left` : 'reward ready'}</Text>
+          <Text style={styles.panelTitle}>STAMP CARD</Text>
+          <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `다음 보상까지 ${MAX_STAMPS - currentStamps}개 남았습니다` : '보상 봉인 해제 가능'}</Text>
         </View>
         <View style={styles.stampGrid}>
-          {STAMP_IMAGES.map((source, index) => {
+          {Array.from({ length: MAX_STAMPS }).map((_, index) => {
             const filled = index < currentStamps;
             return (
               <View key={`stamp-${index}`} style={[styles.stampSlot, filled && styles.stampSlotFilled]}>
-                <Image source={source} style={[styles.stampImage, !filled && styles.stampImageEmpty]} resizeMode="cover" />
-                {!filled && <View style={styles.emptyOverlay}><Text style={styles.emptyIndex}>{index + 1}</Text></View>}
+                <CellarMark size={filled ? 42 : 36} filled={filled} />
+                <Text style={[styles.stampNumber, filled && styles.stampNumberFilled]}>{String(index + 1).padStart(2, '0')}</Text>
               </View>
             );
           })}
         </View>
-      </View>
+      </PremiumCard>
 
-      <View style={styles.panel}>
+      <PremiumCard style={styles.panel}>
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>OWNED COUPONS</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('Coupon')}>
@@ -115,8 +97,10 @@ const TicketScreen = ({ navigation }) => {
         </View>
 
         {coupons.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>No coupons yet.</Text>
+          <View style={styles.emptyEnvelope}>
+            <View style={styles.envelopeFlap} />
+            <CellarMark size={44} />
+            <Text style={styles.emptyText}>아직 봉인된 쿠폰이 없습니다</Text>
           </View>
         ) : (
           coupons.map((coupon) => (
@@ -128,47 +112,22 @@ const TicketScreen = ({ navigation }) => {
             />
           ))
         )}
-      </View>
+      </PremiumCard>
 
       {stampCoupons.length > 0 && (
         <Text style={styles.footerHint}>{stampCoupons.length} stamp reward coupon{stampCoupons.length > 1 ? 's' : ''} available.</Text>
       )}
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DrawerTheme.bgBlackPurple,
   },
   content: {
     paddingHorizontal: 14,
-  },
-  header: {
-    ...CommonStyles.headerBoard,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    borderRadius: 10,
-  },
-  titleRow: {
-    ...CommonStyles.titleRow,
-    marginBottom: 2,
-  },
-  title: {
-    ...CommonStyles.title,
-    fontSize: 18,
-    letterSpacing: 2.5,
-  },
-  headerDivider: {
-    ...CommonStyles.headerDivider,
-    width: 36,
-    marginVertical: 6,
-  },
-  subtitle: {
-    ...CommonStyles.subtitle,
-    fontSize: 11,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -197,12 +156,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   panel: {
-    backgroundColor: 'rgba(74,55,40,0.86)',
-    borderRadius: 12,
-    padding: 14,
+    marginTop: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.16)',
   },
   panelHeader: {
     flexDirection: 'row',
@@ -225,51 +180,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 6,
+    rowGap: 10,
   },
   stampSlot: {
-    width: '18%',
-    aspectRatio: 0.68,
-    borderRadius: 7,
-    overflow: 'hidden',
+    width: '18.4%',
+    aspectRatio: 1,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  stampSlotFilled: {
-    borderColor: DrawerTheme.goldBrass,
-  },
-  stampImage: {
-    width: '100%',
-    height: '100%',
-  },
-  stampImageEmpty: {
-    opacity: 0.18,
-  },
-  emptyOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    borderColor: 'rgba(200,163,64,0.28)',
+    backgroundColor: 'rgba(7,0,9,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.38)',
   },
-  emptyIndex: {
-    color: 'rgba(212,175,55,0.5)',
-    fontSize: 14,
+  stampSlotFilled: {
+    borderColor: DrawerTheme.brightGold,
+    backgroundColor: 'rgba(200,163,64,0.1)',
+  },
+  stampNumber: {
+    position: 'absolute',
+    bottom: 5,
+    color: DrawerTheme.mutedGold,
+    fontSize: 8,
     fontWeight: '900',
+  },
+  stampNumberFilled: {
+    color: DrawerTheme.bgBlackCherry,
   },
   detailLink: {
     color: DrawerTheme.goldBrass,
     fontSize: 11,
     fontWeight: '900',
   },
-  emptyBox: {
-    paddingVertical: 28,
+  emptyEnvelope: {
+    minHeight: 134,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(200,163,64,0.28)',
+    backgroundColor: 'rgba(31,18,12,0.46)',
+    overflow: 'hidden',
+    gap: 10,
+  },
+  envelopeFlap: {
+    position: 'absolute',
+    top: -54,
+    width: '80%',
+    height: 110,
+    transform: [{ rotate: '45deg' }],
+    borderWidth: 1,
+    borderColor: 'rgba(200,163,64,0.16)',
+    backgroundColor: 'rgba(18,0,8,0.28)',
   },
   emptyText: {
-    color: DrawerTheme.woodLight,
-    fontSize: 12,
-    opacity: 0.8,
+    color: DrawerTheme.ivory,
+    fontSize: 13,
+    fontWeight: '700',
   },
   footerHint: {
     color: DrawerTheme.woodLight,

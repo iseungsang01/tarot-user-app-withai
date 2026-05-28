@@ -33,7 +33,7 @@ export const VoteDetail = ({
             <View style={styles.detailHeader}>
                 <Text style={styles.detailTitle}>{vote.title}</Text>
                 <View style={styles.detailMeta}>
-                    <Text style={styles.metaText}>🗳️ 현재 {participantCount}명 참여 중</Text>
+                    <Text style={styles.metaText}> 현재 {participantCount}명 참여 중</Text>
                     {vote.allow_multiple && vote.max_selections && (
                         <Text style={styles.metaText}>• 최대 {vote.max_selections}개 선택 가능</Text>
                     )}
@@ -42,7 +42,7 @@ export const VoteDetail = ({
 
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{isResultView ? '📊 결과 현황' : '🗳️ 항목 선택'}</Text>
+                    <Text style={styles.sectionTitle}>{isResultView ? ' 결과 현황' : ' 항목 선택'}</Text>
                     {isResultView && !isGuest && !isEnded && (
                         <TouchableOpacity onPress={onEditRequest}>
                             <Text style={styles.editLink}>다시 투표하기</Text>

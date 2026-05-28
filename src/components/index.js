@@ -1,4 +1,13 @@
 export { GradientBackground } from './common/GradientBackground';
+export {
+  ScreenContainer,
+  PremiumHeaderPanel,
+  PremiumCard,
+  GoldActionButton,
+  SegmentControl,
+  CellarMark,
+  PremiumGradients,
+} from './common/PremiumUI';
 export { LoadingSpinner } from './common/LoadingSpinner';
 export { CustomButton } from './common/CustomButton';
 export { ErrorBoundary } from './common/ErrorBoundary';

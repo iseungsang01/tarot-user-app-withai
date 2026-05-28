@@ -56,7 +56,7 @@ const NoticeScreen = ({ isIntegrated = false }) => {
                 ListHeaderComponent={!isIntegrated ? renderHeader : null}
                 ListEmptyComponent={
                     <View style={styles.emptyBox}>
-                        <Text style={styles.emptyIcon}>📭</Text>
+                        <Text style={styles.emptyIcon}></Text>
                         <Text style={styles.emptyText}>아직 등록된 소식이 없습니다.</Text>
                     </View>
                 }

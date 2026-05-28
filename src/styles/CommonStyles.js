@@ -47,7 +47,7 @@ export const CommonStyles = {
     },
     subtitle: {
         fontSize: 12,
-        color: DrawerTheme.woodLight,
+        color: DrawerTheme.ivory,
         opacity: 0.9,
         textAlign: 'center'
     }

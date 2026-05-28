@@ -29,10 +29,10 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
           text: "삭제",
           style: "destructive",
           onPress: () => {
-            console.log('🗑️ [TarotCardModal] 삭제 버튼 클릭:', visit.id);
+            console.log(' [TarotCardModal] 삭제 버튼 클릭:', visit.id);
             onClose();
             setTimeout(() => {
-              console.log('🗑️ [TarotCardModal] onDelete 호출:', visit.id);
+              console.log(' [TarotCardModal] onDelete 호출:', visit.id);
               onDelete(visit.id);
             }, 300);
           }
@@ -59,7 +59,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
                   {visit.title?.trim() ? visit.title : `${displayDate}의 기록`}
                 </Text>
                 <Text style={[styles.sourceTag, { color: isManual ? DrawerTheme.navyLight : DrawerTheme.woodLight }]}>
-                  {isManual ? '📝 개인 메모장' : '🏛 타로 아카이브'}
+                  {isManual ? ' 개인 메모장' : ' 타로 아카이브'}
                 </Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -94,7 +94,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
 
             <View style={styles.reviewSection}>
               <Text style={[styles.sectionLabel, isManual && { color: DrawerTheme.navyLight }]}>
-                {isManual ? '✒️ 비밀 서랍' : '📜 타로 노트'}
+                {isManual ? '✒ 비밀 서랍' : ' 타로 노트'}
               </Text>
               <View style={[
                 styles.reviewContent,
@@ -120,7 +120,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
                   styles.secondaryButtonText,
                   isManual && { color: '#555', textDecorationColor: '#555' }
                 ]}>
-                  🗑️ 이 서랍 비우기(삭제)
+                   이 서랍 비우기(삭제)
                 </Text>
               </TouchableOpacity>
             </View>

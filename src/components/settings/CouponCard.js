@@ -6,7 +6,7 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 export const CouponCard = ({ coupon, type, onPress }) => {
   const isExpired = coupon.valid_until && new Date(coupon.valid_until) < new Date();
   const themeColor = type === 'stamp' ? DrawerTheme.goldBrass : '#D4A5A5';
-  const icon = type === 'stamp' ? '📜' : '🎁';
+  const icon = type === 'stamp' ? '' : '';
 
   return (
     <TouchableOpacity

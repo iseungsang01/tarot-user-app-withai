@@ -90,7 +90,7 @@ const CouponScreen = ({ navigation, isIntegrated = false }) => {
     const renderCouponItem = (coupon) => {
         const isSelected = selectedCouponId === coupon.id;
         const type = getCouponType(coupon.coupon_code);
-        const couponTitle = type === 'birthday' ? '🎂 생일 축하 쿠폰' : '⭐ 스탬프 완성 쿠폰';
+        const couponTitle = type === 'birthday' ? ' 생일 축하 쿠폰' : '⭐ 스탬프 완성 쿠폰';
 
         return (
             <View key={coupon.id} style={styles.couponWrapper}>
@@ -152,7 +152,7 @@ const CouponScreen = ({ navigation, isIntegrated = false }) => {
                 ]}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
             >
-                {/* 🪵 NoticeScreen 규격과 100% 동일한 헤더 */}
+                {/*  NoticeScreen 규격과 100% 동일한 헤더 */}
                 {!isIntegrated && (
                     <View style={styles.header}>
                         <View style={styles.titleRow}>
@@ -175,27 +175,27 @@ const CouponScreen = ({ navigation, isIntegrated = false }) => {
 
                 {stampCoupons.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>📜 스탬프 쿠폰</Text>
+                        <Text style={styles.sectionTitle}> 스탬프 쿠폰</Text>
                         {stampCoupons.map(renderCouponItem)}
                     </View>
                 )}
 
                 {birthdayCoupons.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>🎁 생일 쿠폰</Text>
+                        <Text style={styles.sectionTitle}> 생일 쿠폰</Text>
                         {birthdayCoupons.map(renderCouponItem)}
                     </View>
                 )}
 
                 {coupons.length === 0 && (
                     <View style={styles.emptyBox}>
-                        <Text style={styles.emptyIcon}>🎫</Text>
+                        <Text style={styles.emptyIcon}></Text>
                         <Text style={styles.emptyText}>보유하신 쿠폰이 없습니다.</Text>
                     </View>
                 )}
 
                 <View style={styles.infoBox}>
-                    <Text style={styles.infoTitle}>💡 사용 안내</Text>
+                    <Text style={styles.infoTitle}> 사용 안내</Text>
                     <Text style={styles.infoText}>
                         • 쿠폰을 탭하면 인증 화면이 나타납니다{'\n'}
                         • 관리자에게 화면을 보여주세요{'\n'}
@@ -209,7 +209,7 @@ const CouponScreen = ({ navigation, isIntegrated = false }) => {
 };
 
 const styles = StyleSheet.create({
-    // 🪵 NoticeScreen 규격 그대로 이식 (CommonStyles 사용)
+    //  NoticeScreen 규격 그대로 이식 (CommonStyles 사용)
     listArea: {
         padding: 20,
         paddingBottom: 100
