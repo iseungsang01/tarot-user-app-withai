@@ -52,7 +52,7 @@ const TicketScreen = ({ navigation }) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
         showsVerticalScrollIndicator={false}
       >
-      <PremiumHeaderPanel title="쿠폰함" subtitle="스탬프와 쿠폰을 한눈에 확인하세요" compact>
+      <PremiumHeaderPanel title="STAMP & COUPON" subtitle="스탬프와 쿠폰을 한눈에 확인하세요" compact>
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryChip}>
