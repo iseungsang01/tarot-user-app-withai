@@ -93,27 +93,42 @@ export const supabase = new Proxy({}, {
   },
 });
 
-export const ensureAuthenticatedSession = async () => {
-  const reportAndFail = (error, fallbackMessage) => {
-    const normalizedError = normalizeAuthError(error, fallbackMessage);
-    if (typeof globalAuthErrorHandler === 'function') {
-      globalAuthErrorHandler(normalizedError);
-    }
-    return { ok: false, error: normalizedError };
-  };
+let pendingSessionPromise = null;
 
-  const customerSession = await getCustomerRpcSession();
-  if (customerSession?.token) {
-    return {
-      ok: true,
-      session: {
-        access_token: customerSession.token,
-        customer_id: customerSession.customerId,
-        type: 'customer_rpc_session',
-      },
-      error: null,
-    };
+export const ensureAuthenticatedSession = async () => {
+  if (pendingSessionPromise) {
+    return pendingSessionPromise;
   }
 
-  return reportAndFail(null, '저장된 고객 세션이 없습니다. 다시 로그인해주세요.');
+  const runSessionCheck = async () => {
+    const reportAndFail = (error, fallbackMessage) => {
+      const normalizedError = normalizeAuthError(error, fallbackMessage);
+      if (typeof globalAuthErrorHandler === 'function') {
+        globalAuthErrorHandler(normalizedError);
+      }
+      return { ok: false, error: normalizedError };
+    };
+
+    const customerSession = await getCustomerRpcSession();
+    if (customerSession?.token) {
+      return {
+        ok: true,
+        session: {
+          access_token: customerSession.token,
+          customer_id: customerSession.customerId,
+          type: 'customer_rpc_session',
+        },
+        error: null,
+      };
+    }
+
+    return reportAndFail(null, '저장된 고객 세션이 없습니다. 다시 로그인해주세요.');
+  };
+
+  pendingSessionPromise = runSessionCheck();
+  try {
+    return await pendingSessionPromise;
+  } finally {
+    pendingSessionPromise = null;
+  }
 };

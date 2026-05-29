@@ -163,6 +163,11 @@ CREATE INDEX idx_login_attempt_tracker_phone_hash ON login_attempt_tracker(phone
 CREATE INDEX idx_login_attempt_tracker_lock_expires_at ON login_attempt_tracker(lock_expires_at);
 CREATE INDEX idx_customer_password_audit_customer ON customer_password_audit_logs(customer_id, changed_at DESC);
 
+-- Additional query optimization indexes
+CREATE INDEX idx_visit_history_visit_date ON visit_history(visit_date);
+CREATE INDEX idx_vote_responses_vote_id ON vote_responses(vote_id);
+CREATE INDEX idx_visit_history_not_deleted ON visit_history(customer_id) WHERE is_deleted = false;
+
 -- ==========================================
 -- 4. RLS (Row Level Security) 설정
 -- ==========================================

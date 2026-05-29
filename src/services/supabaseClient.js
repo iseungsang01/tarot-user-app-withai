@@ -63,16 +63,16 @@ export const supabaseClient = {
     return supabase.from('visit_history').update({ is_deleted: true }).eq('id', visitId);
   },
 
-  getCustomerStats(payload) {
-    return supabase.rpc('get_customer_stats', payload);
+  getCustomerStats(payload, options = {}) {
+    return supabase.rpc('get_customer_stats', payload, options);
   },
 
   getMyCoupons(payload) {
     return supabase.rpc('get_my_coupons', payload);
   },
 
-  getMyCouponCount(payload) {
-    return supabase.rpc('get_my_coupon_count', payload);
+  getMyCouponCount(payload, options = {}) {
+    return supabase.rpc('get_my_coupon_count', payload, options);
   },
 
   useMyCoupon(payload) {

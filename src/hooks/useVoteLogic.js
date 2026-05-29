@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Alert, BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from './useAuth';
@@ -24,6 +24,10 @@ export const useVoteLogic = () => {
     const [submitting, setSubmitting] = useState(false);
     const [showResults, setShowResults] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+
+    // Refs for debouncing and double-submit prevention
+    const isSubmittingRef = useRef(false);
+    const lastToggleTimeRef = useRef(0);
 
     // Load list of votes and my responses
     const loadVotes = useCallback(async () => {
@@ -113,6 +117,14 @@ export const useVoteLogic = () => {
 
     const handleOptionToggle = (optionId) => {
         if (isVoteEnded(selectedVote)) return;
+        if (submitting || isSubmittingRef.current) return;
+
+        const now = Date.now();
+        // Prevent rapid duplicate clicks (throttling 200ms)
+        if (now - lastToggleTimeRef.current < 200) {
+            return;
+        }
+        lastToggleTimeRef.current = now;
 
         if (!selectedVote.allow_multiple) {
             setSelectedOptions(prev => prev.includes(optionId) ? [] : [optionId]);
@@ -126,62 +138,63 @@ export const useVoteLogic = () => {
     };
 
     const handleSubmitVote = async () => {
-        if (submitting) return;
+        if (submitting || isSubmittingRef.current) return;
         if (!selectedVote) return;
 
-        // 종료된 투표인지 확인
-        if (isVoteEnded(selectedVote)) {
-            Alert.alert('알림', '이미 종료된 투표입니다.', [{ text: '확인' }]);
-            return;
-        }
+        isSubmittingRef.current = true;
+        setSubmitting(true);
 
-        // Validation
-        if (selectedVote.allow_multiple && selectedVote.max_selections) {
-            if (selectedOptions.length > selectedVote.max_selections) {
-                Alert.alert('선택 초과', `최대 ${selectedVote.max_selections}개까지만 선택 가능합니다.`, [{ text: '확인' }]);
+        try {
+            // 종료된 투표인지 확인
+            if (isVoteEnded(selectedVote)) {
+                Alert.alert('알림', '이미 종료된 투표입니다.', [{ text: '확인' }]);
                 return;
             }
-        }
 
-        // Cancel checks
-        const isCancelRequest = selectedOptions.length === 0 && !!myVote;
-
-        if (isCancelRequest) {
-            setSubmitting(true);
-            try {
-                const { error } = await handleApiCall(
-                    'VoteScreen.cancelVote',
-                    () => voteService.cancelVote(selectedVote.id, customer.id)
-                );
-
-                if (!error) {
-                    // 로컬 상태 업데이트
-                    setMyVoteMap(prev => {
-                        const next = { ...prev };
-                        delete next[selectedVote.id];
-                        return next;
-                    });
-                    setMyVote(null);
-
-                    await loadVoteData(selectedVote.id);
-                    setIsEditMode(false);
-                    setShowResults(false);
+            // Validation
+            if (selectedVote.allow_multiple && selectedVote.max_selections) {
+                if (selectedOptions.length > selectedVote.max_selections) {
+                    Alert.alert('선택 초과', `최대 ${selectedVote.max_selections}개까지만 선택 가능합니다.`, [{ text: '확인' }]);
+                    return;
                 }
-            } finally {
-                setSubmitting(false);
             }
-            return;
-        }
 
-        // New vote Validation
-        if (selectedOptions.length === 0 && !myVote) {
-            Alert.alert('알림', '최소 1개 이상 선택해주세요.', [{ text: '확인' }]);
-            return;
-        }
+            // Cancel checks
+            const isCancelRequest = selectedOptions.length === 0 && !!myVote;
 
-        // Submit
-        setSubmitting(true);
-        try {
+            if (isCancelRequest) {
+                try {
+                    const { error } = await handleApiCall(
+                        'VoteScreen.cancelVote',
+                        () => voteService.cancelVote(selectedVote.id, customer.id)
+                    );
+
+                    if (!error) {
+                        // 로컬 상태 업데이트
+                        setMyVoteMap(prev => {
+                            const next = { ...prev };
+                            delete next[selectedVote.id];
+                            return next;
+                        });
+                        setMyVote(null);
+
+                        await loadVoteData(selectedVote.id);
+                        setIsEditMode(false);
+                        setShowResults(false);
+                    }
+                } catch (error) {
+                    console.error('Cancel vote error:', error);
+                }
+                return;
+            }
+
+            // New vote Validation
+            if (selectedOptions.length === 0 && !myVote) {
+                Alert.alert('알림', '최소 1개 이상 선택해주세요.', [{ text: '확인' }]);
+                return;
+            }
+
+            // Submit
             const res = await handleApiCall(
                 'VoteScreen.submitVote',
                 () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id),
@@ -198,6 +211,7 @@ export const useVoteLogic = () => {
                 setShowResults(true);
             }
         } finally {
+            isSubmittingRef.current = false;
             setSubmitting(false);
         }
     };

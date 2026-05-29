@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVisits } from './useVisits';
@@ -11,6 +11,16 @@ const LOCAL_STORAGE_KEY = 'offline_visit_history';
 
 export const useHistoryLogic = (navigation) => {
     const { customer, refreshCustomer } = useAuth();
+    const abortControllerRef = useRef(null);
+
+    // Cancel pending requests on user change
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, [customer?.id]);
 
     // React Query for server visits
     const {
@@ -54,13 +64,14 @@ export const useHistoryLogic = (navigation) => {
         }
     }, []);
 
-    const loadStats = useCallback(async () => {
+    const loadStats = useCallback(async (signal) => {
         if (!customer?.id) return;
         const { data: latestStats } = await handleApiCall(
             'HistoryScreen.loadStats',
-            () => visitService.getCustomerStats(customer.id),
+            () => visitService.getCustomerStats(customer.id, signal),
             { showAlert: false }
         );
+        if (signal && signal.aborted) return;
         if (latestStats) {
             setStats({
                 current_stamps: latestStats.current_stamps,
@@ -69,37 +80,48 @@ export const useHistoryLogic = (navigation) => {
         }
     }, [customer?.id]);
 
-    const loadCouponCount = useCallback(async () => {
+    const loadCouponCount = useCallback(async (signal) => {
         if (!customer?.id) return;
         try {
-            const { count, error } = await couponService.getValidCouponCount(customer.id);
+            const { count, error } = await couponService.getValidCouponCount(customer.id, signal);
+            if (signal && signal.aborted) return;
             if (!error && typeof count === 'number') {
                 setCouponCount(count);
             } else {
                 setCouponCount(0);
             }
         } catch (err) {
+            if (signal && signal.aborted) return;
             console.error("loadCouponCount error:", err);
         }
     }, [customer?.id]);
 
-    const refreshAllData = useCallback(async () => {
+    const refreshAllData = useCallback(async (signal) => {
         try {
             await Promise.all([
                 refetch(),
                 loadLocalData(),
-                loadStats(),
-                loadCouponCount()
+                loadStats(signal),
+                loadCouponCount(signal)
             ]);
         } catch (e) {
+            if (signal && signal.aborted) return;
             console.error(e);
         }
     }, [refetch, loadLocalData, loadStats, loadCouponCount]);
 
     const handleRefresh = async () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         setRefreshing(true);
-        await refreshAllData();
-        setRefreshing(false);
+        await refreshAllData(controller.signal);
+        if (abortControllerRef.current === controller) {
+            setRefreshing(false);
+        }
     };
 
     // Helper: Filter Logic

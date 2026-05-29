@@ -146,7 +146,7 @@ export const visitService = {
     }
   },
 
-  async getCustomerStats(customerId) {
+  async getCustomerStats(customerId, signal = null) {
     if (customerId === 'guest') {
       return { data: { current_stamps: 0, visit_count: 0 }, error: null };
     }
@@ -157,7 +157,7 @@ export const visitService = {
 
       const { data, error } = await supabaseClient.getCustomerStats({
         p_session_token: sessionState.session.access_token,
-      });
+      }, { abortSignal: signal });
 
       if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
       if (!data?.success) {

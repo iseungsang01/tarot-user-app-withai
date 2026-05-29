@@ -49,6 +49,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
             countUsage = true,
             temperature = 0.7,
             maxTokens = 1000,
+            signal,
         } = options;
         const usageType = explicitUsageType || resolveAIUsageType(task);
 
@@ -76,6 +77,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
             headers: {
                 Authorization: `Bearer ${authState.session.access_token}`,
             },
+            signal,
         });
 
         if (error) {
@@ -90,6 +92,14 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
             return {
                 data: null,
                 error: new Error(stringifyError(data?.error) || 'AI response was not received.'),
+            };
+        }
+
+        // Validate AI response structure
+        if (typeof data.data !== 'string' || !data.data.trim()) {
+            return {
+                data: null,
+                error: new Error('AI response data is invalid or empty.'),
             };
         }
 
@@ -118,7 +128,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
 // 1. 상담 기록 AI 요약/분석
 // ─────────────────────────────────────────────────────────────
 
-export const summarizeReview = async (reviewText, visitDate = '') => {
+export const summarizeReview = async (reviewText, visitDate = '', signal = null) => {
     if (!reviewText?.trim()) {
         return { data: null, error: new Error('상담 기록이 없습니다.') };
     }
@@ -144,14 +154,22 @@ export const summarizeReview = async (reviewText, visitDate = '') => {
         },
     ];
 
-    const { data, error } = await callAIProxy(messages, { temperature: 0.5, maxTokens: 500 }, 'summarizeReview');
+    const { data, error } = await callAIProxy(messages, { temperature: 0.5, maxTokens: 500, signal }, 'summarizeReview');
 
     if (error) return { data: null, error };
 
     try {
         const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
         const parsed = JSON.parse(cleanedData);
-        return { data: parsed, error: null };
+        // Robust key validation and fallback mapping
+        const result = {
+            summary: parsed.summary || '요약 결과를 불러올 수 없습니다.',
+            keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+            mood: parsed.mood || '중립',
+            moodEmoji: parsed.moodEmoji || '📝',
+            advice: parsed.advice || ''
+        };
+        return { data: result, error: null };
     } catch {
         return {
             data: { summary: data, keywords: [], mood: '중립', moodEmoji: '📝', advice: '' },
@@ -160,7 +178,7 @@ export const summarizeReview = async (reviewText, visitDate = '') => {
     }
 };
 
-export const analyzeVisitHistory = async (visits) => {
+export const analyzeVisitHistory = async (visits, signal = null) => {
     const validVisits = visits.filter(v => v.card_review?.trim());
 
     if (validVisits.length === 0) {
@@ -192,23 +210,31 @@ export const analyzeVisitHistory = async (visits) => {
         },
     ];
 
-    const { data, error } = await callAIProxy(messages, { temperature: 0.5, maxTokens: 800 }, 'analyzeVisitHistory');
+    const { data, error } = await callAIProxy(messages, { temperature: 0.5, maxTokens: 800, signal }, 'analyzeVisitHistory');
 
     if (error) return { data: null, error };
 
     try {
         const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
         const parsed = JSON.parse(cleanedData);
-        return { data: parsed, error: null };
+        // Robust key validation and fallback mapping
+        const result = {
+            overallSummary: parsed.overallSummary || '전체 요약이 없습니다.',
+            patterns: Array.isArray(parsed.patterns) ? parsed.patterns : [],
+            growthPoints: parsed.growthPoints || '',
+            recommendation: parsed.recommendation || '',
+            totalVisits: parsed.totalVisits || validVisits.length
+        };
+        return { data: result, error: null };
     } catch {
         return {
-            data: { overallSummary: data, patterns: [], growthPoints: '', recommendation: '' },
+            data: { overallSummary: data, patterns: [], growthPoints: '', recommendation: '', totalVisits: validVisits.length },
             error: null,
         };
     }
 };
 
-export const polishReviewText = async (reviewText) => {
+export const polishReviewText = async (reviewText, signal = null) => {
     if (!reviewText?.trim()) {
         return { data: null, error: new Error('다듬을 상담 기록이 없습니다.') };
     }
@@ -233,15 +259,16 @@ export const polishReviewText = async (reviewText) => {
         },
     ];
 
-    const { data, error } = await callAIProxy(messages, { temperature: 0.4, maxTokens: 600 }, 'polishReviewText');
+    const { data, error } = await callAIProxy(messages, { temperature: 0.4, maxTokens: 600, signal }, 'polishReviewText');
     if (error) return { data: null, error };
 
     try {
         const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
         const parsed = JSON.parse(cleanedData);
-        return { data: parsed.polished || '', error: null };
+        // Robust key validation and fallback mapping
+        return { data: parsed.polished || data || '', error: null };
     } catch {
-        return { data, error: null };
+        return { data: data || '', error: null };
     }
 };
 
@@ -320,6 +347,7 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
             maxTokens: 450,
             usageType: AI_USAGE_TYPES.DAILY_FORTUNE_REDRAW,
             countUsage: Boolean(usageOptions.countUsage),
+            signal: usageOptions.signal || null,
         },
         'getDailyFortune',
     );
@@ -328,9 +356,15 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
     try {
         const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
         const parsed = JSON.parse(cleanedData);
-        return { data: parsed, error: null };
+        // Robust key validation and fallback mapping
+        const result = {
+            fortune: parsed.fortune || '오늘의 운세를 불러올 수 없습니다.',
+            luckyColor: parsed.luckyColor || '',
+            luckyItem: parsed.luckyItem || ''
+        };
+        return { data: result, error: null };
     } catch {
-        return { data: { fortune: data, luckyColor: '', luckyItem: '' }, error: null };
+        return { data: { fortune: data || '오늘의 운세 데이터가 없습니다.', luckyColor: '', luckyItem: '' }, error: null };
     }
 };
 

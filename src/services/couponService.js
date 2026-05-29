@@ -177,14 +177,14 @@ export const couponService = {
    * @param {string} customerId - 고객 ID (UUID)
    * @returns {object} { count, error }
    */
-  async getValidCouponCount(customerId) {
+  async getValidCouponCount(customerId, signal = null) {
     if (customerId === 'guest') return { count: 0, error: null };
     try {
       const token = await requireCustomerSessionToken();
       const { data: count, error } = await supabaseClient.getMyCouponCount({
         p_session_token: token,
         p_valid_only: true,
-      });
+      }, { abortSignal: signal });
 
       return { count: count || 0, error };
     } catch (error) {

@@ -82,8 +82,27 @@ export const compressImage = async (uri, options = {}) => {
       compressionRatio,
     };
   } catch (error) {
-    console.error('❌ [ImageOptimizer] 압축 오류:', error);
-    throw error;
+    console.error('❌ [ImageOptimizer] 압축 오류 (원본 폴백):', error);
+    
+    // Gracefully obtain original file size if possible
+    let originalSize = 0;
+    try {
+      const originalInfo = await FileSystem.getInfoAsync(uri);
+      originalSize = originalInfo.size || 0;
+    } catch {
+      // Ignored
+    }
+
+    return {
+      uri,
+      base64: null,
+      width: 0,
+      height: 0,
+      size: originalSize,
+      originalSize,
+      compressionRatio: '0.00',
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 };
 

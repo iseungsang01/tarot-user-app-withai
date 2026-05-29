@@ -50,14 +50,19 @@ const getSessionToken = async () => {
   return { token: authState.session.access_token, error: null };
 };
 
-export const getMyAIUsage = async (monthBucket = getCurrentMonthBucket()) => {
+export const getMyAIUsage = async (monthBucket) => {
   const { token, error: sessionError } = await getSessionToken();
   if (sessionError) return { data: null, error: sessionError };
 
-  const { data, error } = await supabaseClient.getMyAIUsage({
+  // Omit p_month_bucket if not provided so Supabase RPC defaults to server time (now())
+  const payload = {
     p_session_token: token,
-    p_month_bucket: monthBucket,
-  });
+  };
+  if (monthBucket !== undefined) {
+    payload.p_month_bucket = monthBucket;
+  }
+
+  const { data, error } = await supabaseClient.getMyAIUsage(payload);
 
   if (error) {
     return { data: null, error: withAuthErrorHandling(error, 'Failed to load AI usage.') };
@@ -66,7 +71,7 @@ export const getMyAIUsage = async (monthBucket = getCurrentMonthBucket()) => {
   return { data: Array.isArray(data) ? data : [], error: null };
 };
 
-export const getMyAIUsageCount = async (usageType, monthBucket = getCurrentMonthBucket()) => {
+export const getMyAIUsageCount = async (usageType, monthBucket) => {
   const { data, error } = await getMyAIUsage(monthBucket);
   if (error) return { count: 0, error };
 
@@ -74,7 +79,7 @@ export const getMyAIUsageCount = async (usageType, monthBucket = getCurrentMonth
   return { count: Number(row?.usage_count || 0), error: null };
 };
 
-export const ensureAIUsageAllowed = async (usageType, monthBucket = getCurrentMonthBucket()) => {
+export const ensureAIUsageAllowed = async (usageType, monthBucket) => {
   const limit = getMonthlyLimit(usageType);
   if (limit === null || limit === undefined) return { allowed: true, currentCount: 0, limit: null, error: null };
 
@@ -85,16 +90,21 @@ export const ensureAIUsageAllowed = async (usageType, monthBucket = getCurrentMo
   return { allowed: true, currentCount: count, limit, error: null };
 };
 
-export const incrementMyAIUsage = async (usageType, increment = 1, monthBucket = getCurrentMonthBucket()) => {
+export const incrementMyAIUsage = async (usageType, increment = 1, monthBucket) => {
   const { token, error: sessionError } = await getSessionToken();
   if (sessionError) return { data: null, error: sessionError };
 
-  const { data, error } = await supabaseClient.incrementMyAIUsage({
+  // Omit p_month_bucket if not provided so Supabase RPC defaults to server time (now())
+  const payload = {
     p_session_token: token,
     p_usage_type: usageType,
-    p_month_bucket: monthBucket,
     p_increment: increment,
-  });
+  };
+  if (monthBucket !== undefined) {
+    payload.p_month_bucket = monthBucket;
+  }
+
+  const { data, error } = await supabaseClient.incrementMyAIUsage(payload);
 
   if (error) {
     return { data: null, error: withAuthErrorHandling(error, 'Failed to record AI usage.') };

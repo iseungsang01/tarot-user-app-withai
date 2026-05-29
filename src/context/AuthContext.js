@@ -9,7 +9,11 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [customer, setCustomer] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState({
+    initializing: true,
+    loggingIn: false,
+    loggingOut: false,
+  });
 
   const handleAuthFailure = useCallback(async (authError = {}) => {
     try {
@@ -26,13 +30,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const initializeAuth = useCallback(async () => {
+    setLoadingState(prev => ({ ...prev, initializing: true }));
     try {
       const storedCustomer = await authService.getStoredCustomer();
       if (storedCustomer) setCustomer(storedCustomer);
     } catch (error) {
       logError('AuthContext.initializeAuth', error);
     } finally {
-      setLoading(false);
+      setLoadingState(prev => ({ ...prev, initializing: false }));
     }
   }, []);
 
@@ -49,6 +54,7 @@ export const AuthProvider = ({ children }) => {
   }, [handleAuthFailure]);
 
   const login = async (phoneNumber, password) => {
+    setLoadingState(prev => ({ ...prev, loggingIn: true }));
     try {
       const { data, error } = await authService.login(phoneNumber, password);
       if (data) setCustomer(data);
@@ -57,16 +63,21 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       logError('AuthContext.login', error, { phoneNumber });
       return { data: null, error: { message: '로그인 중 오류가 발생했습니다.' } };
+    } finally {
+      setLoadingState(prev => ({ ...prev, loggingIn: false }));
     }
   };
 
   const logout = async () => {
     setCustomer(null);
+    setLoadingState(prev => ({ ...prev, loggingOut: true }));
 
     try {
       await authService.logout();
     } catch (error) {
       logError('AuthContext.logout', error);
+    } finally {
+      setLoadingState(prev => ({ ...prev, loggingOut: false }));
     }
   };
 
@@ -104,8 +115,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loading = loadingState.initializing || loadingState.loggingIn || loadingState.loggingOut;
+
   return (
-    <AuthContext.Provider value={{ customer, loading, login, logout, refreshCustomer, guestLogin, register }}>
+    <AuthContext.Provider value={{ customer, loading, loadingState, login, logout, refreshCustomer, guestLogin, register }}>
       {children}
     </AuthContext.Provider>
   );

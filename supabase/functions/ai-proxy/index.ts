@@ -18,6 +18,47 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// In-memory rate limiter configurations
+const rateLimitMap = new Map<string, { tokens: number; lastRefill: number }>();
+const MAX_TOKENS = 10;
+const REFILL_RATE_MS = 6000; // 6 seconds per token (10 tokens per minute)
+
+// Remove expired entries to prevent memory leak
+function cleanupRateLimitMap() {
+  const now = Date.now();
+  for (const [userId, bucket] of rateLimitMap.entries()) {
+    if (now - bucket.lastRefill > 5 * 60 * 1000) {
+      rateLimitMap.delete(userId);
+    }
+  }
+}
+
+// Token bucket rate limiter check
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  let bucket = rateLimitMap.get(userId);
+
+  if (!bucket) {
+    bucket = { tokens: MAX_TOKENS, lastRefill: now };
+  } else {
+    const elapsed = now - bucket.lastRefill;
+    const refilledTokens = Math.floor(elapsed / REFILL_RATE_MS);
+    if (refilledTokens > 0) {
+      bucket.tokens = Math.min(MAX_TOKENS, bucket.tokens + refilledTokens);
+      bucket.lastRefill = bucket.lastRefill + refilledTokens * REFILL_RATE_MS;
+    }
+  }
+
+  if (bucket.tokens <= 0) {
+    rateLimitMap.set(userId, bucket);
+    return false;
+  }
+
+  bucket.tokens -= 1;
+  rateLimitMap.set(userId, bucket);
+  return true;
+}
+
 function requireEnv(name: string, value: string) {
   if (!value) {
     throw new Error(`${name} not configured`);
@@ -85,6 +126,15 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Request size limit verification (max 100KB)
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > 100 * 1024) {
+    return new Response(
+      JSON.stringify({ error: 'Request body is too large. Maximum size is 100KB.' }),
+      { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     requireEnv('SUPABASE_URL', SUPABASE_URL);
     requireEnv('SUPABASE_ANON_KEY', SUPABASE_ANON_KEY);
@@ -122,6 +172,17 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Invalid or expired authentication token.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Rate Limiting (max 10 requests per minute per user)
+    if (userId) {
+      cleanupRateLimitMap();
+      if (!checkRateLimit(userId)) {
+        return new Response(
+          JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     let body;
