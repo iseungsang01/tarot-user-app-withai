@@ -1,4 +1,5 @@
 import { ERROR_TYPES, ERROR_MESSAGES } from '../constants/ErrorMessages';
+import { errorEmitter } from './errorEmitter';
 
 /**
  * 에러 핸들러 유틸리티
@@ -116,8 +117,8 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
       const errorInfo = parseSupabaseError(result.error);
       logError(context, result.error, additionalInfo);
 
-      if (showAlert && global.showGlobalError) {
-        global.showGlobalError(errorInfo);
+      if (showAlert) {
+        errorEmitter.emit(errorInfo);
       }
 
       if (onError) {
@@ -132,8 +133,8 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
     const errorInfo = parseSupabaseError(error);
     logError(context, error, additionalInfo);
 
-    if (showAlert && global.showGlobalError) {
-      global.showGlobalError(errorInfo);
+    if (showAlert) {
+      errorEmitter.emit(errorInfo);
     }
 
     if (onError) {

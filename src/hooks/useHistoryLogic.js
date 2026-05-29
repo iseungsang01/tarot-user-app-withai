@@ -13,19 +13,25 @@ export const useHistoryLogic = (navigation) => {
     const { customer, refreshCustomer } = useAuth();
 
     // React Query for server visits
-    const { visits: serverVisits, isLoading: isVisitsLoading, refetch, deleteVisit } = useVisits(customer?.id);
+    const {
+        visits: serverVisits,
+        isLoading: isVisitsLoading,
+        refetch,
+        deleteVisit,
+        deleteMultipleVisits
+    } = useVisits(customer?.id);
 
     // Local state
     const [personalNotes, setPersonalNotes] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
     const [couponCount, setCouponCount] = useState(0);
-    const [archiveMode, setArchiveMode] = useState('ALL');
     const [stats, setStats] = useState({
         current_stamps: customer?.current_stamps || 0,
         visit_count: customer?.visit_count || 0
     });
 
     // Filter state
+    const [archiveMode, setArchiveMode] = useState('ALL');
     const [timeFilter, setTimeFilter] = useState('ALL');
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -143,7 +149,6 @@ export const useHistoryLogic = (navigation) => {
         [displayData]
     );
 
-
     // Actions
     const toggleSelection = useCallback((id) => {
         setSelectedIds((prev) => {
@@ -220,8 +225,9 @@ export const useHistoryLogic = (navigation) => {
                                 }
                             });
 
-                            const deletePromises = serverIds.map(id => deleteVisit(id));
-                            await Promise.all(deletePromises);
+                            if (serverIds.length > 0) {
+                                await deleteMultipleVisits(serverIds);
+                            }
 
                             if (localIds.length > 0) {
                                 const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
@@ -244,14 +250,17 @@ export const useHistoryLogic = (navigation) => {
                 }
             ]
         );
-    }, [selectedIds, displayDataById, deleteVisit, loadLocalData, refreshCustomer]);
+    }, [selectedIds, displayDataById, deleteMultipleVisits, loadLocalData, refreshCustomer]);
 
     return {
         state: {
             customer,
             isVisitsLoading,
             refreshing,
-            stats,
+            stats: {
+                current_stamps: stats.current_stamps || customer?.current_stamps || 0,
+                visit_count: stats.visit_count || customer?.visit_count || 0
+            },
             couponCount,
             visits: allVisits,
             displayData,

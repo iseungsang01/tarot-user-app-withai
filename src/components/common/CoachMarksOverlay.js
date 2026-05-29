@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.72)';
@@ -32,7 +32,7 @@ const CoachMarksOverlay = ({ steps, stepIndex, onNext, onClose, onTargetPress })
         height: hole.height,
     };
 
-    const screenHeight = Dimensions.get('window').height;
+    const { height: screenHeight } = useWindowDimensions();
     const tooltipHeight = 170;
     const tooltipSpacing = 12;
     const bottomSafeGap = 12;

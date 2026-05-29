@@ -33,10 +33,12 @@ export const useVisits = (customerId) => {
             if (error) throw error;
 
             // 이미지 캐시와 병합 (UI 표시용)
-            const allImages = await storage.getAllCardImages();
-            const allReviews = await storage.getAllCardReviews();
-            const allTitles = await storage.getAllCardTitles();
-            const allAIInsights = await storage.getAllCardAIInsights();
+            const [allImages, allReviews, allTitles, allAIInsights] = await Promise.all([
+                storage.getAllCardImages(),
+                storage.getAllCardReviews(),
+                storage.getAllCardTitles(),
+                storage.getAllCardAIInsights()
+            ]);
 
             return data.map(visit => ({
                 ...visit,
@@ -73,12 +75,41 @@ export const useVisits = (customerId) => {
         }
     });
 
+    // 2-2. 다중 삭제 (Batch Mutation)
+    const deleteMultipleMutation = useMutation({
+        mutationFn: async (visitIds) => {
+            if (!visitIds || visitIds.length === 0) return [];
+
+            const { error } = await supabase
+                .from('visit_history')
+                .update({ is_deleted: true })
+                .in('id', visitIds);
+
+            if (error) throw error;
+
+            // 로컬 데이터 병렬 정리
+            await Promise.all(visitIds.flatMap(id => [
+                storage.deleteCardImage(id),
+                storage.deleteCardReview(id),
+                storage.deleteCardTitle(id),
+                storage.deleteCardAIInsight(id)
+            ]));
+
+            return visitIds;
+        },
+        onSuccess: () => {
+            // 목록 새로고침
+            queryClient.invalidateQueries([...VISITS_KEY, customerId]);
+        }
+    });
+
     return {
         visits: query.data || [],
         isLoading: query.isLoading,
         error: query.error,
         refetch: query.refetch,
         deleteVisit: deleteMutation.mutateAsync,
-        isDeleting: deleteMutation.isPending
+        deleteMultipleVisits: deleteMultipleMutation.mutateAsync,
+        isDeleting: deleteMutation.isPending || deleteMultipleMutation.isPending
     };
 };

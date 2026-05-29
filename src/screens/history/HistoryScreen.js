@@ -57,7 +57,6 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         toggleSelection,
         handleLongPress,
         handleDeleteVisit,
-        handleMultiDelete
     } = actions;
 
     useFocusEffect(
@@ -68,8 +67,10 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         }, [customer, refreshAllData])
     );
 
+    const sideTint = archiveMode === 'OFF' ? 'rgba(42,6,44,0.7)' : 'rgba(31,18,12,0.82)';
+
     const renderHeader = () => (
-        <>
+        <View style={styles.headerContainer}>
             <HistoryHeader
                 stats={stats}
                 couponCount={couponCount}
@@ -95,60 +96,136 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 selectedIds={selectedIds}
                 setSelectionMode={setSelectionMode}
                 setSelectedIds={setSelectedIds}
-                onMultiDelete={handleMultiDelete}
                 onCaptureArchiveFrame={(frame) => onCaptureCoachFrame?.('home-archive-mode', frame)}
                 onCaptureTimeFilterFrame={(frame) => onCaptureCoachFrame?.('home-time-filter', frame)}
             />
-        </>
+
+            {/* Chest Top Moldings */}
+            <View style={styles.chestContainer}>
+                <View style={styles.backLip} />
+                <LinearGradient
+                    colors={['#120806', DrawerTheme.walnutLight, DrawerTheme.walnutDark, DrawerTheme.walnutLight, '#120806']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.topMolding}
+                />
+                <LinearGradient
+                    colors={['#120A06', DrawerTheme.walnutLight, '#120A06']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.topSubMolding}
+                />
+            </View>
+
+            {/* Chest Content Header Area (AI Panel & Manual Add) */}
+            <LinearGradient
+                colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.mainBody, styles.mainBodyHeaderExtension]}
+            >
+                <View style={styles.sideRailLeft} />
+                <View style={styles.sideRailRight} />
+                <View style={styles.drawerContentHeader}>
+                    <AIHistoryAnalysisPanel visits={visits} />
+
+                    {archiveMode === 'OFF' && (
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={styles.manualAddDrawer}
+                            onPress={() => navigation.navigate('VisitDetail', { mode: 'manual', is_manual: true })}
+                        >
+                            <Text style={styles.manualAddText}>+ 개인 서랍 추가</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </LinearGradient>
+        </View>
     );
 
-    const renderDrawerChest = () => (
-        <DrawerChest isManualMode={archiveMode === 'OFF'} selectionMode={selectionMode}>
-            <AIHistoryAnalysisPanel visits={visits} />
+    const renderFooter = () => (
+        <View style={styles.footerContainer}>
+            {/* Main Body Bottom Extension */}
+            <LinearGradient
+                colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.mainBody, styles.mainBodyFooterExtension]}
+            >
+                <View style={styles.sideRailLeft} />
+                <View style={styles.sideRailRight} />
+            </LinearGradient>
 
-            {archiveMode === 'OFF' && (
-                <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={styles.manualAddDrawer}
-                    onPress={() => navigation.navigate('VisitDetail', { mode: 'manual', is_manual: true })}
-                >
-                    <Text style={styles.manualAddText}>+ 개인 서랍 추가</Text>
-                </TouchableOpacity>
-            )}
+            {/* Chest Legs */}
+            <View style={styles.chestContainer}>
+                <LinearGradient
+                    colors={['#120A06', DrawerTheme.walnutLight, '#120A06']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.bottomMolding}
+                />
+                <View style={styles.legsRow}>
+                    <View style={styles.leg} />
+                    <View style={styles.leg} />
+                </View>
+            </View>
+        </View>
+    );
 
-            {displayData.length > 0 ? (
-                displayData.map((item) => (
-                    <DrawerUnit
-                        key={`${item.is_manual ? 'off' : 'on'}-${item.id}`}
-                        visit={item}
-                        onSelectCard={() => {
-                            if (selectionMode) {
-                                toggleSelection(item.id);
-                            } else {
-                                setSelectedItem(item);
-                                setIsModalVisible(true);
-                            }
-                        }}
-                        onLongPress={() => handleLongPress(item.id)}
-                        selectionMode={selectionMode}
-                        isSelected={selectedIds.has(item.id)}
-                    />
-                ))
-            ) : (
-                Array.from({ length: 4 }).map((_, index) => (
-                    <DrawerUnit
-                        key={`sealed-placeholder-${index}`}
-                        visit={{
-                            id: `sealed-placeholder-${index}`,
-                            visit_date: '2026-01-26',
-                            drawer_title: timeFilter !== 'ALL' ? '해당 기간 기록 없음' : '아직 기록이 없습니다',
-                            isPlaceholder: true,
-                        }}
-                        onSelectCard={() => {}}
-                    />
-                ))
-            )}
-        </DrawerChest>
+    const renderEmptyComponent = () => (
+        <View style={styles.emptyContainer}>
+            <LinearGradient
+                colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.mainBody}
+            >
+                <View style={styles.sideRailLeft} />
+                <View style={styles.sideRailRight} />
+                <View style={styles.drawerContent}>
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <DrawerUnit
+                            key={`sealed-placeholder-${index}`}
+                            visit={{
+                                id: `sealed-placeholder-${index}`,
+                                visit_date: '2026-01-26',
+                                drawer_title: timeFilter !== 'ALL' ? '해당 기간 기록 없음' : '아직 기록이 없습니다',
+                                isPlaceholder: true,
+                            }}
+                            onSelectCard={() => {}}
+                        />
+                    ))}
+                </View>
+            </LinearGradient>
+        </View>
+    );
+
+    const renderItem = ({ item }) => (
+        <LinearGradient
+            colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.mainBody}
+        >
+            <View style={styles.sideRailLeft} />
+            <View style={styles.sideRailRight} />
+            <View style={styles.drawerContent}>
+                <DrawerUnit
+                    visit={item}
+                    onSelectCard={() => {
+                        if (selectionMode) {
+                            toggleSelection(item.id);
+                        } else {
+                            setSelectedItem(item);
+                            setIsModalVisible(true);
+                        }
+                    }}
+                    onLongPress={() => handleLongPress(item.id)}
+                    selectionMode={selectionMode}
+                    isSelected={selectedIds.has(item.id)}
+                />
+            </View>
+        </LinearGradient>
     );
 
     const isInitialLoading = isVisitsLoading && !refreshing && displayData.length === 0;
@@ -159,9 +236,12 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         <CellarBackground>
             <FlatList
                 testID="history-scroll"
-                data={[1]}
-                renderItem={renderDrawerChest}
+                data={displayData}
+                renderItem={renderItem}
                 ListHeaderComponent={renderHeader}
+                ListFooterComponent={renderFooter}
+                ListEmptyComponent={renderEmptyComponent}
+                keyExtractor={(item) => `${item.is_manual ? 'off' : 'on'}-${item.id}`}
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
                 style={styles.list}
@@ -215,50 +295,6 @@ const CellarBackground = ({ children }) => (
         {children}
     </View>
 );
-
-const DrawerChest = ({ children, isManualMode }) => {
-    const sideTint = isManualMode ? 'rgba(42,6,44,0.7)' : 'rgba(31,18,12,0.82)';
-
-    return (
-        <View style={styles.chestContainer}>
-            <View style={styles.backLip} />
-            <LinearGradient
-                colors={['#120806', DrawerTheme.walnutLight, DrawerTheme.walnutDark, DrawerTheme.walnutLight, '#120806']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.topMolding}
-            />
-            <LinearGradient
-                colors={['#120A06', DrawerTheme.walnutLight, '#120A06']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.topSubMolding}
-            />
-
-            <LinearGradient
-                colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.mainBody}
-            >
-                <View style={styles.sideRailLeft} />
-                <View style={styles.sideRailRight} />
-                <View style={styles.drawerContent}>{children}</View>
-            </LinearGradient>
-
-            <LinearGradient
-                colors={['#120A06', DrawerTheme.walnutLight, '#120A06']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.bottomMolding}
-            />
-            <View style={styles.legsRow}>
-                <View style={styles.leg} />
-                <View style={styles.leg} />
-            </View>
-        </View>
-    );
-};
 
 const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode, isSelected }) => {
     const isPlaceholder = visit.isPlaceholder === true;
@@ -412,6 +448,15 @@ const styles = StyleSheet.create({
         maxWidth: 393,
         alignSelf: 'center',
     },
+    headerContainer: {
+        width: '100%',
+    },
+    footerContainer: {
+        width: '100%',
+    },
+    emptyContainer: {
+        width: '100%',
+    },
     manualAddDrawer: {
         height: 86,
         margin: 2,
@@ -420,7 +465,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(224,184,90,0.58)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 5,
+        marginBottom: 10,
         backgroundColor: 'rgba(20,0,24,0.7)',
     },
     manualAddText: {
@@ -430,8 +475,6 @@ const styles = StyleSheet.create({
     },
     chestContainer: {
         width: '100%',
-        marginTop: 8,
-        marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 18 },
         shadowOpacity: 0.55,
@@ -467,6 +510,13 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(12,6,4,0.92)',
         overflow: 'hidden',
     },
+    mainBodyHeaderExtension: {
+        borderBottomWidth: 0,
+    },
+    mainBodyFooterExtension: {
+        height: 10,
+        borderTopWidth: 0,
+    },
     sideRailLeft: {
         position: 'absolute',
         top: 0,
@@ -484,8 +534,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(224,184,90,0.22)',
     },
     drawerContent: {
+        paddingVertical: 4,
+        paddingHorizontal: 3,
+    },
+    drawerContentHeader: {
         paddingTop: 6,
-        paddingBottom: 7,
         paddingHorizontal: 3,
     },
     bottomMolding: {
@@ -501,6 +554,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 34,
         marginTop: -2,
+        marginBottom: 10,
     },
     leg: {
         width: 22,

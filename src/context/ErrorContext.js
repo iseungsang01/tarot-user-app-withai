@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { errorEmitter } from '../utils/errorEmitter';
 
 export const ErrorContext = createContext();
 
@@ -16,7 +17,11 @@ export const ErrorProvider = ({ children }) => {
     setTimeout(hideError, 3000);
   }, [hideError]);
 
-  global.showGlobalError = showError;
+  // errorEmitter 구독: 서비스/유틸 레이어에서 발행한 에러를 Context로 연결
+  useEffect(() => {
+    const unsubscribe = errorEmitter.subscribe(showError);
+    return unsubscribe;
+  }, [showError]);
 
   return (
     <ErrorContext.Provider value={{ error, showError, hideError }}>
