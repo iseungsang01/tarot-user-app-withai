@@ -30,17 +30,28 @@ export const compressImage = async (uri, options = {}) => {
     const imageInfo = await FileSystem.getInfoAsync(uri);
     console.log('📊 [ImageOptimizer] 원본 크기:', imageInfo.size, 'bytes');
     
-    // 2. 이미지 리사이징 및 압축
+    // 2. Get original dimensions for aspect ratio preserving resize
+    const originalDimensions = await ImageManipulator.manipulateAsync(uri, []);
+    const { width: origWidth, height: origHeight } = originalDimensions;
+    
+    const actions = [];
+    if (origWidth > config.maxWidth || origHeight > config.maxHeight) {
+      const widthRatio = config.maxWidth / origWidth;
+      const heightRatio = config.maxHeight / origHeight;
+      const ratio = Math.min(widthRatio, heightRatio);
+      
+      actions.push({
+        resize: {
+          width: Math.round(origWidth * ratio),
+          height: Math.round(origHeight * ratio),
+        },
+      });
+    }
+    
+    // 3. Resize and compress image
     const manipResult = await ImageManipulator.manipulateAsync(
       uri,
-      [
-        {
-          resize: {
-            width: config.maxWidth,
-            height: config.maxHeight,
-          },
-        },
-      ],
+      actions,
       {
         compress: config.quality,
         format: config.format,
@@ -54,9 +65,9 @@ export const compressImage = async (uri, options = {}) => {
       height: manipResult.height,
     });
     
-    // 3. 압축된 이미지 크기 확인
+    // 4. Check compressed image size
     const compressedInfo = await FileSystem.getInfoAsync(manipResult.uri);
-    const compressionRatio = ((1 - compressedInfo.size / imageInfo.size) * 100).toFixed(2);
+    const compressionRatio = imageInfo.size ? ((1 - compressedInfo.size / imageInfo.size) * 100).toFixed(2) : '0';
     
     console.log('📊 [ImageOptimizer] 압축률:', compressionRatio, '%');
     console.log('📊 [ImageOptimizer] 압축 후 크기:', compressedInfo.size, 'bytes');
@@ -67,7 +78,7 @@ export const compressImage = async (uri, options = {}) => {
       width: manipResult.width,
       height: manipResult.height,
       size: compressedInfo.size,
-      originalSize: imageInfo.size,
+      originalSize: imageInfo.size || 0,
       compressionRatio,
     };
   } catch (error) {
