@@ -9,6 +9,12 @@ test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async 
 
   const { summarizeReview } = loadModule('src/services/aiService.js', {
     './supabaseClient': { supabaseClient },
+    './aiUsageService': {
+      ensureAIUsageAllowed: async () => ({ allowed: true, error: null }),
+      incrementMyAIUsage: async () => ({ data: {}, error: null }),
+      resolveAIUsageType: (task) => task,
+      AI_USAGE_TYPES: { DAILY_FORTUNE_REDRAW: 'daily_fortune_redraw' },
+    },
     './supabase': { 
       supabase: { 
         functions: { 
@@ -38,6 +44,12 @@ test('aiService: surfaces Edge Function JSON error details', async () => {
   edgeError.context = new Response(JSON.stringify({ error: 'GOOGLE_MODEL not found' }), { status: 500 });
 
   const { getDailyFortune } = loadModule('src/services/aiService.js', {
+    './aiUsageService': {
+      ensureAIUsageAllowed: async () => ({ allowed: true, error: null }),
+      incrementMyAIUsage: async () => ({ data: {}, error: null }),
+      resolveAIUsageType: (task) => task,
+      AI_USAGE_TYPES: { DAILY_FORTUNE_REDRAW: 'daily_fortune_redraw' },
+    },
     './supabase': {
       supabase: {
         functions: {

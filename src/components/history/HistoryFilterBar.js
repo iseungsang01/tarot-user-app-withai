@@ -182,7 +182,7 @@ export const HistoryFilterBar = ({
             ) : (
                 <View style={styles.hintContainer}>
                     <View style={styles.hintStar} />
-                    <Text style={styles.hintText}>서랍 손잡이를 길게 누르면 여러 칸의 기록을 선택할 수 있습니다.</Text>
+                    <Text style={styles.hintText}>기록을 길게 누르면 여러 개를 선택할 수 있습니다.</Text>
                     <View style={styles.hintStar} />
                 </View>
             )}

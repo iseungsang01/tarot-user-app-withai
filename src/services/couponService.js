@@ -1,4 +1,24 @@
 import { supabase } from './supabase';
+import { supabaseClient } from './supabaseClient';
+import { storage } from '../utils/storage';
+
+const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
+
+const getCustomerSessionToken = async () => {
+  const session = await storage.get(CUSTOMER_SESSION_KEY);
+  return session?.token || null;
+};
+
+const requireCustomerSessionToken = async () => {
+  const token = await getCustomerSessionToken();
+  if (!token) {
+    const error = new Error('Login is required. Please sign in again.');
+    error.code = 'AUTH_REQUIRED';
+    error.requiresReLogin = true;
+    throw error;
+  }
+  return token;
+};
 
 /**
  * 쿠폰 서비스
@@ -13,12 +33,11 @@ export const couponService = {
   async getCoupons(customerId) {
     if (customerId === 'guest') return { data: [], error: null };
     try {
-      const { data, error } = await supabase
-        .from('coupon_history')
-        .select('*')
-        .eq('customer_id', customerId)
-        .eq('is_used', false)
-        .order('issued_at', { ascending: false });
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.getMyCoupons({
+        p_session_token: token,
+        p_valid_only: false,
+      });
 
       if (error) {
         console.error('Fetch coupons error:', error);
@@ -40,11 +59,11 @@ export const couponService = {
     if (customerId === 'guest') return { count: 0, error: null };
     try {
 
-      const { count, error } = await supabase
-        .from('coupon_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('customer_id', customerId)
-        .eq('is_used', false);
+      const token = await requireCustomerSessionToken();
+      const { data: count, error } = await supabaseClient.getMyCouponCount({
+        p_session_token: token,
+        p_valid_only: false,
+      });
 
       if (error) {
         console.error('Count coupons error:', error);
@@ -67,13 +86,11 @@ export const couponService = {
   async useCoupon(couponId) {
     try {
 
-      const { error } = await supabase
-        .from('coupon_history')
-        .update({
-          is_used: true,
-          used_at: new Date().toISOString(),
-        })
-        .eq('id', couponId);
+      const token = await requireCustomerSessionToken();
+      const { error } = await supabaseClient.useMyCoupon({
+        p_session_token: token,
+        p_coupon_id: couponId,
+      });
 
       if (error) {
         console.error('Use coupon error:', error);
@@ -142,15 +159,11 @@ export const couponService = {
   async getValidCoupons(customerId) {
     if (customerId === 'guest') return { data: [], error: null };
     try {
-      const now = new Date().toISOString();
-
-      const { data, error } = await supabase
-        .from('coupon_history')
-        .select('*')
-        .eq('customer_id', customerId)
-        .eq('is_used', false)
-        .or(`valid_until.is.null,valid_until.gte.${now}`)
-        .order('issued_at', { ascending: false });
+      const token = await requireCustomerSessionToken();
+      const { data, error } = await supabaseClient.getMyCoupons({
+        p_session_token: token,
+        p_valid_only: true,
+      });
 
       return { data, error };
     } catch (error) {
@@ -167,14 +180,11 @@ export const couponService = {
   async getValidCouponCount(customerId) {
     if (customerId === 'guest') return { count: 0, error: null };
     try {
-      const now = new Date().toISOString();
-
-      const { count, error } = await supabase
-        .from('coupon_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('customer_id', customerId)
-        .eq('is_used', false)
-        .or(`valid_until.is.null,valid_until.gte.${now}`);
+      const token = await requireCustomerSessionToken();
+      const { data: count, error } = await supabaseClient.getMyCouponCount({
+        p_session_token: token,
+        p_valid_only: true,
+      });
 
       return { count: count || 0, error };
     } catch (error) {

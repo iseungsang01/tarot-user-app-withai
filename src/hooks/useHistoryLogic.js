@@ -202,7 +202,7 @@ export const useHistoryLogic = (navigation) => {
 
         Alert.alert(
             '다중 삭제',
-            `선택한 ${selectedIds.size}개의 서랍을 정말 비우시겠습니까?`,
+            `선택한 기록 ${selectedIds.size}개를 정말 삭제하시겠습니까?`,
             [
                 { text: '취소', style: 'cancel' },
                 {

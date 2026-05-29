@@ -8,8 +8,8 @@ export const VoteList = ({ votes, onSelectVote }) => {
     return (
         <View>
             <PremiumCard variant="walnut" style={styles.previewCard}>
-                <Text style={styles.previewTitle}>RECENT NOTICE</Text>
-                <Text style={styles.previewText}>의식과 공지의 최신 기록을 이곳에서 확인할 수 있습니다.</Text>
+                <Text style={styles.previewTitle}>최근 소식</Text>
+                <Text style={styles.previewText}>진행 중인 투표와 공지를 이곳에서 확인할 수 있습니다.</Text>
             </PremiumCard>
 
             {votes.length === 0 ? (

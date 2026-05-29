@@ -11,10 +11,6 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() ?? '';
 
 const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'true').toLowerCase() !== 'false';
-const RATE_LIMIT_PER_MINUTE = Number(Deno.env.get('AI_PROXY_RATE_LIMIT_PER_MINUTE') ?? '20');
-const RATE_LIMIT_PER_HOUR = Number(Deno.env.get('AI_PROXY_RATE_LIMIT_PER_HOUR') ?? '200');
-const DAILY_TOKEN_QUOTA = Number(Deno.env.get('AI_PROXY_DAILY_TOKEN_QUOTA') ?? '50000');
-const MONTHLY_TOKEN_QUOTA = Number(Deno.env.get('AI_PROXY_MONTHLY_TOKEN_QUOTA') ?? '1000000');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,23 +30,6 @@ function getBearerToken(req: Request) {
     return '';
   }
   return raw.slice(7).trim();
-}
-
-function getBucketStart(date: Date, bucketType: 'minute' | 'hour') {
-  const clone = new Date(date);
-  clone.setUTCSeconds(0, 0);
-  if (bucketType === 'hour') {
-    clone.setUTCMinutes(0, 0, 0);
-  }
-  return clone.toISOString();
-}
-
-function getIsoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function getMonthKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) {
@@ -190,72 +169,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const deviceId = req.headers.get('x-device-id')?.trim() || body?.deviceId || 'unknown-device';
-    const now = new Date();
-
-    const rateChecks = [
-      { dimension: 'user', identifier: userId ?? 'anonymous', bucketType: 'minute', limitValue: RATE_LIMIT_PER_MINUTE },
-      { dimension: 'device', identifier: deviceId, bucketType: 'minute', limitValue: RATE_LIMIT_PER_MINUTE },
-      { dimension: 'user_hour', identifier: userId ?? 'anonymous', bucketType: 'hour', limitValue: RATE_LIMIT_PER_HOUR },
-    ];
-
-    for (const check of rateChecks) {
-      const { data, error } = await adminClient.rpc('increment_ai_proxy_rate_limit', {
-        p_dimension: check.dimension,
-        p_identifier: check.identifier,
-        p_bucket_type: check.bucketType,
-        p_bucket_start: getBucketStart(now, check.bucketType as 'minute' | 'hour'),
-        p_limit: check.limitValue,
-      });
-
-      if (error) {
-        console.error('[AI Proxy] Rate limit check error', error);
-        return new Response(
-          JSON.stringify({ error: '요청 제한 확인 중 오류가 발생했습니다.' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      if (!data?.allowed) {
-        return new Response(
-          JSON.stringify({ error: '요청 횟수 제한을 초과했습니다.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-    }
-
     const temperature = Number(options?.temperature ?? 0.7);
     const maxTokens = Number(options?.maxTokens ?? 1000);
     const googleResult = await callGoogle(messages, temperature, maxTokens);
-
-    const usage = googleResult.usage ?? {};
-    const usedTokens = Number(usage.totalTokenCount ?? usage.totalTokens ?? 0);
-
-    if (userId && usedTokens > 0) {
-      const { data, error } = await adminClient.rpc('apply_ai_proxy_token_usage', {
-        p_user_id: userId,
-        p_day_bucket: getIsoDate(now),
-        p_month_bucket: getMonthKey(now),
-        p_used_tokens: usedTokens,
-        p_daily_limit: DAILY_TOKEN_QUOTA,
-        p_monthly_limit: MONTHLY_TOKEN_QUOTA,
-      });
-
-      if (error) {
-        console.error('[AI Proxy] Quota update error', error);
-        return new Response(
-          JSON.stringify({ error: '쿼터 확인 중 오류가 발생했습니다.' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      if (!data?.allowed) {
-        return new Response(
-          JSON.stringify({ error: '토큰 사용량 쿼터를 초과했습니다.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-    }
 
     return new Response(JSON.stringify(googleResult), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

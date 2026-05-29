@@ -67,6 +67,18 @@ export const supabaseClient = {
     return supabase.rpc('get_customer_stats', payload);
   },
 
+  getMyCoupons(payload) {
+    return supabase.rpc('get_my_coupons', payload);
+  },
+
+  getMyCouponCount(payload) {
+    return supabase.rpc('get_my_coupon_count', payload);
+  },
+
+  useMyCoupon(payload) {
+    return supabase.rpc('use_my_coupon', payload);
+  },
+
   getMyVoteResponses(payload) {
     return supabase.rpc('get_my_vote_responses', payload);
   },
@@ -85,6 +97,14 @@ export const supabaseClient = {
 
   getVoteSummary(payload) {
     return supabase.rpc('get_vote_summary', payload);
+  },
+
+  getMyAIUsage(payload) {
+    return supabase.rpc('get_my_ai_monthly_usage', payload);
+  },
+
+  incrementMyAIUsage(payload) {
+    return supabase.rpc('increment_my_ai_monthly_usage', payload);
   },
 
   submitBugReport(payload) {

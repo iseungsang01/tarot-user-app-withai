@@ -1,0 +1,5 @@
+[functions.ai-proxy]
+# The app authenticates this function with opaque customer_sessions tokens in the handler.
+# Disable platform JWT verification so non-JWT customer tokens reach the handler.
+verify_jwt = false
+

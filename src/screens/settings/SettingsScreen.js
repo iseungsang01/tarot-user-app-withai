@@ -110,7 +110,7 @@ const SettingsScreen = ({ navigation }) => {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                <PremiumHeaderPanel title="TUNING ROOM" subtitle={`${customer?.nickname || 'Guest'}님의 셀러 조율과 계정 설정을 관리하세요`} compact />
+                <PremiumHeaderPanel title="SETTINGS" subtitle={`${customer?.nickname || 'Guest'}님의 계정과 앱 설정을 관리하세요`} compact />
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{MENU_ITEMS.info}</Text>

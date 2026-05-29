@@ -37,3 +37,15 @@ export const SUCCESS_MESSAGES = {
 export const STORAGE_KEYS = {
   COACH_MARKS: 'has_seen_main_coach_marks_v1',
 };
+
+
+export const AI_USAGE_LIMITS = {
+  monthly: {
+    summarize_review: 30,
+    analyze_visit_history: 10,
+    polish_review_text: 30,
+    send_chat_message: 100,
+    get_welcome_message: 10,
+    daily_fortune_redraw: 10,
+  },
+};

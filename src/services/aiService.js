@@ -4,6 +4,7 @@
  */
 
 import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
+import { ensureAIUsageAllowed, incrementMyAIUsage, resolveAIUsageType, AI_USAGE_TYPES } from './aiUsageService';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
 
@@ -43,22 +44,34 @@ const withFunctionErrorDetails = async (error) => {
 
 const callAIProxy = async (messages, options = {}, task = 'chat') => {
     try {
+        const {
+            usageType: explicitUsageType,
+            countUsage = true,
+            temperature = 0.7,
+            maxTokens = 1000,
+        } = options;
+        const usageType = explicitUsageType || resolveAIUsageType(task);
+
         const authState = await ensureAuthenticatedSession();
         if (!authState.ok) {
             return {
                 data: null,
-                error: withAuthErrorHandling(authState.error, '로그인이 필요합니다. 다시 로그인해주세요.'),
+                error: withAuthErrorHandling(authState.error, 'Login is required. Please sign in again.'),
             };
+        }
+
+        if (countUsage && usageType) {
+            const usageCheck = await ensureAIUsageAllowed(usageType);
+            if (!usageCheck.allowed) {
+                return { data: null, error: usageCheck.error };
+            }
         }
 
         const { data, error } = await supabase.functions.invoke(EDGE_FUNCTION_NAME, {
             body: {
                 task,
                 messages,
-                options: {
-                    temperature: options.temperature ?? 0.7,
-                    maxTokens: options.maxTokens ?? 1000,
-                },
+                options: { temperature, maxTokens },
             },
             headers: {
                 Authorization: `Bearer ${authState.session.access_token}`,
@@ -76,8 +89,15 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
         if (!data || data.error) {
             return {
                 data: null,
-                error: new Error(stringifyError(data?.error) || 'AI 응답을 받지 못했습니다.'),
+                error: new Error(stringifyError(data?.error) || 'AI response was not received.'),
             };
+        }
+
+        if (countUsage && usageType) {
+            const usageRecord = await incrementMyAIUsage(usageType);
+            if (usageRecord.error) {
+                return { data: null, error: usageRecord.error };
+            }
         }
 
         return {
@@ -89,7 +109,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
     } catch (error) {
         return {
             data: null,
-            error: withAuthErrorHandling(error, 'AI 서비스 연동 오류가 발생했습니다.'),
+            error: withAuthErrorHandling(error, 'AI service integration error occurred.'),
         };
     }
 };
@@ -268,7 +288,7 @@ export const getWelcomeMessage = async () => {
 // 3. 오늘의 운세 (Daily Fortune)
 // ─────────────────────────────────────────────────────────────
 
-export const getDailyFortune = async (userName = '사용자', previousFortune = '', cardName = '') => {
+export const getDailyFortune = async (userName = '사용자', previousFortune = '', cardName = '', usageOptions = {}) => {
     const messages = [
         {
             role: 'system',
@@ -293,7 +313,16 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
         },
     ];
 
-    const { data, error } = await callAIProxy(messages, { temperature: 0.9, maxTokens: 450 }, 'getDailyFortune');
+    const { data, error } = await callAIProxy(
+        messages,
+        {
+            temperature: 0.9,
+            maxTokens: 450,
+            usageType: AI_USAGE_TYPES.DAILY_FORTUNE_REDRAW,
+            countUsage: Boolean(usageOptions.countUsage),
+        },
+        'getDailyFortune',
+    );
     if (error) return { data: null, error };
 
     try {

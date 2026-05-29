@@ -16,6 +16,9 @@ DROP FUNCTION IF EXISTS public.update_admin_settings(text, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.verify_password(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.update_customer_password(uuid, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.validate_password_complexity(text) CASCADE;
+DROP FUNCTION IF EXISTS public.get_my_ai_monthly_usage(text, date) CASCADE;
+DROP FUNCTION IF EXISTS public.increment_my_ai_monthly_usage(text, text, date, integer) CASCADE;
+DROP TABLE IF EXISTS public.ai_monthly_usage CASCADE;
 DROP FUNCTION IF EXISTS public.increment_ai_proxy_rate_limit(text, text, text, timestamptz, integer) CASCADE;
 DROP FUNCTION IF EXISTS public.apply_ai_proxy_token_usage(uuid, date, text, bigint, bigint, bigint) CASCADE;
 

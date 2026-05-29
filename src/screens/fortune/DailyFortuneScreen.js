@@ -102,7 +102,7 @@ const DailyFortuneScreen = () => {
       const nickname = customer?.nickname || '고객님';
       const prevContent = hasValidFortune(currentFortune) ? currentFortune.fortune : '';
       const [fortuneResult] = await Promise.all([
-        getDailyFortune(nickname, prevContent, randomCard.name),
+        getDailyFortune(nickname, prevContent, randomCard.name, { countUsage: isRepick }),
         !todayCheckedIn ? storage.saveAttendance(todayStr) : Promise.resolve(),
       ]);
 
@@ -193,7 +193,7 @@ const DailyFortuneScreen = () => {
       >
         <PremiumHeaderPanel
           title="FORTUNE BOARD"
-          subtitle={`${currentYear}년 ${currentMonth + 1}월의 카드 의식 기록을 확인하세요`}
+          subtitle={`${currentYear}년 ${currentMonth + 1}월의 오늘의 운세를 확인하세요`}
           compact
           style={styles.header}
         />
@@ -207,7 +207,7 @@ const DailyFortuneScreen = () => {
             <>
               {!hasFortuneToday && !isTodayError && !selectedFortune && (
                 <View style={styles.doneBanner}>
-                  <Text style={styles.doneText}>카드를 봉인 해제해 오늘의 메시지를 확인해보세요</Text>
+                  <Text style={styles.doneText}>카드를 열어 오늘의 메시지를 확인해보세요</Text>
                 </View>
               )}
 
@@ -220,10 +220,10 @@ const DailyFortuneScreen = () => {
                 {checkInLoading
                   ? '해석 중...'
                   : isTodayError
-                    ? '카드 다시 봉인 해제'
+                    ? '카드 다시 뽑기'
                     : hasFortuneToday
-                      ? '카드 다시 봉인 해제'
-                      : '오늘의 카드 봉인 해제'}
+                      ? '카드 다시 뽑기'
+                      : '오늘의 카드 뽑기'}
               </GoldActionButton>
             </>
           ) : selectedDate ? (
@@ -235,7 +235,7 @@ const DailyFortuneScreen = () => {
 
         {isPickingCard && (
           <PremiumCard style={styles.pickerPanel}>
-            <Text style={styles.pickerTitle}>봉인을 해제할 카드를 선택하세요</Text>
+            <Text style={styles.pickerTitle}>오늘의 카드를 선택하세요</Text>
             <View style={styles.cardRow}>
               {[0, 1, 2].map((idx) => (
                 <TouchableOpacity

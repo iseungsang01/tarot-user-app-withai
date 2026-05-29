@@ -141,7 +141,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                         visit={{
                             id: `sealed-placeholder-${index}`,
                             visit_date: '2026-01-26',
-                            drawer_title: timeFilter !== 'ALL' ? '해당 기간 기록 없음' : '아직 봉인된 서랍',
+                            drawer_title: timeFilter !== 'ALL' ? '해당 기간 기록 없음' : '아직 기록이 없습니다',
                             isPlaceholder: true,
                         }}
                         onSelectCard={() => {}}

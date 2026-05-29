@@ -52,28 +52,28 @@ const TicketScreen = ({ navigation }) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
         showsVerticalScrollIndicator={false}
       >
-      <PremiumHeaderPanel title="TICKET LEDGER" subtitle="스탬프와 쿠폰을 한눈에 확인하세요" compact>
+      <PremiumHeaderPanel title="쿠폰함" subtitle="스탬프와 쿠폰을 한눈에 확인하세요" compact>
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryChip}>
             <Text style={styles.summaryValue}>{coupons.length}</Text>
-            <Text style={styles.summaryLabel}>COUPONS</Text>
+            <Text style={styles.summaryLabel}>쿠폰</Text>
           </View>
           <View style={styles.summaryChip}>
             <Text style={styles.summaryValue}>{currentStamps}/{MAX_STAMPS}</Text>
-            <Text style={styles.summaryLabel}>STAMPS</Text>
+            <Text style={styles.summaryLabel}>스탬프</Text>
           </View>
           <View style={styles.summaryChip}>
             <Text style={styles.summaryValue}>{birthdayCoupons.length}</Text>
-            <Text style={styles.summaryLabel}>BONUS</Text>
+            <Text style={styles.summaryLabel}>생일</Text>
           </View>
         </View>
       </PremiumHeaderPanel>
 
       <PremiumCard variant="walnut" style={styles.panel}>
         <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>STAMP CARD</Text>
-          <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `다음 보상까지 ${MAX_STAMPS - currentStamps}개 남았습니다` : '보상 봉인 해제 가능'}</Text>
+          <Text style={styles.panelTitle}>스탬프 카드</Text>
+          <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `다음 보상까지 ${MAX_STAMPS - currentStamps}개 남았습니다` : '쿠폰을 받을 수 있습니다'}</Text>
         </View>
         <View style={styles.stampGrid}>
           {Array.from({ length: MAX_STAMPS }).map((_, index) => {
@@ -90,9 +90,9 @@ const TicketScreen = ({ navigation }) => {
 
       <PremiumCard style={styles.panel}>
         <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>OWNED COUPONS</Text>
+          <Text style={styles.panelTitle}>보유 쿠폰</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('Coupon')}>
-            <Text style={styles.detailLink}>DETAIL</Text>
+            <Text style={styles.detailLink}>자세히</Text>
           </TouchableOpacity>
         </View>
 
@@ -100,7 +100,7 @@ const TicketScreen = ({ navigation }) => {
           <View style={styles.emptyEnvelope}>
             <View style={styles.envelopeFlap} />
             <CellarMark size={44} />
-            <Text style={styles.emptyText}>아직 봉인된 쿠폰이 없습니다</Text>
+            <Text style={styles.emptyText}>보유한 쿠폰이 없습니다</Text>
           </View>
         ) : (
           coupons.map((coupon) => (
@@ -115,7 +115,7 @@ const TicketScreen = ({ navigation }) => {
       </PremiumCard>
 
       {stampCoupons.length > 0 && (
-        <Text style={styles.footerHint}>{stampCoupons.length} stamp reward coupon{stampCoupons.length > 1 ? 's' : ''} available.</Text>
+        <Text style={styles.footerHint}>스탬프 쿠폰 {stampCoupons.length}개를 사용할 수 있습니다.</Text>
       )}
       </ScrollView>
     </ScreenContainer>
