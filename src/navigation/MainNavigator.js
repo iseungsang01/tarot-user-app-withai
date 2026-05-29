@@ -18,7 +18,6 @@ import {
   DailyFortuneScreen,
   AIChatHistoryScreen,
   CouponScreen,
-  StampScreen,
   NoticeDetailScreen,
   NewsScreen,
   TicketScreen,
@@ -327,7 +326,6 @@ const MainNavigator = () => {
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="AIChatHistory" component={AIChatHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Coupon" component={CouponScreen} options={{ presentation: 'card' }} />
-      <Stack.Screen name="Stamp" component={StampScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />

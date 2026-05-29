@@ -74,7 +74,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 stats={stats}
                 couponCount={couponCount}
                 onNavigateCoupon={() => navigation.navigate('Coupon')}
-                onNavigateStamp={() => navigation.navigate('Stamp')}
+                onNavigateStamp={() => navigation.navigate('Ticket')}
                 onCoachAdvanceCoupon={() => advanceCoachStep?.('home-coupon')}
                 onCoachAdvanceStamp={() => advanceCoachStep?.('home-stamp')}
                 onCaptureStampFrame={(frame) => onCaptureCoachFrame?.('home-stamp', frame)}

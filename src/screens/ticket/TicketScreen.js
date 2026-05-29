@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -9,6 +9,19 @@ import { couponService } from '../../services/couponService';
 import { handleApiCall } from '../../utils/errorHandler';
 
 const MAX_STAMPS = 10;
+
+const tarotCards = [
+  { name: 'The Fool', image: require('../../../assets/card/0. The Fool.png') },
+  { name: 'The Magician', image: require('../../../assets/card/1. The Magician.png') },
+  { name: 'The High Priestess', image: require('../../../assets/card/2. The High Priestess.png') },
+  { name: 'The Empress', image: require('../../../assets/card/3. The Empress.png') },
+  { name: 'The Emperor', image: require('../../../assets/card/4. The Emperor.png') },
+  { name: 'The Hierophant', image: require('../../../assets/card/5. The Hierophant.png') },
+  { name: 'The Lovers', image: require('../../../assets/card/6. The Lovers.png') },
+  { name: 'The Chariot', image: require('../../../assets/card/7. Chariot.png') },
+  { name: 'Strength', image: require('../../../assets/card/8. Strength.png') },
+  { name: 'The Hermit', image: require('../../../assets/card/9. The Hermit.png') },
+];
 
 const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
 
@@ -76,12 +89,19 @@ const TicketScreen = ({ navigation }) => {
           <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `다음 보상까지 ${MAX_STAMPS - currentStamps}개 남았습니다` : '쿠폰을 받을 수 있습니다'}</Text>
         </View>
         <View style={styles.stampGrid}>
-          {Array.from({ length: MAX_STAMPS }).map((_, index) => {
+          {tarotCards.map((card, index) => {
             const filled = index < currentStamps;
             return (
-              <View key={`stamp-${index}`} style={[styles.stampSlot, filled && styles.stampSlotFilled]}>
-                <CellarMark size={filled ? 42 : 36} filled={filled} />
-                <Text style={[styles.stampNumber, filled && styles.stampNumberFilled]}>{String(index + 1).padStart(2, '0')}</Text>
+              <View key={card.name} style={[styles.stampSlot, filled && styles.stampSlotFilled]}>
+                <Image
+                  source={card.image}
+                  style={[styles.stampCardImage, !filled && styles.stampCardImageLocked]}
+                  resizeMode="cover"
+                />
+                {!filled && <View style={styles.lockedOverlay} />}
+                <View style={[styles.stampNumberBadge, filled && styles.stampNumberBadgeFilled]}>
+                  <Text style={[styles.stampNumber, filled && styles.stampNumberFilled]}>{String(index + 1).padStart(2, '0')}</Text>
+                </View>
               </View>
             );
           })}
@@ -184,21 +204,51 @@ const styles = StyleSheet.create({
   },
   stampSlot: {
     width: '18.4%',
-    aspectRatio: 1,
-    borderRadius: 999,
+    aspectRatio: 0.68,
+    borderRadius: 9,
     borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.28)',
+    borderColor: 'rgba(200,163,64,0.32)',
     backgroundColor: 'rgba(7,0,9,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
   stampSlotFilled: {
     borderColor: DrawerTheme.brightGold,
-    backgroundColor: 'rgba(200,163,64,0.1)',
+    borderWidth: 1.5,
+    shadowColor: DrawerTheme.brightGold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  stampCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  stampCardImageLocked: {
+    opacity: 0.34,
+  },
+  lockedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(12,0,14,0.56)',
+  },
+  stampNumberBadge: {
+    position: 'absolute',
+    right: 4,
+    bottom: 4,
+    minWidth: 19,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.56)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,163,64,0.26)',
+  },
+  stampNumberBadgeFilled: {
+    backgroundColor: 'rgba(245,210,103,0.88)',
+    borderColor: DrawerTheme.brightGold,
   },
   stampNumber: {
-    position: 'absolute',
-    bottom: 5,
     color: DrawerTheme.mutedGold,
     fontSize: 8,
     fontWeight: '900',
