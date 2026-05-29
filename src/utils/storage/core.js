@@ -18,7 +18,6 @@ export const STORAGE_KEYS = {
   LAST_SYNC: 'last_sync',
   DAILY_FORTUNE: 'daily_fortune',
   ATTENDANCE: 'attendance_history',
-  AI_CHAT_HISTORY: 'ai_chat_history',
 };
 
 export const coreStorage = {

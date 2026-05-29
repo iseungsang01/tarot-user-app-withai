@@ -8,7 +8,6 @@ export { default as DailyFortuneScreen } from './fortune/DailyFortuneScreen';
 // History
 export { default as HistoryScreen } from './history/HistoryScreen';
 export { default as VisitDetailScreen } from './history/VisitDetailScreen';
-export { default as AIChatHistoryScreen } from './history/AIChatHistoryScreen';
 
 // Notice / News
 export { default as NoticeScreen } from './notice/NoticeScreen';
