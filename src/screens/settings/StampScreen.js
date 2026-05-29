@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientBackground } from '../../components/common/GradientBackground';
@@ -7,26 +7,20 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 import { CommonStyles } from '../../styles/CommonStyles';
 import { useAuth } from '../../hooks/useAuth';
 
-const { width } = Dimensions.get('window');
-// Padding: wrapper (20*2) + card (22*2) + grid (4*2) = 92
-// Gaps: 4 gaps * 8px = 32
-// Available width for 5 items = width - 92 - 32
-const STAMP_SIZE = (width - 124) / 5;
+const MAX_STAMPS = 10;
 
 const tarotCards = [
-    { emoji: '', name: 'The Fool' },
-    { emoji: '', name: 'The Magician' },
-    { emoji: '', name: 'The Empress' },
-    { emoji: '', name: 'The Emperor' },
-    { emoji: '⚖', name: 'Justice' },
-    { emoji: '', name: 'The Moon' },
-    { emoji: '☀', name: 'The Sun' },
-    { emoji: '', name: 'The Hermit' },
-    { emoji: '', name: 'The Lovers' },
-    { emoji: '', name: 'The Devil' }
+    { name: 'The Fool', image: require('../../../assets/card/0. The Fool.png') },
+    { name: 'The Magician', image: require('../../../assets/card/1. The Magician.png') },
+    { name: 'The High Priestess', image: require('../../../assets/card/2. The High Priestess.png') },
+    { name: 'The Empress', image: require('../../../assets/card/3. The Empress.png') },
+    { name: 'The Emperor', image: require('../../../assets/card/4. The Emperor.png') },
+    { name: 'The Hierophant', image: require('../../../assets/card/5. The Hierophant.png') },
+    { name: 'The Lovers', image: require('../../../assets/card/6. The Lovers.png') },
+    { name: 'The Chariot', image: require('../../../assets/card/7. Chariot.png') },
+    { name: 'Strength', image: require('../../../assets/card/8. Strength.png') },
+    { name: 'The Hermit', image: require('../../../assets/card/9. The Hermit.png') },
 ];
-
-const MAX_STAMPS = 10;
 
 const StampScreen = () => {
     const insets = useSafeAreaInsets();
@@ -37,8 +31,9 @@ const StampScreen = () => {
         setCurrentCustomer(customer);
     }, [customer]);
 
-    const currentStamps = useMemo(() => currentCustomer?.current_stamps || 0, [currentCustomer]);
-    const progressPercent = (currentStamps / MAX_STAMPS) * 100;
+    const currentStamps = useMemo(() => Number(currentCustomer?.current_stamps) || 0, [currentCustomer]);
+    const cappedStamps = Math.max(0, Math.min(currentStamps, MAX_STAMPS));
+    const progressPercent = (cappedStamps / MAX_STAMPS) * 100;
 
     return (
         <GradientBackground>
@@ -54,19 +49,18 @@ const StampScreen = () => {
                         <Text style={styles.title}>STAMP BOARD</Text>
                     </View>
                     <View style={styles.headerDivider} />
-                    <Text style={styles.subtitle}>오늘의 상담이 한 조각의 기록이 됩니다</Text>
+                    <Text style={styles.subtitle}>오늘의 상담을 타로 카드 조각으로 모아보세요.</Text>
                 </View>
 
-                {/*  Progress Overview Section */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.statusBadge}>
-                            <Text style={styles.statusBadgeText}>진행도</Text>
+                            <Text style={styles.statusBadgeText}>진행</Text>
                         </View>
                         <Text style={styles.cardHeaderText}>현재 적립 현황</Text>
                         <View style={{ flex: 1 }} />
                         <Text style={styles.progressValue}>
-                            <Text style={styles.currentCount}>{currentStamps}</Text>
+                            <Text style={styles.currentCount}>{cappedStamps}</Text>
                             <Text style={styles.totalCount}> / {MAX_STAMPS}</Text>
                         </Text>
                     </View>
@@ -84,14 +78,13 @@ const StampScreen = () => {
                         </View>
 
                         <Text style={styles.rewardHint}>
-                            {currentStamps >= MAX_STAMPS
-                                ? '✨ 모든 스탬프를 모으셨습니다! 쿠폰을 확인해주세요.'
-                                : `앞으로 ${MAX_STAMPS - currentStamps}개의 스탬프를 더 모으면 쿠폰이 발송됩니다.`}
+                            {cappedStamps >= MAX_STAMPS
+                                ? '모든 스탬프를 모았습니다! 쿠폰함을 확인해주세요.'
+                                : `앞으로 ${MAX_STAMPS - cappedStamps}개의 스탬프를 더 모으면 쿠폰이 발송됩니다.`}
                         </Text>
                     </View>
                 </View>
 
-                {/*  Main Stamp Card */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.collectionBadge}>
@@ -102,21 +95,26 @@ const StampScreen = () => {
 
                     <View style={styles.contentContainer}>
                         <View style={styles.stampGrid}>
-                            {Array.from({ length: MAX_STAMPS }).map((_, i) => {
-                                const filled = i < currentStamps;
+                            {tarotCards.map((card, i) => {
+                                const filled = i < cappedStamps;
                                 return (
-                                    <View key={`stamp-${i}`} style={styles.stampWrapper}>
+                                    <View key={card.name} style={styles.stampWrapper}>
                                         <View style={[styles.stampFrame, filled && styles.stampFrameFilled]}>
+                                            <Image
+                                                source={card.image}
+                                                style={[styles.cardImage, !filled && styles.cardImageLocked]}
+                                                resizeMode="cover"
+                                            />
+                                            {!filled && <View style={styles.lockedOverlay} />}
                                             {filled ? (
-                                                <View style={styles.filledContent}>
-                                                    <LinearGradient
-                                                        colors={['rgba(212, 175, 55, 0.2)', 'rgba(212, 175, 55, 0.05)']}
-                                                        style={styles.stampInnerGlow}
-                                                    />
-                                                    <Text style={styles.stampEmoji}>{tarotCards[i].emoji}</Text>
-                                                </View>
+                                                <LinearGradient
+                                                    colors={['rgba(255, 235, 170, 0.22)', 'rgba(212, 175, 55, 0)']}
+                                                    style={styles.stampInnerGlow}
+                                                />
                                             ) : (
-                                                <Text style={styles.indexText}>{i + 1}</Text>
+                                                <View style={styles.lockedBadge}>
+                                                    <Text style={styles.indexText}>{i + 1}</Text>
+                                                </View>
                                             )}
                                         </View>
                                     </View>
@@ -131,12 +129,12 @@ const StampScreen = () => {
                 </View>
 
                 <View style={styles.noticeBox}>
-                    <Text style={styles.noticeTitle}> 이용 안내</Text>
+                    <Text style={styles.noticeTitle}>이용 안내</Text>
                     <View style={styles.noticeContent}>
                         <Text style={styles.noticeText}>• 상담 완료 시 자동으로 스탬프가 적립됩니다.</Text>
-                        <Text style={styles.noticeText}>• 10개를 모두 모으면 쿠폰함으로 무료 상담권이 발송됩니다.</Text>
+                        <Text style={styles.noticeText}>• 10개를 모두 모으면 무료 상담 쿠폰이 발송됩니다.</Text>
                         <Text style={styles.noticeText}>• 발급된 쿠폰의 유효기간은 발행일로부터 3개월입니다.</Text>
-                        <Text style={styles.noticeText}>• 스탬프 적립 내역은 본인 명의의 계정에서만 유효합니다.</Text>
+                        <Text style={styles.noticeText}>• 스탬프 적립 내역은 본인 계정에서만 유효합니다.</Text>
                     </View>
                 </View>
             </ScrollView>
@@ -152,7 +150,6 @@ const styles = StyleSheet.create({
     headerDivider: CommonStyles.headerDivider,
     subtitle: CommonStyles.subtitle,
 
-    // Card Design (NoticeCard 스타일 기반)
     card: {
         backgroundColor: '#4A3728',
         borderRadius: 16,
@@ -180,7 +177,6 @@ const styles = StyleSheet.create({
         borderTopColor: 'rgba(255,255,255,0.06)',
     },
 
-    // Badge Styles (NoticeCard Pin Badge 참고)
     statusBadge: {
         backgroundColor: DrawerTheme.goldBrass,
         borderRadius: 4,
@@ -208,7 +204,6 @@ const styles = StyleSheet.create({
         color: DrawerTheme.goldBrass,
     },
 
-    // Progress UI
     progressValue: {
         flexDirection: 'row',
         alignItems: 'baseline',
@@ -246,61 +241,66 @@ const styles = StyleSheet.create({
         opacity: 0.8,
     },
 
-    // Stamp Grid UI
     stampGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         paddingHorizontal: 4,
     },
-
     stampWrapper: {
-        width: '18.5%', // Guarantees 5 items per row
-        aspectRatio: 0.7, // Tarot card比例
-        marginVertical: 4,
+        width: '18.5%',
+        aspectRatio: 0.68,
+        marginVertical: 5,
     },
     stampFrame: {
         flex: 1,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        alignItems: 'center',
-        justifyContent: 'center',
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.35)',
         overflow: 'hidden',
     },
     stampFrameFilled: {
         borderColor: DrawerTheme.goldBrass,
         borderWidth: 1.5,
-        backgroundColor: 'rgba(45, 35, 20, 0.6)',
         shadowColor: DrawerTheme.goldBright,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
         shadowRadius: 10,
         elevation: 5,
     },
-    filledContent: {
+    cardImage: {
         width: '100%',
         height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
+    },
+    cardImageLocked: {
+        opacity: 0.34,
+    },
+    lockedOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(18, 12, 8, 0.52)',
     },
     stampInnerGlow: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: 8,
     },
-    stampEmoji: {
-        fontSize: 26,
-        ...Platform.select({
-            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.6, shadowRadius: 4 },
-            android: { elevation: 4 }
-        })
+    lockedBadge: {
+        position: 'absolute',
+        top: 5,
+        right: 5,
+        minWidth: 20,
+        height: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.48)',
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.25)',
     },
     indexText: {
-        color: 'rgba(212, 175, 55, 0.1)',
-        fontSize: 18,
+        color: 'rgba(255, 230, 160, 0.74)',
+        fontSize: 11,
         fontWeight: '900',
-        fontStyle: 'italic',
     },
     cardFooter: {
         marginTop: 20,
@@ -314,7 +314,6 @@ const styles = StyleSheet.create({
         opacity: 0.9,
     },
 
-    // Notice Box
     noticeBox: {
         backgroundColor: 'rgba(139, 90, 43, 0.05)',
         borderRadius: 16,
