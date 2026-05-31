@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -78,9 +78,16 @@ const DailyFortuneScreen = () => {
 
   useEffect(() => {
     MAJOR_ARCANA.forEach((card) => {
-      if (card?.image) Image.prefetch(card.image);
+      if (typeof card?.image === 'string') Image.prefetch(card.image);
     });
   }, []);
+
+  const getCardImageSource = (fortune) => {
+    const localCard = MAJOR_ARCANA.find((card) => card.id === fortune?.cardId);
+    const cardImage = localCard?.image || fortune?.cardImage;
+    if (!cardImage) return null;
+    return typeof cardImage === 'string' ? { uri: cardImage } : cardImage;
+  };
 
   const handleDrawCard = async (isRepick = false) => {
     const currentFortune = allFortunes[todayStr];
@@ -90,6 +97,7 @@ const DailyFortuneScreen = () => {
     try {
       const randomCard = MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
       const initialFortuneState = {
+        cardId: randomCard.id,
         cardName: randomCard.nameKr,
         cardImage: randomCard.image,
         fortune: null,
@@ -115,6 +123,7 @@ const DailyFortuneScreen = () => {
 
       const finalFortune = {
         ...fortuneResult.data,
+        cardId: randomCard.id,
         cardName: randomCard.nameKr,
         cardImage: randomCard.image,
       };
@@ -267,7 +276,7 @@ const DailyFortuneScreen = () => {
 
             {selectedFortune.cardImage && (
               <View style={styles.resultCardContainer}>
-                <Image source={{ uri: selectedFortune.cardImage }} style={styles.resultCardImage} resizeMode="contain" />
+                <Image source={getCardImageSource(selectedFortune)} style={styles.resultCardImage} resizeMode="contain" />
                 <Text style={styles.resultCardName}>{selectedFortune.cardName}</Text>
               </View>
             )}
