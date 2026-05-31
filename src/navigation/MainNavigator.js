@@ -183,7 +183,8 @@ const TabNavigator = () => {
     setStepIndex(0);
   };
 
-  const advanceStep = useCallback((expectedStepKey) => {
+  const advanceStep = useCallback((expectedStepKey, options = {}) => {
+    const { navigateNext = true } = options;
     const current = stepsWithFrame[stepIndex];
     if (!current) return;
     if (expectedStepKey && current.key !== expectedStepKey) return;
@@ -197,7 +198,7 @@ const TabNavigator = () => {
       const nextIndex = Math.min(prev + 1, stepsWithFrame.length - 1);
       const nextStep = stepsWithFrame[nextIndex];
       const nextRouteName = STEP_ROUTE_MAP[nextStep?.key];
-      if (nextRouteName) navRef.current?.navigate(nextRouteName);
+      if (navigateNext && nextRouteName) navRef.current?.navigate(nextRouteName);
       return nextIndex;
     });
   }, [stepIndex, stepsWithFrame]);

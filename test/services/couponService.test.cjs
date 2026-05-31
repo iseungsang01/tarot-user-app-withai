@@ -56,12 +56,12 @@ test('couponService: counts valid coupons through customer-session RPC', async (
   assert.deepEqual(result, { count: 3, error: null });
 });
 
-test('couponService: uses coupons through customer-session RPC', async () => {
+test('couponService: uses coupons through customer-session and admin-password RPC', async () => {
   const calls = [];
   const supabaseClient = {
-    useMyCoupon: async (payload) => {
+    useMyCouponWithAdminPassword: async (payload) => {
       calls.push(payload);
-      return { data: { id: 10, is_used: true }, error: null };
+      return { data: { success: true, coupon: { id: 10, is_used: true } }, error: null };
     },
   };
 
@@ -71,8 +71,29 @@ test('couponService: uses coupons through customer-session RPC', async () => {
     '../utils/storage': { storage: createStorageMock() },
   });
 
-  const result = await couponService.useCoupon(10);
+  const result = await couponService.useCoupon(10, 'admin-secret');
 
-  assert.deepEqual(calls, [{ p_session_token: 'session-token', p_coupon_id: 10 }]);
+  assert.deepEqual(calls, [{ p_session_token: 'session-token', p_coupon_id: 10, p_admin_password: 'admin-secret' }]);
   assert.deepEqual(result, { error: null });
+});
+
+test('couponService: rejects coupon use without admin password before RPC', async () => {
+  const calls = [];
+  const supabaseClient = {
+    useMyCouponWithAdminPassword: async (payload) => {
+      calls.push(payload);
+      return { data: { success: true }, error: null };
+    },
+  };
+
+  const { couponService } = loadModule('src/services/couponService.js', {
+    './supabase': { supabase: createSupabaseTableMock() },
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage: createStorageMock() },
+  });
+
+  const result = await couponService.useCoupon(10, '');
+
+  assert.equal(calls.length, 0);
+  assert.equal(result.error.code, 'ADMIN_PASSWORD_REQUIRED');
 });

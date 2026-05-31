@@ -83,13 +83,19 @@ export const couponService = {
    * @param {number} couponId - 쿠폰 ID
    * @returns {object} { error }
    */
-  async useCoupon(couponId) {
+  async useCoupon(couponId, adminPassword) {
     try {
+      if (!adminPassword?.trim()) {
+        const error = new Error('Admin password is required to use a coupon.');
+        error.code = 'ADMIN_PASSWORD_REQUIRED';
+        throw error;
+      }
 
       const token = await requireCustomerSessionToken();
-      const { error } = await supabaseClient.useMyCoupon({
+      const { data, error } = await supabaseClient.useMyCouponWithAdminPassword({
         p_session_token: token,
         p_coupon_id: couponId,
+        p_admin_password: adminPassword,
       });
 
       if (error) {
@@ -97,10 +103,17 @@ export const couponService = {
         throw error;
       }
 
+      if (data?.success === false) {
+        const useError = new Error(data.message || 'Coupon could not be used.');
+        useError.code = data.reason || 'COUPON_USE_FAILED';
+        throw useError;
+      }
 
       return { error: null };
     } catch (error) {
-      console.error('Use coupon error:', error);
+      if (error?.code !== 'ADMIN_PASSWORD_REQUIRED') {
+        console.error('Use coupon error:', error);
+      }
       return { error };
     }
   },

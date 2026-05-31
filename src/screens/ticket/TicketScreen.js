@@ -6,7 +6,6 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 import { CouponCard, CellarMark, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { couponService } from '../../services/couponService';
-import { adminService } from '../../services/adminService';
 import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
 
 const MAX_STAMPS = 10;
@@ -82,32 +81,26 @@ const TicketScreen = () => {
       return;
     }
 
-    setProcessingCouponId(coupon.id);
-    const { data: isVerified, error: verifyError } = await handleApiCall(
-      'TicketScreen.verifyAdminPassword',
-      () => adminService.verifyPassword(password),
-    );
-
-    if (verifyError || !isVerified) {
-      setProcessingCouponId(null);
-      Alert.alert('인증 실패', '관리자 비밀번호가 일치하지 않습니다.');
-      return;
-    }
+    Keyboard.dismiss();
 
     Alert.alert('쿠폰 사용', '이 쿠폰을 사용 처리하시겠습니까?', [
       {
         text: '취소',
         style: 'cancel',
-        onPress: () => setProcessingCouponId(null),
       },
       {
         text: '사용',
         onPress: async () => {
-          const { error } = await handleApiCall('TicketScreen.useCoupon', () => couponService.useCoupon(coupon.id));
+          setProcessingCouponId(coupon.id);
+          const { error } = await handleApiCall('TicketScreen.useCoupon', () => couponService.useCoupon(coupon.id, password));
           if (!error) {
             showSuccessAlert('COUPON_USED', Alert, '쿠폰이 사용 처리되었습니다.');
             resetCouponUse();
             await Promise.all([loadTickets(), refreshCustomer?.()]);
+          } else if (error.code === 'INVALID_ADMIN_PASSWORD') {
+            Alert.alert('인증 실패', '관리자 비밀번호가 일치하지 않습니다.');
+          } else {
+            Alert.alert('쿠폰 사용 실패', error.message || '쿠폰 사용 처리 중 문제가 발생했습니다.');
           }
           setProcessingCouponId(null);
         },
@@ -169,9 +162,6 @@ const TicketScreen = () => {
       <PremiumCard style={styles.panel}>
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>보유 쿠폰</Text>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('Coupon')}>
-            <Text style={styles.detailLink}>자세히</Text>
-          </TouchableOpacity>
         </View>
 
         {coupons.length === 0 ? (

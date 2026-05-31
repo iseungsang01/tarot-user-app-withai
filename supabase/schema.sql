@@ -151,6 +151,14 @@ CREATE TABLE public.customer_password_audit_logs (
     metadata jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
+CREATE TABLE IF NOT EXISTS public.customer_sessions (
+    token_hash text PRIMARY KEY,
+    customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT NOW(),
+    expires_at timestamptz NOT NULL DEFAULT (NOW() + interval '30 days'),
+    revoked_at timestamptz
+);
+
 -- ==========================================
 -- 3. 인덱스 설정 (최적화)
 -- ==========================================
@@ -162,6 +170,8 @@ CREATE INDEX idx_notices_pinned_published ON notices(is_pinned, is_published) WH
 CREATE INDEX idx_login_attempt_tracker_phone_hash ON login_attempt_tracker(phone_hash);
 CREATE INDEX idx_login_attempt_tracker_lock_expires_at ON login_attempt_tracker(lock_expires_at);
 CREATE INDEX idx_customer_password_audit_customer ON customer_password_audit_logs(customer_id, changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer ON public.customer_sessions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_sessions_active ON public.customer_sessions(customer_id, expires_at) WHERE revoked_at IS NULL;
 
 -- Additional query optimization indexes
 CREATE INDEX idx_visit_history_visit_date ON visit_history(visit_date);
@@ -180,6 +190,7 @@ ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vote_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE login_attempt_tracker ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customer_sessions ENABLE ROW LEVEL SECURITY;
 
 -- 공통 RLS 정책 (데모용으로 모두 허용되어 있으나 실제 운영 시 보안 강화 필요)
 CREATE POLICY "Allow All Select" ON customers FOR SELECT USING (true);
@@ -192,9 +203,6 @@ CREATE POLICY "Allow All Update" ON visit_history FOR UPDATE USING (true);
 CREATE POLICY "Allow All Delete" ON visit_history FOR DELETE USING (true);
 
 CREATE POLICY "Allow All Select" ON coupon_history FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert" ON coupon_history FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update" ON coupon_history FOR UPDATE USING (true);
-CREATE POLICY "Allow All Delete" ON coupon_history FOR DELETE USING (true);
 
 CREATE POLICY "Allow All Select" ON notices FOR SELECT USING (true);
 CREATE POLICY "Allow All Insert" ON notices FOR INSERT WITH CHECK (true);
@@ -216,6 +224,8 @@ CREATE POLICY "Allow All Insert" ON vote_responses FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow All Update" ON vote_responses FOR UPDATE USING (true);
 CREATE POLICY "Allow All Delete" ON vote_responses FOR DELETE USING (true);
 ALTER TABLE customer_password_audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No Direct Access customer_sessions" ON public.customer_sessions
+FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
 
 -- 고객 정보: 본인 데이터만 접근 가능
 CREATE POLICY "Customers can view own profile" ON customers
@@ -240,12 +250,8 @@ FOR DELETE USING (customer_id = auth.uid());
 -- 쿠폰 이력: 본인 데이터만 접근 가능
 CREATE POLICY "Coupon history owner select" ON coupon_history
 FOR SELECT USING (customer_id = auth.uid());
-CREATE POLICY "Coupon history owner insert" ON coupon_history
-FOR INSERT WITH CHECK (customer_id = auth.uid());
-CREATE POLICY "Coupon history owner update" ON coupon_history
-FOR UPDATE USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid());
-CREATE POLICY "Coupon history owner delete" ON coupon_history
-FOR DELETE USING (customer_id = auth.uid());
+CREATE POLICY "No Direct Mutation coupon_history" ON coupon_history
+FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
 
 -- 공지사항: anon 포함 공개 읽기만 허용
 CREATE POLICY "Public can read published notices" ON notices
@@ -466,6 +472,7 @@ DECLARE
     v_lock_expires_at timestamptz;
     v_max_failed_attempts integer := 5;
     v_lock_minutes integer := 5;
+    v_session_token text;
 BEGIN
     v_phone_hash := encode(extensions.digest(p_phone, 'sha256'), 'hex');
     v_device_hash := encode(extensions.digest(COALESCE(NULLIF(trim(p_client_fingerprint), ''), 'unknown'), 'sha256'), 'hex');
@@ -554,7 +561,97 @@ BEGIN
     WHERE phone_hash = v_phone_hash
       AND ip_device_hash IN ('__phone__', v_device_hash);
 
-    RETURN jsonb_build_object('success', true, 'id', v_customer.id, 'nickname', v_customer.nickname);
+    v_session_token := encode(extensions.gen_random_bytes(32), 'hex');
+    INSERT INTO public.customer_sessions (token_hash, customer_id)
+    VALUES (encode(extensions.digest(v_session_token, 'sha256'), 'hex'), v_customer.id);
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'session_token', v_session_token,
+        'id', v_customer.id,
+        'nickname', v_customer.nickname,
+        'phone_number', v_customer.phone_number,
+        'current_stamps', v_customer.current_stamps,
+        'visit_count', v_customer.visit_count,
+        'must_change_password', v_customer.must_change_password
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.resolve_customer_session(p_session_token text)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer_id uuid;
+BEGIN
+  IF p_session_token IS NULL OR btrim(p_session_token) = '' THEN
+    RAISE EXCEPTION 'customer session is required' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT s.customer_id
+  INTO v_customer_id
+  FROM public.customer_sessions s
+  JOIN public.customers c ON c.id = s.customer_id
+  WHERE s.token_hash = encode(extensions.digest(p_session_token, 'sha256'), 'hex')
+    AND s.revoked_at IS NULL
+    AND s.expires_at > now()
+    AND c.deleted_at IS NULL;
+
+  IF v_customer_id IS NULL THEN
+    RAISE EXCEPTION 'customer session is invalid or expired' USING ERRCODE = '28000';
+  END IF;
+
+  RETURN v_customer_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.logout_customer(p_session_token text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.customer_sessions
+  SET revoked_at = now()
+  WHERE token_hash = encode(extensions.digest(p_session_token, 'sha256'), 'hex')
+    AND revoked_at IS NULL;
+
+  RETURN FOUND;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_my_profile(p_session_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer_id uuid;
+  v_customer public.customers%ROWTYPE;
+BEGIN
+  v_customer_id := public.resolve_customer_session(p_session_token);
+
+  SELECT * INTO v_customer
+  FROM public.customers
+  WHERE id = v_customer_id
+    AND deleted_at IS NULL;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'customer', jsonb_build_object(
+      'id', v_customer.id,
+      'nickname', v_customer.nickname,
+      'phone_number', v_customer.phone_number,
+      'current_stamps', v_customer.current_stamps,
+      'visit_count', v_customer.visit_count,
+      'must_change_password', v_customer.must_change_password
+    )
+  );
 END;
 $$;
 
@@ -616,6 +713,9 @@ $$;
 -- 실행 권한 부여
 GRANT EXECUTE ON FUNCTION public.register_customer(uuid, text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_customer_session(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.logout_customer(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_profile(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
 
@@ -755,3 +855,52 @@ REVOKE ALL ON FUNCTION public.get_my_ai_monthly_usage(text, date) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.increment_my_ai_monthly_usage(text, text, date, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_my_ai_monthly_usage(text, date) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.increment_my_ai_monthly_usage(text, text, date, integer) TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.use_my_coupon_with_admin_password(
+  p_session_token text,
+  p_coupon_id integer,
+  p_admin_password text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+  v_customer_id uuid;
+  v_hashed_password text;
+  v_coupon public.coupon_history%ROWTYPE;
+BEGIN
+  v_customer_id := public.resolve_customer_session(p_session_token);
+
+  IF p_admin_password IS NULL OR btrim(p_admin_password) = '' THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'INVALID_ADMIN_PASSWORD', 'message', '??? ????? ??????.');
+  END IF;
+
+  SELECT value INTO v_hashed_password
+  FROM public.app_configs
+  WHERE key = 'admin_password';
+
+  IF v_hashed_password IS NULL OR v_hashed_password <> extensions.crypt(p_admin_password, v_hashed_password) THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'INVALID_ADMIN_PASSWORD', 'message', '??? ????? ???? ????.');
+  END IF;
+
+  UPDATE public.coupon_history
+  SET is_used = true,
+      used_at = now()
+  WHERE id = p_coupon_id
+    AND customer_id = v_customer_id
+    AND is_used = false
+    AND (valid_until IS NULL OR valid_until >= now())
+  RETURNING * INTO v_coupon;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'COUPON_NOT_AVAILABLE', 'message', '?? ??? ??? ?? ? ????.');
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'coupon', to_jsonb(v_coupon));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.use_my_coupon_with_admin_password(text, integer, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.use_my_coupon_with_admin_password(text, integer, text) TO anon, authenticated;
