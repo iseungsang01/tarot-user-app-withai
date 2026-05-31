@@ -130,10 +130,6 @@ export const authService = {
 
     const cleanupTasks = [];
 
-    if (typeof supabaseClient.signOutAuthSession === 'function') {
-      cleanupTasks.push(settleWithin(supabaseClient.signOutAuthSession()));
-    }
-
     if (session?.token) {
       cleanupTasks.push(settleWithin(supabaseClient.logoutCustomer({ p_session_token: session.token })));
     }

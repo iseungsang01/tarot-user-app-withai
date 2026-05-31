@@ -21,7 +21,7 @@ test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async 
           invoke: async () => ({ data: { data: '일반 텍스트 응답', usage: {}, provider: 'mock' }, error: null }) 
         } 
       }, 
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'mock_token' } }) 
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }) 
     },
   });
 
@@ -56,7 +56,7 @@ test('aiService: surfaces Edge Function JSON error details', async () => {
           invoke: async () => ({ data: null, error: edgeError }),
         },
       },
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'mock_token' } }),
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
       withAuthErrorHandling: (error) => error,
     },
   });

@@ -148,22 +148,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     let userId: string | null = null;
     if (token) {
-      const { data, error } = await authClient.auth.getUser(token);
-      if (!error && data.user) {
-        userId = data.user.id;
-      } else {
-        const { data: profileData, error: profileError } = await adminClient.rpc('get_my_profile', {
-          p_session_token: token,
-        });
-        const customerId = profileData?.customer?.id || profileData?.id || null;
-        if (!profileError && profileData?.success && customerId) {
-          userId = customerId;
-        }
+      const { data: profileData, error: profileError } = await adminClient.rpc('get_my_profile', {
+        p_session_token: token,
+      });
+      const customerId = profileData?.customer?.id || profileData?.id || null;
+      if (!profileError && profileData?.success && customerId) {
+        userId = customerId;
       }
     }
 

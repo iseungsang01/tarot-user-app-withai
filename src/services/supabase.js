@@ -22,9 +22,8 @@ const createSupabaseClient = () => {
 
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      storage: AsyncStorage,
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: false,
+      autoRefreshToken: false,
       detectSessionInUrl: false,
     },
   });
@@ -114,8 +113,8 @@ export const ensureAuthenticatedSession = async () => {
       return {
         ok: true,
         session: {
-          access_token: customerSession.token,
-          customer_id: customerSession.customerId,
+          token: customerSession.token,
+          customerId: customerSession.customerId,
           type: 'customer_rpc_session',
         },
         error: null,

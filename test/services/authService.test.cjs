@@ -180,10 +180,6 @@ test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제
       revoked.push(payload);
       return { data: true, error: null };
     },
-    signOutAuthSession: async () => {
-      revoked.push({ auth: 'local' });
-      return { error: null };
-    },
   };
 
   const { authService } = loadModule('src/services/authService.js', {
@@ -193,7 +189,7 @@ test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제
 
   await authService.logout();
 
-  assert.deepEqual(revoked, [{ auth: 'local' }, { p_session_token: 'saved-token' }]);
+  assert.deepEqual(revoked, [{ p_session_token: 'saved-token' }]);
   assert.equal(await storage.get('tarot_customer_session'), null);
   assert.equal(await storage.get('tarot_customer'), null);
 });
@@ -207,9 +203,6 @@ test('authService: logout clears local session even when remote cleanup fails', 
   const supabaseClient = {
     logoutCustomer: async () => {
       throw new Error('network down');
-    },
-    signOutAuthSession: async () => {
-      throw new Error('auth cleanup failed');
     },
   };
 
@@ -240,7 +233,6 @@ test('authService: logout tolerates Supabase thenables without catch method', as
       assert.deepEqual(payload, { p_session_token: 'saved-token' });
       return makeThenable({ data: true, error: null });
     },
-    signOutAuthSession: () => makeThenable({ error: null }),
   };
 
   const { authService } = loadModule('src/services/authService.js', {

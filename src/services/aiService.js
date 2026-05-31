@@ -75,7 +75,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
                 options: { temperature, maxTokens },
             },
             headers: {
-                Authorization: `Bearer ${authState.session.access_token}`,
+                Authorization: `Bearer ${authState.session.token}`,
             },
             signal,
         });

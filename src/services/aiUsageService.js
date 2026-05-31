@@ -47,7 +47,7 @@ const getSessionToken = async () => {
       error: withAuthErrorHandling(authState.error, 'Login is required. Please sign in again.'),
     };
   }
-  return { token: authState.session.access_token, error: null };
+  return { token: authState.session.token, error: null };
 };
 
 export const getMyAIUsage = async (monthBucket) => {

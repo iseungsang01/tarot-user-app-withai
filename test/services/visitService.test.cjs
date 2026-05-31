@@ -25,7 +25,7 @@ test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
 
   const { visitService } = loadModule('src/services/visitService.js', {
     './supabase': {
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'test-token' }, error: null }),
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'test-token' }, error: null }),
       withAuthErrorHandling: (error) => error,
       supabase: {},
     },
@@ -58,7 +58,7 @@ test('visitService: customer stats use the stored RPC session token', async () =
 
   const { visitService } = loadModule('src/services/visitService.js', {
     './supabase': {
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'rpc-token' }, error: null }),
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'rpc-token' }, error: null }),
       withAuthErrorHandling: (error) => error,
       supabase: {},
     },

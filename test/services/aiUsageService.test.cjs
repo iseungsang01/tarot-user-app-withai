@@ -6,7 +6,7 @@ test('aiUsageService: blocks when monthly count reaches configured limit', async
   const { ensureAIUsageAllowed } = loadModule('src/services/aiUsageService.js', {
     '../constants/Config': { AI_USAGE_LIMITS: { monthly: { summarize_review: 1 } } },
     './supabase': {
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'token' } }),
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'token' } }),
       withAuthErrorHandling: (error) => error,
     },
     './supabaseClient': {
@@ -27,7 +27,7 @@ test('aiUsageService: increments through session-token RPC', async () => {
   const { incrementMyAIUsage } = loadModule('src/services/aiUsageService.js', {
     '../constants/Config': { AI_USAGE_LIMITS: { monthly: {} } },
     './supabase': {
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { access_token: 'token' } }),
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'token' } }),
       withAuthErrorHandling: (error) => error,
     },
     './supabaseClient': {

@@ -156,7 +156,7 @@ export const visitService = {
       if (!sessionState.ok) return { data: null, error: sessionState.error };
 
       const { data, error } = await supabaseClient.getCustomerStats({
-        p_session_token: sessionState.session.access_token,
+        p_session_token: sessionState.session.token,
       }, { abortSignal: signal });
 
       if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
