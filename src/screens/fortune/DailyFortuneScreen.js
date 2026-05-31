@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldActionButton, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useAuth } from '../../hooks/useAuth';
-import { getDailyFortune } from '../../services/aiService';
+import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
 import { storage } from '../../utils/storage';
 import { MAJOR_ARCANA } from '../../constants/TarotCards';
 
@@ -50,7 +50,9 @@ const DailyFortuneScreen = () => {
       await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
       const fortunes = await storage.getAllFortunes();
       const history = await storage.getAttendanceHistory();
-      const safeFortunes = fortunes || {};
+      const safeFortunes = Object.fromEntries(
+        Object.entries(fortunes || {}).map(([date, fortune]) => [date, normalizeDailyFortunePayload(fortune)])
+      );
       const safeHistory = history || [];
 
       setAllFortunes(safeFortunes);

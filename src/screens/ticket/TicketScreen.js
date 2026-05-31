@@ -1,12 +1,13 @@
-﻿import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
+﻿import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Alert, Keyboard, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { CouponCard, CellarMark, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { couponService } from '../../services/couponService';
-import { handleApiCall } from '../../utils/errorHandler';
+import { adminService } from '../../services/adminService';
+import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
 
 const MAX_STAMPS = 10;
 
@@ -25,11 +26,15 @@ const tarotCards = [
 
 const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
 
-const TicketScreen = ({ navigation }) => {
+const TicketScreen = () => {
   const insets = useSafeAreaInsets();
   const { customer, refreshCustomer } = useAuth();
   const [coupons, setCoupons] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedCouponId, setSelectedCouponId] = useState(null);
+  const [password, setPassword] = useState('');
+  const [processingCouponId, setProcessingCouponId] = useState(null);
+  const passwordInputRef = useRef(null);
 
   const currentStamps = Math.max(0, Math.min(Number(customer?.current_stamps) || 0, MAX_STAMPS));
   const stampCoupons = useMemo(() => coupons.filter((coupon) => getCouponType(coupon.coupon_code) === 'stamp'), [coupons]);
@@ -44,7 +49,8 @@ const TicketScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       loadTickets();
-    }, [loadTickets])
+      refreshCustomer?.();
+    }, [loadTickets, refreshCustomer])
   );
 
   const handleRefresh = async () => {
@@ -53,8 +59,60 @@ const TicketScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleCouponPress = () => {
-    navigation.navigate('Coupon');
+  const resetCouponUse = () => {
+    Keyboard.dismiss();
+    setSelectedCouponId(null);
+    setPassword('');
+  };
+
+  const handleCouponPress = (coupon) => {
+    if (selectedCouponId === coupon.id) {
+      resetCouponUse();
+      return;
+    }
+
+    setSelectedCouponId(coupon.id);
+    setPassword('');
+    setTimeout(() => passwordInputRef.current?.focus(), 120);
+  };
+
+  const handleUseCoupon = async (coupon) => {
+    if (!password.trim()) {
+      showErrorAlert(createValidationError('PASSWORD_EMPTY'), Alert);
+      return;
+    }
+
+    setProcessingCouponId(coupon.id);
+    const { data: isVerified, error: verifyError } = await handleApiCall(
+      'TicketScreen.verifyAdminPassword',
+      () => adminService.verifyPassword(password),
+    );
+
+    if (verifyError || !isVerified) {
+      setProcessingCouponId(null);
+      Alert.alert('인증 실패', '관리자 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    Alert.alert('쿠폰 사용', '이 쿠폰을 사용 처리하시겠습니까?', [
+      {
+        text: '취소',
+        style: 'cancel',
+        onPress: () => setProcessingCouponId(null),
+      },
+      {
+        text: '사용',
+        onPress: async () => {
+          const { error } = await handleApiCall('TicketScreen.useCoupon', () => couponService.useCoupon(coupon.id));
+          if (!error) {
+            showSuccessAlert('COUPON_USED', Alert, '쿠폰이 사용 처리되었습니다.');
+            resetCouponUse();
+            await Promise.all([loadTickets(), refreshCustomer?.()]);
+          }
+          setProcessingCouponId(null);
+        },
+      },
+    ]);
   };
 
   return (
@@ -123,14 +181,56 @@ const TicketScreen = ({ navigation }) => {
             <Text style={styles.emptyText}>보유한 쿠폰이 없습니다</Text>
           </View>
         ) : (
-          coupons.map((coupon) => (
-            <CouponCard
-              key={coupon.id}
-              coupon={coupon}
-              type={getCouponType(coupon.coupon_code)}
-              onPress={handleCouponPress}
-            />
-          ))
+          coupons.map((coupon) => {
+            const isSelected = selectedCouponId === coupon.id;
+            const isProcessing = processingCouponId === coupon.id;
+
+            return (
+              <View key={coupon.id} style={styles.couponUseBlock}>
+                <CouponCard
+                  coupon={coupon}
+                  type={getCouponType(coupon.coupon_code)}
+                  onPress={handleCouponPress}
+                  containerStyle={isSelected ? styles.selectedCoupon : null}
+                />
+                {isSelected && (
+                  <View style={styles.inlineUseForm}>
+                    <Text style={styles.inlineUseTitle}>관리자 비밀번호를 입력하면 바로 사용할 수 있습니다.</Text>
+                    <TextInput
+                      ref={passwordInputRef}
+                      style={styles.passwordInput}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="관리자 비밀번호"
+                      placeholderTextColor="rgba(255,255,255,0.32)"
+                      secureTextEntry
+                      autoCapitalize="none"
+                      onSubmitEditing={() => handleUseCoupon(coupon)}
+                      editable={!isProcessing}
+                    />
+                    <View style={styles.inlineButtons}>
+                      <TouchableOpacity
+                        activeOpacity={0.84}
+                        style={[styles.inlineButton, styles.useButton]}
+                        onPress={() => handleUseCoupon(coupon)}
+                        disabled={isProcessing}
+                      >
+                        <Text style={styles.useButtonText}>{isProcessing ? '처리 중...' : '사용하기'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        activeOpacity={0.84}
+                        style={[styles.inlineButton, styles.cancelButton]}
+                        onPress={resetCouponUse}
+                        disabled={isProcessing}
+                      >
+                        <Text style={styles.cancelButtonText}>취소</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          })
         )}
       </PremiumCard>
 
@@ -256,11 +356,6 @@ const styles = StyleSheet.create({
   stampNumberFilled: {
     color: DrawerTheme.bgBlackCherry,
   },
-  detailLink: {
-    color: DrawerTheme.goldBrass,
-    fontSize: 11,
-    fontWeight: '900',
-  },
   emptyEnvelope: {
     minHeight: 134,
     alignItems: 'center',
@@ -292,6 +387,73 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     opacity: 0.75,
+  },
+  couponUseBlock: {
+    marginBottom: 10,
+  },
+  selectedCoupon: {
+    borderColor: DrawerTheme.goldBrass,
+    borderWidth: 1.5,
+  },
+  inlineUseForm: {
+    marginTop: -8,
+    marginHorizontal: 4,
+    padding: 14,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: 'rgba(200,163,64,0.34)',
+    backgroundColor: 'rgba(18,0,8,0.9)',
+  },
+  inlineUseTitle: {
+    color: DrawerTheme.ivory,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  passwordInput: {
+    minHeight: 46,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(200,163,64,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.34)',
+    color: DrawerTheme.goldBright,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  inlineButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  inlineButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  useButton: {
+    backgroundColor: DrawerTheme.goldBrass,
+  },
+  useButtonText: {
+    color: DrawerTheme.bgBlackCherry,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  cancelButtonText: {
+    color: DrawerTheme.mutedIvory,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
 

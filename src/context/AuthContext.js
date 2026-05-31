@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const refreshCustomer = async () => {
+  const refreshCustomer = useCallback(async () => {
     if (!customer || customer.isGuest) return;
 
     try {
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       logError('AuthContext.refreshCustomer', error, { customerId: customer?.id });
     }
-  };
+  }, [customer?.id, customer?.isGuest]);
 
   const guestLogin = async () => {
     try {

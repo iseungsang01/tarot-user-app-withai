@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { formatDateShort } from '../../utils/formatters';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
-export const CouponCard = ({ coupon, type, onPress }) => {
+export const CouponCard = ({ coupon, type, onPress, containerStyle }) => {
   const isExpired = coupon.valid_until && new Date(coupon.valid_until) < new Date();
   const themeColor = type === 'stamp' ? DrawerTheme.goldBrass : '#D4A5A5';
   const icon = type === 'stamp' ? '' : '';
@@ -17,6 +17,7 @@ export const CouponCard = ({ coupon, type, onPress }) => {
           backgroundColor: isExpired ? 'rgba(20,20,20,0.6)' : DrawerTheme.woodDark
         },
         isExpired && styles.cardExpired,
+        containerStyle,
       ]}
       onPress={() => !isExpired && onPress(coupon)}
       disabled={isExpired}

@@ -21,6 +21,118 @@ const stringifyError = (errorValue) => {
     return String(errorValue);
 };
 
+const extractFirstJSONObject = (text) => {
+    if (typeof text !== 'string') return null;
+
+    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+    const start = cleaned.indexOf('{');
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < cleaned.length; i += 1) {
+        const char = cleaned[i];
+
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (inString && char === '\\') {
+            escaped = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) continue;
+
+        if (char === '{') depth += 1;
+        if (char === '}') {
+            depth -= 1;
+            if (depth === 0) {
+                return cleaned.slice(start, i + 1);
+            }
+        }
+    }
+
+    return null;
+};
+
+const parseFirstJSONObject = (text) => {
+    const jsonText = extractFirstJSONObject(text);
+    if (!jsonText) return null;
+
+    try {
+        return JSON.parse(jsonText);
+    } catch {
+        return null;
+    }
+};
+
+
+const stripJSONDecorators = (text) => {
+    if (typeof text !== 'string') return '';
+    return text
+        .replace(/```(?:json)?\s*/gi, '')
+        .replace(/```/g, '')
+        .trim();
+};
+
+const cleanJSONLikeValue = (value) => {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/\\n/g, '\n')
+        .replace(/\\"/g, '"')
+        .replace(/^\s*[{,]?\s*"?/g, '')
+        .replace(/"?\s*[,}]?\s*$/g, '')
+        .trim();
+};
+
+const extractLooseField = (text, fieldName) => {
+    const cleaned = stripJSONDecorators(text);
+    if (!cleaned) return '';
+
+    const nextFieldPattern = '"?(?:fortune|luckyColor|luckyItem)"?\\s*[:：]';
+    const pattern = new RegExp(`"?${fieldName}"?\\s*[:：]\\s*([\\s\\S]*?)(?=,?\\s*${nextFieldPattern}|\\s*}\\s*$|$)`, 'i');
+    const match = cleaned.match(pattern);
+    if (!match?.[1]) return '';
+
+    return cleanJSONLikeValue(match[1]);
+};
+
+export const normalizeDailyFortunePayload = (payload) => {
+    if (!payload) return null;
+
+    if (typeof payload === 'object') {
+        const nested = typeof payload.fortune === 'string' ? parseFirstJSONObject(payload.fortune) : null;
+        if (nested) return normalizeDailyFortunePayload({ ...payload, ...nested });
+
+        const looseNestedFortune = typeof payload.fortune === 'string' ? extractLooseField(payload.fortune, 'fortune') : '';
+        const fortune = looseNestedFortune || payload.fortune || '';
+        return {
+            ...payload,
+            fortune: cleanJSONLikeValue(fortune) || '오늘의 운세를 불러올 수 없습니다.',
+            luckyColor: cleanJSONLikeValue(payload.luckyColor || extractLooseField(payload.fortune, 'luckyColor')),
+            luckyItem: cleanJSONLikeValue(payload.luckyItem || extractLooseField(payload.fortune, 'luckyItem')),
+        };
+    }
+
+    const parsed = parseFirstJSONObject(payload);
+    if (parsed) return normalizeDailyFortunePayload(parsed);
+
+    return {
+        fortune: extractLooseField(payload, 'fortune') || cleanJSONLikeValue(stripJSONDecorators(payload)) || '오늘의 운세 데이터가 없습니다.',
+        luckyColor: extractLooseField(payload, 'luckyColor'),
+        luckyItem: extractLooseField(payload, 'luckyItem'),
+    };
+};
+
 
 const withFunctionErrorDetails = async (error) => {
     const response = error?.context;
@@ -159,8 +271,8 @@ export const summarizeReview = async (reviewText, visitDate = '', signal = null)
     if (error) return { data: null, error };
 
     try {
-        const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
-        const parsed = JSON.parse(cleanedData);
+        const parsed = parseFirstJSONObject(data);
+        if (!parsed) throw new Error('AI JSON parse failed.');
         // Robust key validation and fallback mapping
         const result = {
             summary: parsed.summary || '요약 결과를 불러올 수 없습니다.',
@@ -215,8 +327,8 @@ export const analyzeVisitHistory = async (visits, signal = null) => {
     if (error) return { data: null, error };
 
     try {
-        const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
-        const parsed = JSON.parse(cleanedData);
+        const parsed = parseFirstJSONObject(data);
+        if (!parsed) throw new Error('AI JSON parse failed.');
         // Robust key validation and fallback mapping
         const result = {
             overallSummary: parsed.overallSummary || '전체 요약이 없습니다.',
@@ -263,8 +375,8 @@ export const polishReviewText = async (reviewText, signal = null) => {
     if (error) return { data: null, error };
 
     try {
-        const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
-        const parsed = JSON.parse(cleanedData);
+        const parsed = parseFirstJSONObject(data);
+        if (!parsed) throw new Error('AI JSON parse failed.');
         // Robust key validation and fallback mapping
         return { data: parsed.polished || data || '', error: null };
     } catch {
@@ -354,17 +466,11 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
     if (error) return { data: null, error };
 
     try {
-        const cleanedData = data.replace(/```json\n?|\n?```/g, '').trim();
-        const parsed = JSON.parse(cleanedData);
-        // Robust key validation and fallback mapping
-        const result = {
-            fortune: parsed.fortune || '오늘의 운세를 불러올 수 없습니다.',
-            luckyColor: parsed.luckyColor || '',
-            luckyItem: parsed.luckyItem || ''
-        };
-        return { data: result, error: null };
+        const parsed = parseFirstJSONObject(data);
+        if (!parsed) throw new Error('AI JSON parse failed.');
+        return { data: normalizeDailyFortunePayload(parsed), error: null };
     } catch {
-        return { data: { fortune: data || '오늘의 운세 데이터가 없습니다.', luckyColor: '', luckyItem: '' }, error: null };
+        return { data: normalizeDailyFortunePayload(data), error: null };
     }
 };
 
@@ -375,4 +481,5 @@ export default {
     sendChatMessage,
     getWelcomeMessage,
     getDailyFortune,
+    normalizeDailyFortunePayload,
 };

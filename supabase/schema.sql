@@ -740,7 +740,7 @@ BEGIN
   RETURN QUERY
   INSERT INTO public.ai_monthly_usage (customer_id, month_bucket, usage_type, usage_count)
   VALUES (v_customer_id, v_month_bucket, p_usage_type, v_increment)
-  ON CONFLICT (customer_id, month_bucket, usage_type)
+  ON CONFLICT ON CONSTRAINT ai_monthly_usage_pkey
   DO UPDATE SET
     usage_count = public.ai_monthly_usage.usage_count + EXCLUDED.usage_count,
     updated_at = now()
