@@ -29,7 +29,7 @@ export const UIProvider = ({ children }) => {
     };
 
     hydrateUIState();
-  }, [customer]);
+  }, [customer?.id]);
 
   const completeCoachMarks = useCallback(async () => {
     try {
