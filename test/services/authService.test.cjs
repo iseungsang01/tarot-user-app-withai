@@ -12,6 +12,26 @@ const createStorageMock = () => {
   };
 };
 
+test('authService: invalid salt RPC 오류는 계정 비밀번호 저장 형식 문제로 안내한다', async () => {
+  const storage = createStorageMock();
+  const supabaseClient = {
+    loginCustomer: async () => ({
+      data: null,
+      error: { code: '22023', message: 'invalid salt', details: null, hint: null },
+    }),
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await authService.login('010-1111-2222', 'pw');
+
+  assert.equal(result.data, null);
+  assert.equal(result.error.message, '계정 비밀번호 저장 형식에 문제가 있습니다. 매장에 문의해주세요.');
+});
+
 test('authService: 로그인 실패 시 시도 횟수를 증가한다', async () => {
   const storage = createStorageMock();
   const saved = [];

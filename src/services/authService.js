@@ -55,6 +55,14 @@ const getFailureMessage = (resultData) => {
   return resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.';
 };
 
+const getRpcFailureMessage = (rpcError) => {
+  if (rpcError?.code === '22023' && rpcError?.message?.toLowerCase?.().includes('invalid salt')) {
+    return '계정 비밀번호 저장 형식에 문제가 있습니다. 매장에 문의해주세요.';
+  }
+
+  return '서버 연결 중 오류가 발생했습니다.';
+};
+
 export const authService = {
   async login(phoneNumber, password) {
     try {
@@ -70,7 +78,7 @@ export const authService = {
 
       if (rpcError) {
         console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: '서버 연결 중 오류가 발생했습니다.' } };
+        return { data: null, error: { message: getRpcFailureMessage(rpcError) } };
       }
 
       if (!resultData || resultData.success === false) {
@@ -210,7 +218,7 @@ export const authService = {
 
       if (rpcError) {
         console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: '서버 연결 중 오류가 발생했습니다.' } };
+        return { data: null, error: { message: getRpcFailureMessage(rpcError) } };
       }
 
       if (!resultData || resultData.success === false) {
