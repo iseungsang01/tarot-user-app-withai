@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Alert, Keyboard, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Alert, Keyboard, TextInput, Modal } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -31,6 +31,7 @@ const TicketScreen = () => {
   const [coupons, setCoupons] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState(null);
+  const [selectedStampCard, setSelectedStampCard] = useState(null);
   const [password, setPassword] = useState('');
   const [processingCouponId, setProcessingCouponId] = useState(null);
   const passwordInputRef = useRef(null);
@@ -63,6 +64,8 @@ const TicketScreen = () => {
     setSelectedCouponId(null);
     setPassword('');
   };
+
+  const closeStampModal = () => setSelectedStampCard(null);
 
   const handleCouponPress = (coupon) => {
     if (selectedCouponId === coupon.id) {
@@ -142,8 +145,8 @@ const TicketScreen = () => {
         <View style={styles.stampGrid}>
           {tarotCards.map((card, index) => {
             const filled = index < currentStamps;
-            return (
-              <View key={card.name} style={[styles.stampSlot, filled && styles.stampSlotFilled]}>
+            const slotContent = (
+              <>
                 <Image
                   source={card.image}
                   style={[styles.stampCardImage, !filled && styles.stampCardImageLocked]}
@@ -153,6 +156,31 @@ const TicketScreen = () => {
                 <View style={[styles.stampNumberBadge, filled && styles.stampNumberBadgeFilled]}>
                   <Text style={[styles.stampNumber, filled && styles.stampNumberFilled]}>{String(index + 1).padStart(2, '0')}</Text>
                 </View>
+              </>
+            );
+
+            if (filled) {
+              return (
+                <TouchableOpacity
+                  key={card.name}
+                  style={[styles.stampSlot, styles.stampSlotFilled]}
+                  activeOpacity={0.82}
+                  onPress={() => setSelectedStampCard(card)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${card.name} 스탬프 카드 크게 보기`}
+                >
+                  {slotContent}
+                </TouchableOpacity>
+              );
+            }
+
+            return (
+              <View
+                key={card.name}
+                style={styles.stampSlot}
+                accessibilityLabel={`${card.name} 미보유 스탬프 카드`}
+              >
+                {slotContent}
               </View>
             );
           })}
@@ -228,6 +256,44 @@ const TicketScreen = () => {
         <Text style={styles.footerHint}>스탬프 쿠폰 {stampCoupons.length}개를 사용할 수 있습니다.</Text>
       )}
       </ScrollView>
+      <Modal
+        visible={Boolean(selectedStampCard)}
+        transparent
+        animationType="fade"
+        onRequestClose={closeStampModal}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={closeStampModal}
+          accessibilityRole="button"
+          accessibilityLabel="스탬프 카드 확대 닫기"
+        >
+          <View style={styles.modalCardWrap}>
+            <TouchableOpacity activeOpacity={1}>
+              {selectedStampCard && (
+                <>
+                  <Image
+                    source={selectedStampCard.image}
+                    style={styles.modalStampImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.modalStampName}>{selectedStampCard.name}</Text>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    activeOpacity={0.84}
+                    onPress={closeStampModal}
+                    accessibilityRole="button"
+                    accessibilityLabel="닫기"
+                  >
+                    <Text style={styles.modalCloseText}>닫기</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScreenContainer>
   );
 };
@@ -260,8 +326,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   summaryLabel: {
-    color: DrawerTheme.woodLight,
-    fontSize: 9,
+    color: DrawerTheme.goldBright,
+    fontSize: 11,
+    fontWeight: '900',
     marginTop: 2,
     letterSpacing: 0.8,
   },
@@ -273,6 +340,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
     marginBottom: 10,
   },
   panelTitle: {
@@ -280,11 +348,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1.2,
+    flexShrink: 0,
   },
   panelMeta: {
-    color: DrawerTheme.woodLight,
+    color: '#F8E9C6',
     fontSize: 11,
-    opacity: 0.8,
+    fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'right',
   },
   stampGrid: {
     flexDirection: 'row',
@@ -373,10 +444,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   footerHint: {
-    color: DrawerTheme.woodLight,
+    color: DrawerTheme.ivory,
     fontSize: 11,
+    fontWeight: '700',
     textAlign: 'center',
-    opacity: 0.75,
+    opacity: 0.95,
   },
   couponUseBlock: {
     marginBottom: 10,
@@ -444,6 +516,45 @@ const styles = StyleSheet.create({
     color: DrawerTheme.mutedIvory,
     fontSize: 13,
     fontWeight: '800',
+  },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(7,0,9,0.86)',
+  },
+  modalCardWrap: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalStampImage: {
+    width: 260,
+    height: 390,
+    maxWidth: '100%',
+  },
+  modalStampName: {
+    marginTop: 16,
+    color: DrawerTheme.ivory,
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: 0.6,
+  },
+  modalCloseButton: {
+    alignSelf: 'center',
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,217,119,0.5)',
+    backgroundColor: 'rgba(200,163,64,0.18)',
+  },
+  modalCloseText: {
+    color: '#FFD977',
+    fontSize: 13,
+    fontWeight: '900',
   },
 });
 

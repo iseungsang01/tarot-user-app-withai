@@ -21,9 +21,15 @@ const stringifyError = (errorValue) => {
 };
 
 const extractFirstJSONObject = (text) => {
+    if (text && typeof text === 'object') return text;
     if (typeof text !== 'string') return null;
 
-    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+    const cleaned = text
+        .replace(/```(?:json)?\s*/gi, '')
+        .replace(/```/g, '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .trim();
     const start = cleaned.indexOf('{');
     if (start === -1) return null;
 
@@ -63,14 +69,72 @@ const extractFirstJSONObject = (text) => {
     return null;
 };
 
+const escapeNewlinesInJSONString = (jsonText) => {
+    let result = '';
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < jsonText.length; i += 1) {
+        const char = jsonText[i];
+
+        if (escaped) {
+            result += char;
+            escaped = false;
+            continue;
+        }
+
+        if (inString && char === '\\') {
+            result += char;
+            escaped = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            result += char;
+            continue;
+        }
+
+        if (inString && char === '\n') {
+            result += '\\n';
+            continue;
+        }
+
+        if (inString && char === '\r') {
+            result += '\\r';
+            continue;
+        }
+
+        result += char;
+    }
+
+    return result;
+};
+
+const repairJSONText = (jsonText) => {
+    if (!jsonText) return jsonText;
+    return escapeNewlinesInJSONString(
+        jsonText
+            .replace(/[“”]/g, '"')
+            .replace(/[‘’]/g, "'")
+            .replace(/,\s*([}\]])/g, '$1'),
+    );
+};
+
 const parseFirstJSONObject = (text) => {
+    if (text && typeof text === 'object') return text;
+
     const jsonText = extractFirstJSONObject(text);
     if (!jsonText) return null;
 
     try {
         return JSON.parse(jsonText);
     } catch {
-        return null;
+        try {
+            return JSON.parse(repairJSONText(jsonText));
+        } catch {
+            return null;
+        }
     }
 };
 
@@ -80,6 +144,8 @@ const stripJSONDecorators = (text) => {
     return text
         .replace(/```(?:json)?\s*/gi, '')
         .replace(/```/g, '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
         .trim();
 };
 
@@ -117,8 +183,8 @@ export const normalizeDailyFortunePayload = (payload) => {
         return {
             ...payload,
             fortune: cleanJSONLikeValue(fortune) || '오늘의 운세를 불러올 수 없습니다.',
-            luckyColor: cleanJSONLikeValue(payload.luckyColor || extractLooseField(payload.fortune, 'luckyColor')),
-            luckyItem: cleanJSONLikeValue(payload.luckyItem || extractLooseField(payload.fortune, 'luckyItem')),
+            luckyColor: cleanJSONLikeValue(payload.luckyColor || extractLooseField(payload.fortune, 'luckyColor')) || '골드',
+            luckyItem: cleanJSONLikeValue(payload.luckyItem || extractLooseField(payload.fortune, 'luckyItem')) || '작은 노트',
         };
     }
 
@@ -127,8 +193,8 @@ export const normalizeDailyFortunePayload = (payload) => {
 
     return {
         fortune: extractLooseField(payload, 'fortune') || cleanJSONLikeValue(stripJSONDecorators(payload)) || '오늘의 운세 데이터가 없습니다.',
-        luckyColor: extractLooseField(payload, 'luckyColor'),
-        luckyItem: extractLooseField(payload, 'luckyItem'),
+        luckyColor: extractLooseField(payload, 'luckyColor') || '골드',
+        luckyItem: extractLooseField(payload, 'luckyItem') || '작은 노트',
     };
 };
 

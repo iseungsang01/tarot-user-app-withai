@@ -107,3 +107,76 @@ test('aiService: daily fortune sanitizes malformed JSON-like fortune output', as
     '1님, 오늘 당신의 길 위에 차분한 기회가 보입니다.',
   );
 });
+
+test('aiService: daily fortune tolerates trailing comma and smart quotes', async () => {
+  const modelOutput = '물론입니다. { “fortune”: “문이 열리는 하루입니다.”, “luckyColor”: “아이보리”, “luckyItem”: “펜”, }';
+
+  const { getDailyFortune } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await getDailyFortune('tester');
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, {
+    fortune: '문이 열리는 하루입니다.',
+    luckyColor: '아이보리',
+    luckyItem: '펜',
+  });
+});
+
+test('aiService: daily fortune raw Korean fallback receives safe lucky defaults', async () => {
+  const { getDailyFortune } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({ data: { data: '오늘은 차분하게 기회를 살피면 좋은 하루입니다.', usage: {}, provider: 'mock' }, error: null }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await getDailyFortune('tester');
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, {
+    fortune: '오늘은 차분하게 기회를 살피면 좋은 하루입니다.',
+    luckyColor: '골드',
+    luckyItem: '작은 노트',
+  });
+});
+
+test('aiService: daily fortune repairs raw newline inside JSON string', async () => {
+  const modelOutput = '{ "fortune": "첫 문장입니다.\n둘째 문장입니다.", "luckyColor": "골드", "luckyItem": "작은 노트" }';
+
+  const { getDailyFortune } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await getDailyFortune('tester');
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, {
+    fortune: '첫 문장입니다.\n둘째 문장입니다.',
+    luckyColor: '골드',
+    luckyItem: '작은 노트',
+  });
+});

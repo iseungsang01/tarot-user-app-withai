@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 // Deploy example: supabase functions deploy ai-proxy
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
-const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-4-31b-it';
+const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-4-26b-it';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() ?? '';
@@ -73,7 +73,51 @@ function getBearerToken(req: Request) {
   return raw.slice(7).trim();
 }
 
-async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) {
+type GoogleGenerationConfig = {
+  temperature: number;
+  maxOutputTokens: number;
+  responseMimeType: string;
+  responseJsonSchema?: Record<string, unknown>;
+};
+
+const responseSchemasByTask: Record<string, Record<string, unknown>> = {
+  getDailyFortune: {
+    type: 'object',
+    properties: {
+      fortune: {
+        type: 'string',
+        description: '오늘의 운세 본문',
+      },
+      luckyColor: {
+        type: 'string',
+        description: '추천 행운의 색상',
+      },
+      luckyItem: {
+        type: 'string',
+        description: '추천 행운의 아이템',
+      },
+    },
+    required: ['fortune', 'luckyColor', 'luckyItem'],
+    additionalProperties: false,
+  },
+};
+
+function buildGenerationConfig(task = ''): GoogleGenerationConfig {
+  const generationConfig: GoogleGenerationConfig = {
+    temperature: 0.7,
+    maxOutputTokens: 1000,
+    responseMimeType: 'application/json',
+  };
+
+  const schema = responseSchemasByTask[task];
+  if (schema) {
+    generationConfig.responseJsonSchema = schema;
+  }
+
+  return generationConfig;
+}
+
+async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000, task = '') {
   requireEnv('GOOGLE_API_KEY', GOOGLE_API_KEY);
 
   const system = messages.find((m) => m.role === 'system')?.content || '';
@@ -93,26 +137,66 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000) 
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent?key=${GOOGLE_API_KEY}`;
+  const generationConfig = {
+    ...buildGenerationConfig(task),
+    temperature,
+    maxOutputTokens: maxTokens,
+  };
+  const requestBody = {
+    contents,
+    generationConfig,
+  };
 
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents,
-      generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens,
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = payload?.error?.message || `Google AI request failed with status ${response.status}`;
+    const schemaRejected = generationConfig.responseJsonSchema &&
+      /response(Json)?Schema|schema|generationConfig/i.test(message);
+
+    if (schemaRejected) {
+      const fallbackResponse = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature,
+            maxOutputTokens: maxTokens,
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+
+      const fallbackPayload = await fallbackResponse.json().catch(() => ({}));
+      if (!fallbackResponse.ok) {
+        const fallbackMessage = fallbackPayload?.error?.message ||
+          `Google AI request failed with status ${fallbackResponse.status}`;
+        throw new Error(fallbackMessage);
+      }
+
+      const fallbackText = (fallbackPayload?.candidates?.[0]?.content?.parts || [])
+        .map((part: { text?: string }) => part?.text || '')
+        .join('');
+
+      return {
+        data: fallbackText,
+        usage: fallbackPayload?.usageMetadata || null,
+        provider: 'google-gemma',
+      };
+    }
+
     throw new Error(message);
   }
 
-  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const text = (payload?.candidates?.[0]?.content?.parts || [])
+    .map((part: { text?: string }) => part?.text || '')
+    .join('');
 
   return {
     data: text,
@@ -189,7 +273,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { messages, options } = body;
+    const { messages, options, task } = body;
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
         JSON.stringify({ error: 'messages는 1개 이상 필요합니다.' }),
@@ -226,7 +310,7 @@ Deno.serve(async (req) => {
 
     const temperature = Number(options?.temperature ?? 0.7);
     const maxTokens = Number(options?.maxTokens ?? 1000);
-    const googleResult = await callGoogle(messages, temperature, maxTokens);
+    const googleResult = await callGoogle(messages, temperature, maxTokens, task);
 
     return new Response(JSON.stringify(googleResult), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
