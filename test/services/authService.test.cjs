@@ -169,6 +169,26 @@ test('authService: 회원가입은 Supabase Auth ID 없이 RPC 가입 후 로그
   assert.equal(calls[1][0], 'login');
 });
 
+test('authService: 회원가입 중 이미 등록된 전화번호는 한국어 안내를 반환한다', async () => {
+  const storage = createStorageMock();
+  const supabaseClient = {
+    registerCustomer: async () => ({
+      data: { success: false, message: 'phone number already registered' },
+      error: null,
+    }),
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await authService.register('010-1111-2222', 'password', 'tester');
+
+  assert.equal(result.data, null);
+  assert.equal(result.error.message, '이미 가입된 전화번호입니다. 로그인 화면에서 기존 계정으로 로그인해주세요.');
+});
+
 test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제한다', async () => {
   const storage = createStorageMock();
   await storage.save('tarot_customer_session', { token: 'saved-token', customerId: 'customer-1' });

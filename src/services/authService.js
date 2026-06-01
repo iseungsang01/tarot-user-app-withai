@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
+import { normalizeCustomerPassword } from '../utils/password';
 
 const CUSTOMER_KEY = 'tarot_customer';
 const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
@@ -55,6 +56,23 @@ const getFailureMessage = (resultData) => {
   return resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.';
 };
 
+const getRegisterFailureMessage = (resultData, fallback = '회원가입에 실패했습니다.') => {
+  const message = resultData?.message || fallback;
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    resultData?.reason === 'PHONE_ALREADY_REGISTERED'
+    || normalizedMessage.includes('already registered')
+    || normalizedMessage.includes('duplicate')
+    || normalizedMessage.includes('unique')
+    || normalizedMessage.includes('이미 가입')
+  ) {
+    return '이미 가입된 전화번호입니다. 로그인 화면에서 기존 계정으로 로그인해주세요.';
+  }
+
+  return message;
+};
+
 const getRpcFailureMessage = (rpcError) => {
   if (rpcError?.code === '22023' && rpcError?.message?.toLowerCase?.().includes('invalid salt')) {
     return '계정 비밀번호 저장 형식에 문제가 있습니다. 매장에 문의해주세요.';
@@ -66,7 +84,7 @@ const getRpcFailureMessage = (rpcError) => {
 export const authService = {
   async login(phoneNumber, password) {
     try {
-      const paddedPassword = password.length < 6 ? password.padEnd(6, '0') : password;
+      const paddedPassword = normalizeCustomerPassword(password);
       const guard = await getLoginGuard();
       const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
@@ -203,7 +221,7 @@ export const authService = {
 
   async register(phoneNumber, password, nickname = '') {
     try {
-      const paddedPassword = password.length < 6 ? password.padEnd(6, '0') : password;
+      const paddedPassword = normalizeCustomerPassword(password);
       const normalizedPhone = phoneNumber.trim();
 
       const { data: resultData, error: rpcError } = await supabaseClient.registerCustomer({
@@ -214,13 +232,13 @@ export const authService = {
 
       if (rpcError) {
         console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: getRpcFailureMessage(rpcError) } };
+        return { data: null, error: { message: getRegisterFailureMessage(rpcError, getRpcFailureMessage(rpcError)) } };
       }
 
       if (!resultData || resultData.success === false) {
         return {
           data: null,
-          error: { message: resultData?.message || '회원가입에 실패했습니다.' },
+          error: { message: getRegisterFailureMessage(resultData) },
         };
       }
 

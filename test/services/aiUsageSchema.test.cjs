@@ -75,6 +75,12 @@ test('session schema: resolve_customer_session is defined and login issues sessi
   assert.match(loginFunction, /'session_token', v_session_token/);
 });
 
+test('password schema: customer password change clears forced-change flag', () => {
+  const functionBody = getFunctionBody('update_customer_password');
+
+  assert.match(functionBody, /SET password = extensions\.crypt\(new_password, extensions\.gen_salt\('bf'\)\),\s+must_change_password = false/);
+});
+
 test('coupon schema: direct coupon mutations are denied to client roles', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
 

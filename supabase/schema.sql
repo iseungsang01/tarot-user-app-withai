@@ -755,7 +755,8 @@ BEGIN
   END IF;
 
   UPDATE public.customers
-  SET password = extensions.crypt(new_password, extensions.gen_salt('bf'))
+  SET password = extensions.crypt(new_password, extensions.gen_salt('bf')),
+      must_change_password = false
   WHERE id = customer_uuid
     AND deleted_at IS NULL;
 

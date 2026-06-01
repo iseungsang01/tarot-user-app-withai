@@ -24,6 +24,7 @@ import {
 } from '../../utils/errorHandler';
 import { APP_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { normalizeCustomerPassword } from '../../utils/password';
 
 const MENU_ITEMS = {
     info: '내 정보',
@@ -54,7 +55,7 @@ const SettingsScreen = ({ navigation }) => {
         try {
             const { data: isValid } = await supabase.rpc('verify_password', {
                 customer_uuid: customer.id,
-                input_password: currentPassword
+                input_password: normalizeCustomerPassword(currentPassword)
             });
             if (!isValid) {
                 Alert.alert('오류', '현재 비밀번호가 일치하지 않습니다.');
@@ -62,7 +63,7 @@ const SettingsScreen = ({ navigation }) => {
             }
             const { error } = await supabase.rpc('update_customer_password', {
                 customer_uuid: customer.id,
-                new_password: newPassword,
+                new_password: normalizeCustomerPassword(newPassword),
                 p_reason: 'settings_change'
             });
             if (!error) {
@@ -81,7 +82,7 @@ const SettingsScreen = ({ navigation }) => {
         try {
             const { data: isValid } = await supabase.rpc('verify_password', {
                 customer_uuid: customer.id,
-                input_password: password
+                input_password: normalizeCustomerPassword(password)
             });
             if (!isValid) {
                 Alert.alert('오류', '비밀번호가 일치하지 않습니다.');

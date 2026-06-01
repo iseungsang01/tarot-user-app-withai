@@ -3,7 +3,7 @@ import { View, TextInput } from 'react-native';
 import { CustomButton } from '../common/CustomButton';
 import { styles } from '../../styles/SettingsStyles';
 
-export const SettingPasswordForm = ({ onSubmit, processing }) => {
+export const SettingPasswordForm = ({ onSubmit, processing, requireCurrentPassword = true }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -14,16 +14,18 @@ export const SettingPasswordForm = ({ onSubmit, processing }) => {
 
   return (
     <View style={styles.formCard}>
+      {requireCurrentPassword && (
+        <TextInput
+          style={styles.input}
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          secureTextEntry
+          placeholder="현재 비밀번호"
+          placeholderTextColor="rgba(166, 137, 102, 0.5)"
+        />
+      )}
       <TextInput
-        style={styles.input}
-        value={currentPassword}
-        onChangeText={setCurrentPassword}
-        secureTextEntry
-        placeholder="현재 비밀번호"
-        placeholderTextColor="rgba(166, 137, 102, 0.5)"
-      />
-      <TextInput
-        style={[styles.input, { marginTop: 10 }]}
+        style={[styles.input, requireCurrentPassword && { marginTop: 10 }]}
         value={newPassword}
         onChangeText={setNewPassword}
         secureTextEntry

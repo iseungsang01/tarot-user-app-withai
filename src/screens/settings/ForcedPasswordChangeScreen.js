@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SettingPasswordForm, GradientBackground } from '../../components';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { normalizeCustomerPassword } from '../../utils/password';
 
 const ForcedPasswordChangeScreen = ({ navigation }) => {
-  const { customer, refreshCustomer } = useAuth();
+  const { customer, refreshCustomer, logout } = useAuth();
   const [processing, setProcessing] = useState(false);
 
-  const handlePasswordReset = async ({ currentPassword, newPassword, confirmPassword }) => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('입력 필요', '현재 비밀번호와 새 비밀번호를 모두 입력해주세요.');
+  const handlePasswordReset = async ({ newPassword, confirmPassword }) => {
+    if (!newPassword || !confirmPassword) {
+      Alert.alert('입력 필요', '새 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -21,19 +22,9 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
 
     setProcessing(true);
     try {
-      const { data: isValid, error: verifyError } = await supabase.rpc('verify_password', {
-        customer_uuid: customer.id,
-        input_password: currentPassword,
-      });
-
-      if (verifyError || !isValid) {
-        Alert.alert('오류', '현재 비밀번호가 일치하지 않습니다.');
-        return;
-      }
-
       const { data: changed, error } = await supabase.rpc('update_customer_password', {
         customer_uuid: customer.id,
-        new_password: newPassword,
+        new_password: normalizeCustomerPassword(newPassword),
         p_reason: 'forced_change',
       });
 
@@ -55,7 +46,16 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
       <View style={styles.container}>
         <Text style={styles.title}>비밀번호 변경이 필요합니다</Text>
         <Text style={styles.description}>초기/임시 비밀번호 계정은 로그인 후 반드시 새 비밀번호로 변경해야 합니다.</Text>
-        <SettingPasswordForm onSubmit={handlePasswordReset} processing={processing} />
+        <SettingPasswordForm onSubmit={handlePasswordReset} processing={processing} requireCurrentPassword={false} />
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={logout}
+          disabled={processing}
+          activeOpacity={0.75}
+          style={[styles.cancelButton, processing && styles.cancelButtonDisabled]}
+        >
+          <Text style={styles.cancelText}>취소하고 로그인 화면으로 돌아가기</Text>
+        </TouchableOpacity>
       </View>
     </GradientBackground>
   );
@@ -77,6 +77,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     lineHeight: 20,
     marginBottom: 16,
+  },
+  cancelButton: {
+    alignSelf: 'center',
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  cancelButtonDisabled: {
+    opacity: 0.45,
+  },
+  cancelText: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 14,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
 
