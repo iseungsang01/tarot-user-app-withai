@@ -42,6 +42,30 @@ test('coupon schema: admin password and coupon redemption are bound in one RPC',
   );
 });
 
+test('coupon schema: customer coupon lookup RPCs use session token ownership', () => {
+  const listFunction = getFunctionBody('get_my_coupons');
+  const countFunction = getFunctionBody('get_my_coupon_count');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+
+  for (const functionBody of [listFunction, countFunction]) {
+    assert.match(functionBody, /p_session_token text/);
+    assert.match(functionBody, /p_valid_only boolean DEFAULT false/);
+    assert.match(functionBody, /public\.resolve_customer_session\(p_session_token\)/);
+    assert.match(functionBody, /ch\.customer_id = v_customer_id/);
+    assert.match(functionBody, /ch\.is_used = false/);
+    assert.match(functionBody, /ch\.valid_until IS NULL/);
+    assert.match(functionBody, /ch\.valid_until >= now\(\)/);
+    assert.match(functionBody, /SET search_path = public/);
+  }
+
+  assert.match(listFunction, /RETURNS SETOF public\.coupon_history/);
+  assert.match(listFunction, /ORDER BY ch\.issued_at DESC/);
+  assert.match(countFunction, /RETURNS integer/);
+  assert.match(countFunction, /RETURN COALESCE\(v_count, 0\)/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_coupons\(text, boolean\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_coupon_count\(text, boolean\) TO anon, authenticated;/);
+});
+
 test('session schema: resolve_customer_session is defined and login issues session tokens', () => {
   const resolveFunction = getFunctionBody('resolve_customer_session');
   const loginFunction = getFunctionBody('login_customer');

@@ -655,7 +655,67 @@ BEGIN
 END;
 $$;
 
--- [기능] 비밀번호 일치 여부 확인
+-- [function] Customer coupon lookup
+
+CREATE OR REPLACE FUNCTION public.get_my_coupons(
+  p_session_token text,
+  p_valid_only boolean DEFAULT false
+)
+RETURNS SETOF public.coupon_history
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer_id uuid;
+BEGIN
+  v_customer_id := public.resolve_customer_session(p_session_token);
+
+  RETURN QUERY
+  SELECT *
+  FROM public.coupon_history ch
+  WHERE ch.customer_id = v_customer_id
+    AND ch.is_used = false
+    AND (
+      NOT COALESCE(p_valid_only, false)
+      OR ch.valid_until IS NULL
+      OR ch.valid_until >= now()
+    )
+  ORDER BY ch.issued_at DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_my_coupon_count(
+  p_session_token text,
+  p_valid_only boolean DEFAULT false
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer_id uuid;
+  v_count integer;
+BEGIN
+  v_customer_id := public.resolve_customer_session(p_session_token);
+
+  SELECT count(*)::integer
+  INTO v_count
+  FROM public.coupon_history ch
+  WHERE ch.customer_id = v_customer_id
+    AND ch.is_used = false
+    AND (
+      NOT COALESCE(p_valid_only, false)
+      OR ch.valid_until IS NULL
+      OR ch.valid_until >= now()
+    );
+
+  RETURN COALESCE(v_count, 0);
+END;
+$$;
+
+-- [function] Customer password verification
 CREATE OR REPLACE FUNCTION public.verify_password(customer_uuid uuid, input_password text)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -716,6 +776,8 @@ GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authe
 GRANT EXECUTE ON FUNCTION public.resolve_customer_session(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.logout_customer(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_profile(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_coupons(text, boolean) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_coupon_count(text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
 
