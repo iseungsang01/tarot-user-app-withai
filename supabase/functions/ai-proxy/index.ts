@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 // Deploy example: supabase functions deploy ai-proxy
 
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
-const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || gemma-4-31b-it';
+const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-4-31b-it';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() ?? '';
