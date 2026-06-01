@@ -11,6 +11,8 @@ DROP FUNCTION IF EXISTS public.update_my_nickname(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.delete_my_account(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.increment_visit_count(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.verify_admin_password(text) CASCADE;
+DROP FUNCTION IF EXISTS public.redeem_coupon(integer, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.use_my_coupon_with_admin_password(text, integer, text) CASCADE;
 DROP FUNCTION IF EXISTS public.verify_admin_login(text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.update_admin_settings(text, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.verify_password(uuid, text) CASCADE;

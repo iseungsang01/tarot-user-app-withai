@@ -25,6 +25,13 @@ const tarotCards = [
 
 const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
 
+const COUPON_REDEEM_MESSAGES = {
+  invalid_session: '로그인이 만료되었습니다. 다시 로그인해 주세요.',
+  invalid_admin_password: '관리자 비밀번호가 일치하지 않습니다.',
+  coupon_not_found: '쿠폰을 찾을 수 없습니다.',
+  coupon_already_used: '이미 사용된 쿠폰입니다.',
+};
+
 const TicketScreen = () => {
   const insets = useSafeAreaInsets();
   const { customer, refreshCustomer } = useAuth();
@@ -100,10 +107,9 @@ const TicketScreen = () => {
             showSuccessAlert('COUPON_USED', Alert, '쿠폰이 사용 처리되었습니다.');
             resetCouponUse();
             await Promise.all([loadTickets(), refreshCustomer?.()]);
-          } else if (error.code === 'INVALID_ADMIN_PASSWORD') {
-            Alert.alert('인증 실패', '관리자 비밀번호가 일치하지 않습니다.');
           } else {
-            Alert.alert('쿠폰 사용 실패', error.message || '쿠폰 사용 처리 중 문제가 발생했습니다.');
+            const redeemMessage = COUPON_REDEEM_MESSAGES[error.code] || error.message || '쿠폰 사용 처리 중 문제가 발생했습니다.';
+            Alert.alert('쿠폰 사용 실패', redeemMessage);
           }
           setProcessingCouponId(null);
         },

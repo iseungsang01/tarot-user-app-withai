@@ -16,20 +16,30 @@ function getFunctionBody(functionName) {
   return match[0];
 }
 
-test('coupon schema: admin password and coupon redemption are bound in one RPC', () => {
-  const functionBody = getFunctionBody('use_my_coupon_with_admin_password');
+test('coupon schema: redeem_coupon validates session and admin password before atomic redemption', () => {
+  const functionBody = getFunctionBody('redeem_coupon');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
 
+  assert.match(functionBody, /p_coupon_id integer/);
   assert.match(functionBody, /p_admin_password text/);
+  assert.match(functionBody, /p_session_token text/);
+  assert.match(functionBody, /RETURNS TABLE\(success boolean, message text\)/);
+  assert.match(functionBody, /RETURN QUERY SELECT false, 'invalid_session'::text/);
   assert.match(functionBody, /extensions\.crypt\(p_admin_password,\s*v_hashed_password\)/);
-  assert.match(functionBody, /public\.resolve_customer_session\(p_session_token\)/);
+  assert.match(functionBody, /FOR UPDATE/);
+  assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_not_found'::text/);
+  assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_already_used'::text/);
+  assert.match(functionBody, /RETURN QUERY SELECT true, 'ok'::text/);
   assert.match(functionBody, /UPDATE public\.coupon_history/);
-  assert.match(functionBody, /customer_id = v_customer_id/);
   assert.match(functionBody, /SET search_path = public, extensions/);
   assert.ok(
     functionBody.indexOf('public.resolve_customer_session(p_session_token)') <
       functionBody.indexOf('extensions.crypt(p_admin_password, v_hashed_password)'),
     'customer session should be resolved before admin password verification',
   );
+  assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.use_my_coupon_with_admin_password/);
+  assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.use_my_coupon_with_admin_password/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.redeem_coupon\(integer, text, text\) TO anon, authenticated;/);
 });
 
 test('coupon schema: customer coupon lookup RPCs use session token ownership', () => {
@@ -62,15 +72,16 @@ test('session schema: resolve_customer_session is defined and login issues sessi
   const schema = fs.readFileSync(schemaPath, 'utf8');
 
   assert.match(schema, /CREATE TABLE IF NOT EXISTS public\.customer_sessions/);
-  assert.match(schema, /token_hash text PRIMARY KEY/);
+  assert.match(schema, /token_hash text NOT NULL UNIQUE/);
   assert.doesNotMatch(schema, /customer_sessions \(\s*token text PRIMARY KEY/);
   assert.match(resolveFunction, /RETURNS uuid/);
   assert.match(resolveFunction, /FROM public\.customer_sessions/);
-  assert.match(resolveFunction, /token_hash = encode\(extensions\.digest\(p_session_token, 'sha256'\), 'hex'\)/);
+  assert.match(resolveFunction, /v_token_hash := encode\(extensions\.digest\(p_session_token, 'sha256'\), 'hex'\)/);
+  assert.match(resolveFunction, /s\.token_hash = v_token_hash/);
   assert.doesNotMatch(resolveFunction, /s\.token = p_session_token/);
   assert.match(resolveFunction, /revoked_at IS NULL/);
   assert.match(resolveFunction, /expires_at > now\(\)/);
-  assert.match(loginFunction, /INSERT INTO public\.customer_sessions \(token_hash, customer_id\)/);
+  assert.match(loginFunction, /INSERT INTO public\.customer_sessions \(customer_id, token_hash, expires_at, last_used_at\)/);
   assert.match(loginFunction, /extensions\.digest\(v_session_token, 'sha256'\)/);
   assert.match(loginFunction, /'session_token', v_session_token/);
 });
@@ -86,6 +97,6 @@ test('coupon schema: direct coupon mutations are denied to client roles', () => 
 
   assert.doesNotMatch(schema, /CREATE POLICY "Allow All (Insert|Update|Delete)" ON coupon_history/);
   assert.doesNotMatch(schema, /CREATE POLICY "Coupon history owner (insert|update|delete)" ON coupon_history/i);
-  assert.match(schema, /CREATE POLICY "No Direct Mutation coupon_history" ON coupon_history/);
-  assert.match(schema, /FOR ALL TO anon, authenticated USING \(false\) WITH CHECK \(false\)/);
+  assert.match(schema, /CREATE POLICY "Admin can manage coupon_history"/);
+  assert.match(schema, /ON public\.coupon_history[\s\S]*?USING \(public\.is_admin\(\)\)[\s\S]*?WITH CHECK \(public\.is_admin\(\)\)/);
 });

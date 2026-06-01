@@ -71,8 +71,8 @@ export const supabaseClient = {
     return supabase.rpc('get_my_coupon_count', payload, options);
   },
 
-  useMyCouponWithAdminPassword(payload) {
-    return supabase.rpc('use_my_coupon_with_admin_password', payload);
+  redeemCoupon(payload) {
+    return supabase.rpc('redeem_coupon', payload);
   },
 
   getMyVoteResponses(payload) {

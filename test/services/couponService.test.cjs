@@ -59,9 +59,9 @@ test('couponService: counts valid coupons through customer-session RPC', async (
 test('couponService: uses coupons through customer-session and admin-password RPC', async () => {
   const calls = [];
   const supabaseClient = {
-    useMyCouponWithAdminPassword: async (payload) => {
+    redeemCoupon: async (payload) => {
       calls.push(payload);
-      return { data: { success: true, coupon: { id: 10, is_used: true } }, error: null };
+      return { data: [{ success: true, message: 'ok' }], error: null };
     },
   };
 
@@ -73,16 +73,16 @@ test('couponService: uses coupons through customer-session and admin-password RP
 
   const result = await couponService.useCoupon(10, 'admin-secret');
 
-  assert.deepEqual(calls, [{ p_session_token: 'session-token', p_coupon_id: 10, p_admin_password: 'admin-secret' }]);
-  assert.deepEqual(result, { error: null });
+  assert.deepEqual(calls, [{ p_coupon_id: 10, p_admin_password: 'admin-secret', p_session_token: 'session-token' }]);
+  assert.deepEqual(result, { error: null, message: 'ok' });
 });
 
 test('couponService: rejects coupon use without admin password before RPC', async () => {
   const calls = [];
   const supabaseClient = {
-    useMyCouponWithAdminPassword: async (payload) => {
+    redeemCoupon: async (payload) => {
       calls.push(payload);
-      return { data: { success: true }, error: null };
+      return { data: [{ success: true, message: 'ok' }], error: null };
     },
   };
 

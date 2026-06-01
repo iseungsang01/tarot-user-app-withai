@@ -307,6 +307,7 @@ DROP FUNCTION IF EXISTS public.verify_admin_login(text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.update_admin_settings(text, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.increment_visit_count(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.use_my_coupon(text, integer) CASCADE;
+DROP FUNCTION IF EXISTS public.use_my_coupon_with_admin_password(text, integer, text) CASCADE;
 DROP FUNCTION IF EXISTS public.register_customer(uuid, text, text, text) CASCADE;
 
 
@@ -566,12 +567,12 @@ $$;
 
 
 
-CREATE OR REPLACE FUNCTION public.use_my_coupon_with_admin_password(
-  p_session_token text,
+CREATE OR REPLACE FUNCTION public.redeem_coupon(
   p_coupon_id integer,
-  p_admin_password text
+  p_admin_password text,
+  p_session_token text
 )
-RETURNS jsonb
+RETURNS TABLE(success boolean, message text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, extensions
@@ -582,33 +583,45 @@ DECLARE
   v_coupon public.coupon_history%ROWTYPE;
 BEGIN
   v_customer_id := public.resolve_customer_session(p_session_token);
-
-  IF p_admin_password IS NULL OR btrim(p_admin_password) = '' THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'INVALID_ADMIN_PASSWORD', 'message', 'Admin password is required.');
+  IF v_customer_id IS NULL THEN
+    RETURN QUERY SELECT false, 'invalid_session'::text;
+    RETURN;
   END IF;
 
   SELECT value INTO v_hashed_password
   FROM public.app_configs
   WHERE key = 'admin_password';
 
-  IF v_hashed_password IS NULL OR v_hashed_password <> extensions.crypt(p_admin_password, v_hashed_password) THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'INVALID_ADMIN_PASSWORD', 'message', 'Invalid admin password.');
+  IF p_admin_password IS NULL
+     OR btrim(p_admin_password) = ''
+     OR v_hashed_password IS NULL
+     OR v_hashed_password <> extensions.crypt(p_admin_password, v_hashed_password) THEN
+    RETURN QUERY SELECT false, 'invalid_admin_password'::text;
+    RETURN;
+  END IF;
+
+  SELECT * INTO v_coupon
+  FROM public.coupon_history
+  WHERE id = p_coupon_id
+    AND customer_id = v_customer_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT false, 'coupon_not_found'::text;
+    RETURN;
+  END IF;
+
+  IF v_coupon.is_used THEN
+    RETURN QUERY SELECT false, 'coupon_already_used'::text;
+    RETURN;
   END IF;
 
   UPDATE public.coupon_history
   SET is_used = true,
       used_at = now()
-  WHERE id = p_coupon_id
-    AND customer_id = v_customer_id
-    AND is_used = false
-    AND (valid_until IS NULL OR valid_until >= now())
-  RETURNING * INTO v_coupon;
+  WHERE id = v_coupon.id;
 
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false, 'reason', 'COUPON_NOT_AVAILABLE', 'message', 'Coupon not found, already used, or expired.');
-  END IF;
-
-  RETURN jsonb_build_object('success', true, 'coupon', to_jsonb(v_coupon));
+  RETURN QUERY SELECT true, 'ok'::text;
 END;
 $$;
 
@@ -719,7 +732,7 @@ GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO a
 GRANT EXECUTE ON FUNCTION public.verify_admin_password(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_coupons(text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_coupon_count(text, boolean) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.use_my_coupon_with_admin_password(text, integer, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.redeem_coupon(integer, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_vote_responses(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_vote_response(text, integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_vote_response(text, integer, integer[], integer) TO anon, authenticated;
@@ -730,7 +743,7 @@ GRANT EXECUTE ON FUNCTION public.submit_bug_report(text, text, text, text, text,
 
 
 
--- Optional seed example for the admin password used by verify_admin_password/use_my_coupon_with_admin_password.
+-- Optional seed example for the admin password used by verify_admin_password/redeem_coupon.
 -- Replace CHANGE_ME before running, or manage this row separately.
 -- INSERT INTO public.app_configs (key, value, description)
 -- VALUES ('admin_password', extensions.crypt('CHANGE_ME', extensions.gen_salt('bf')), 'Admin password hash')

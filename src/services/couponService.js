@@ -92,10 +92,10 @@ export const couponService = {
       }
 
       const token = await requireCustomerSessionToken();
-      const { data, error } = await supabaseClient.useMyCouponWithAdminPassword({
-        p_session_token: token,
+      const { data, error } = await supabaseClient.redeemCoupon({
         p_coupon_id: couponId,
         p_admin_password: adminPassword,
+        p_session_token: token,
       });
 
       if (error) {
@@ -103,13 +103,16 @@ export const couponService = {
         throw error;
       }
 
-      if (data?.success === false) {
-        const useError = new Error(data.message || 'Coupon could not be used.');
-        useError.code = data.reason || 'COUPON_USE_FAILED';
+      const result = Array.isArray(data) ? data[0] : data;
+
+      if (result?.success !== true || result?.message !== 'ok') {
+        const message = result?.message || 'coupon_redemption_failed';
+        const useError = new Error(message);
+        useError.code = message;
         throw useError;
       }
 
-      return { error: null };
+      return { error: null, message: result.message };
     } catch (error) {
       if (error?.code !== 'ADMIN_PASSWORD_REQUIRED') {
         console.error('Use coupon error:', error);
