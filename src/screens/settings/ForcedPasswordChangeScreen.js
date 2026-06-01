@@ -3,7 +3,6 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SettingPasswordForm, GradientBackground } from '../../components';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { normalizeCustomerPassword } from '../../utils/password';
 
 const ForcedPasswordChangeScreen = ({ navigation }) => {
   const { customer, refreshCustomer, logout } = useAuth();
@@ -24,7 +23,7 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
     try {
       const { data: changed, error } = await supabase.rpc('update_customer_password', {
         customer_uuid: customer.id,
-        new_password: normalizeCustomerPassword(newPassword),
+        new_password: newPassword,
         p_reason: 'forced_change',
       });
 

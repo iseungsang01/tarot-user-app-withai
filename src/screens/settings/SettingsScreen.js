@@ -24,7 +24,6 @@ import {
 } from '../../utils/errorHandler';
 import { APP_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { normalizeCustomerPassword } from '../../utils/password';
 
 const MENU_ITEMS = {
     info: '내 정보',
@@ -51,11 +50,15 @@ const SettingsScreen = ({ navigation }) => {
             showErrorAlert({ ...createValidationError('REQUIRED_FIELD'), message: '필드를 채워주세요.' }, Alert);
             return;
         }
+        if (newPassword !== confirmPassword) {
+            Alert.alert('오류', '새 비밀번호 확인이 일치하지 않습니다.');
+            return;
+        }
         setProcessing(true);
         try {
             const { data: isValid } = await supabase.rpc('verify_password', {
                 customer_uuid: customer.id,
-                input_password: normalizeCustomerPassword(currentPassword)
+                input_password: currentPassword
             });
             if (!isValid) {
                 Alert.alert('오류', '현재 비밀번호가 일치하지 않습니다.');
@@ -63,7 +66,7 @@ const SettingsScreen = ({ navigation }) => {
             }
             const { error } = await supabase.rpc('update_customer_password', {
                 customer_uuid: customer.id,
-                new_password: normalizeCustomerPassword(newPassword),
+                new_password: newPassword,
                 p_reason: 'settings_change'
             });
             if (!error) {
@@ -82,7 +85,7 @@ const SettingsScreen = ({ navigation }) => {
         try {
             const { data: isValid } = await supabase.rpc('verify_password', {
                 customer_uuid: customer.id,
-                input_password: normalizeCustomerPassword(password)
+                input_password: password
             });
             if (!isValid) {
                 Alert.alert('오류', '비밀번호가 일치하지 않습니다.');

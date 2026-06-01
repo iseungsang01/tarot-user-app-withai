@@ -1,6 +1,5 @@
 import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
-import { normalizeCustomerPassword } from '../utils/password';
 
 const CUSTOMER_KEY = 'tarot_customer';
 const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
@@ -84,13 +83,12 @@ const getRpcFailureMessage = (rpcError) => {
 export const authService = {
   async login(phoneNumber, password) {
     try {
-      const paddedPassword = normalizeCustomerPassword(password);
       const guard = await getLoginGuard();
       const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
 
       const { data: resultData, error: rpcError } = await supabaseClient.loginCustomer({
         p_phone: phoneNumber.trim(),
-        p_password: paddedPassword,
+        p_password: password,
         p_client_fingerprint: clientFingerprint,
       });
 
@@ -221,12 +219,11 @@ export const authService = {
 
   async register(phoneNumber, password, nickname = '') {
     try {
-      const paddedPassword = normalizeCustomerPassword(password);
       const normalizedPhone = phoneNumber.trim();
 
       const { data: resultData, error: rpcError } = await supabaseClient.registerCustomer({
         p_phone: normalizedPhone,
-        p_password: paddedPassword,
+        p_password: password,
         p_nickname: nickname,
       });
 
