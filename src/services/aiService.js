@@ -4,7 +4,6 @@
  */
 
 import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
-import { ensureAIUsageAllowed, incrementMyAIUsage, resolveAIUsageType, AI_USAGE_TYPES } from './aiUsageService';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
 
@@ -157,13 +156,10 @@ const withFunctionErrorDetails = async (error) => {
 const callAIProxy = async (messages, options = {}, task = 'chat') => {
     try {
         const {
-            usageType: explicitUsageType,
-            countUsage = true,
             temperature = 0.7,
             maxTokens = 1000,
             signal,
         } = options;
-        const usageType = explicitUsageType || resolveAIUsageType(task);
 
         const authState = await ensureAuthenticatedSession();
         if (!authState.ok) {
@@ -173,12 +169,6 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
             };
         }
 
-        if (countUsage && usageType) {
-            const usageCheck = await ensureAIUsageAllowed(usageType);
-            if (!usageCheck.allowed) {
-                return { data: null, error: usageCheck.error };
-            }
-        }
 
         const { data, error } = await supabase.functions.invoke(EDGE_FUNCTION_NAME, {
             body: {
@@ -215,12 +205,6 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
             };
         }
 
-        if (countUsage && usageType) {
-            const usageRecord = await incrementMyAIUsage(usageType);
-            if (usageRecord.error) {
-                return { data: null, error: usageRecord.error };
-            }
-        }
 
         return {
             data: data.data,
@@ -457,8 +441,6 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
         {
             temperature: 0.9,
             maxTokens: 450,
-            usageType: AI_USAGE_TYPES.DAILY_FORTUNE_REDRAW,
-            countUsage: Boolean(usageOptions.countUsage),
             signal: usageOptions.signal || null,
         },
         'getDailyFortune',

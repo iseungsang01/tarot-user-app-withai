@@ -9,12 +9,6 @@ test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async 
 
   const { summarizeReview } = loadModule('src/services/aiService.js', {
     './supabaseClient': { supabaseClient },
-    './aiUsageService': {
-      ensureAIUsageAllowed: async () => ({ allowed: true, error: null }),
-      incrementMyAIUsage: async () => ({ data: {}, error: null }),
-      resolveAIUsageType: (task) => task,
-      AI_USAGE_TYPES: { DAILY_FORTUNE_REDRAW: 'daily_fortune_redraw' },
-    },
     './supabase': { 
       supabase: { 
         functions: { 
@@ -44,12 +38,6 @@ test('aiService: surfaces Edge Function JSON error details', async () => {
   edgeError.context = new Response(JSON.stringify({ error: 'GOOGLE_MODEL not found' }), { status: 500 });
 
   const { getDailyFortune } = loadModule('src/services/aiService.js', {
-    './aiUsageService': {
-      ensureAIUsageAllowed: async () => ({ allowed: true, error: null }),
-      incrementMyAIUsage: async () => ({ data: {}, error: null }),
-      resolveAIUsageType: (task) => task,
-      AI_USAGE_TYPES: { DAILY_FORTUNE_REDRAW: 'daily_fortune_redraw' },
-    },
     './supabase': {
       supabase: {
         functions: {
@@ -72,12 +60,6 @@ test('aiService: daily fortune extracts JSON object from decorated model output'
   const modelOutput = `오늘의 운세입니다.\n\n\`\`\`json\n{\n  "fortune": "차분하게 기회를 살피면 좋은 하루입니다.",\n  "luckyColor": "남색",\n  "luckyItem": "노트"\n}\n\`\`\``;
 
   const { getDailyFortune } = loadModule('src/services/aiService.js', {
-    './aiUsageService': {
-      ensureAIUsageAllowed: async () => ({ allowed: true, error: null }),
-      incrementMyAIUsage: async () => ({ data: {}, error: null }),
-      resolveAIUsageType: (task) => task,
-      AI_USAGE_TYPES: { DAILY_FORTUNE_REDRAW: 'daily_fortune_redraw' },
-    },
     './supabase': {
       supabase: {
         functions: {
@@ -103,12 +85,6 @@ test('aiService: daily fortune sanitizes malformed JSON-like fortune output', as
   const modelOutput = '```json\\n{ "fortune:1님, 오늘 당신의 길 위에 차분한 기회가 보입니다.", "luckyColor":"보라", "luckyItem":"노트" }\\n```';
 
   const { getDailyFortune, normalizeDailyFortunePayload } = loadModule('src/services/aiService.js', {
-    './aiUsageService': {
-      ensureAIUsageAllowed: async () => ({ allowed: true, error: null }),
-      incrementMyAIUsage: async () => ({ data: {}, error: null }),
-      resolveAIUsageType: (task) => task,
-      AI_USAGE_TYPES: { DAILY_FORTUNE_REDRAW: 'daily_fortune_redraw' },
-    },
     './supabase': {
       supabase: {
         functions: {

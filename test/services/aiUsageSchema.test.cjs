@@ -16,16 +16,6 @@ function getFunctionBody(functionName) {
   return match[0];
 }
 
-test('ai usage schema: increment function avoids ambiguous month_bucket conflict target', () => {
-  const functionBody = getFunctionBody('increment_my_ai_monthly_usage');
-
-  assert.match(functionBody, /ON CONFLICT ON CONSTRAINT ai_monthly_usage_pkey/);
-  assert.doesNotMatch(
-    functionBody,
-    /ON CONFLICT\s*\(\s*customer_id\s*,\s*month_bucket\s*,\s*usage_type\s*\)/,
-  );
-});
-
 test('coupon schema: admin password and coupon redemption are bound in one RPC', () => {
   const functionBody = getFunctionBody('use_my_coupon_with_admin_password');
 

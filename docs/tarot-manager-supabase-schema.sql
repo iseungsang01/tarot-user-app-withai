@@ -1,8 +1,9 @@
--- Tarot Manager App - Supabase schema for sharing
+-- Tarot User/Manager App - Supabase schema for sharing
 -- Generated from the tables/RPCs used by the current tarot-user-app-withai source.
 -- Scope: shared app tables + only SQL functions currently called from src/**/*.js.
--- Kept RPCs: login/register/session/profile, password/account, coupon, vote, bug report, AI usage, admin-password verification.
+-- Kept RPCs: login/register/session/profile, password/account, coupon, vote, bug report, admin-password verification.
 -- Removed/omitted stale RPCs: verify_admin_login, update_admin_settings, increment_visit_count, use_my_coupon, test-only helpers.
+-- Verification source: scanned src/**/*.js for supabase.rpc(...) and supabase.from(...) usages.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
 
@@ -270,28 +271,17 @@ CREATE TABLE IF NOT EXISTS public.customer_password_audit_logs (
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
-CREATE TABLE IF NOT EXISTS public.ai_monthly_usage (
-  customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
-  month_bucket date NOT NULL,
-  usage_type text NOT NULL CHECK (usage_type ~ '^[a-z][a-z0-9_]{1,63}$'),
-  usage_count integer NOT NULL DEFAULT 0 CHECK (usage_count >= 0),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (customer_id, month_bucket, usage_type)
-);
 
 CREATE INDEX IF NOT EXISTS idx_login_attempt_tracker_phone_hash ON public.login_attempt_tracker(phone_hash);
 CREATE INDEX IF NOT EXISTS idx_login_attempt_tracker_lock_expires_at ON public.login_attempt_tracker(lock_expires_at);
 CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer ON public.customer_sessions(customer_id);
 CREATE INDEX IF NOT EXISTS idx_customer_sessions_valid ON public.customer_sessions(token_hash, expires_at) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_customer_password_audit_customer ON public.customer_password_audit_logs(customer_id, changed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ai_monthly_usage_customer_month ON public.ai_monthly_usage(customer_id, month_bucket);
 
 ALTER TABLE public.app_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.login_attempt_tracker ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_password_audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ai_monthly_usage ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "No Direct Access app_configs" ON public.app_configs;
 CREATE POLICY "No Direct Access app_configs" ON public.app_configs FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
@@ -305,15 +295,11 @@ CREATE POLICY "No Direct Access customer_sessions" ON public.customer_sessions F
 DROP POLICY IF EXISTS "No Direct Access customer_password_audit_logs" ON public.customer_password_audit_logs;
 CREATE POLICY "No Direct Access customer_password_audit_logs" ON public.customer_password_audit_logs FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
 
-DROP POLICY IF EXISTS "No Direct Access ai_monthly_usage" ON public.ai_monthly_usage;
-CREATE POLICY "No Direct Access ai_monthly_usage" ON public.ai_monthly_usage FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
 
 REVOKE ALL ON public.app_configs FROM anon, authenticated;
 REVOKE ALL ON public.login_attempt_tracker FROM anon, authenticated;
 REVOKE ALL ON public.customer_sessions FROM anon, authenticated;
 REVOKE ALL ON public.customer_password_audit_logs FROM anon, authenticated;
-REVOKE ALL ON public.ai_monthly_usage FROM anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.ai_monthly_usage TO service_role;
 
 
 -- Cleanup for stale functions intentionally not used by the current app.
@@ -718,37 +704,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.get_my_ai_monthly_usage(p_session_token text, p_month_bucket date DEFAULT date_trunc('month', now())::date)
-RETURNS TABLE(usage_type text, usage_count integer, month_bucket date, updated_at timestamptz)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_customer_id uuid;
-BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN RAISE EXCEPTION 'Invalid or expired customer session' USING ERRCODE = '28000'; END IF;
-  RETURN QUERY SELECT u.usage_type, u.usage_count, u.month_bucket, u.updated_at
-  FROM public.ai_monthly_usage u
-  WHERE u.customer_id = v_customer_id AND u.month_bucket = COALESCE(p_month_bucket, date_trunc('month', now())::date)
-  ORDER BY u.usage_type;
-END;
-$$;
 
-CREATE OR REPLACE FUNCTION public.increment_my_ai_monthly_usage(p_session_token text, p_usage_type text, p_month_bucket date DEFAULT date_trunc('month', now())::date, p_increment integer DEFAULT 1)
-RETURNS TABLE(usage_type text, usage_count integer, month_bucket date, updated_at timestamptz)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_customer_id uuid; v_month date := COALESCE(p_month_bucket, date_trunc('month', now())::date); v_increment integer := COALESCE(p_increment, 1);
-BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN RAISE EXCEPTION 'Invalid or expired customer session' USING ERRCODE = '28000'; END IF;
-  IF p_usage_type IS NULL OR p_usage_type !~ '^[a-z][a-z0-9_]{1,63}$' THEN RAISE EXCEPTION 'invalid ai usage type'; END IF;
-  IF v_increment < 1 THEN RAISE EXCEPTION 'increment must be positive'; END IF;
-
-  RETURN QUERY INSERT INTO public.ai_monthly_usage (customer_id, month_bucket, usage_type, usage_count)
-  VALUES (v_customer_id, v_month, p_usage_type, v_increment)
-  ON CONFLICT (customer_id, month_bucket, usage_type) DO UPDATE
-  SET usage_count = public.ai_monthly_usage.usage_count + EXCLUDED.usage_count, updated_at = now()
-  RETURNING public.ai_monthly_usage.usage_type, public.ai_monthly_usage.usage_count, public.ai_monthly_usage.month_bucket, public.ai_monthly_usage.updated_at;
-END;
-$$;
 
 GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
@@ -771,8 +727,6 @@ GRANT EXECUTE ON FUNCTION public.cancel_vote_response(text, integer) TO anon, au
 GRANT EXECUTE ON FUNCTION public.get_vote_summary(integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_bug_reports(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_bug_report(text, text, text, text, text, jsonb) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.get_my_ai_monthly_usage(text, date) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.increment_my_ai_monthly_usage(text, text, date, integer) TO anon, authenticated;
 
 
 
