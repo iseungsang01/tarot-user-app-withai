@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { GradientBackground, LoadingSpinner, NoticeCard } from '../../components';
+import { CellarMark, GradientBackground, LoadingSpinner, NoticeCard, PremiumCard } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { noticeService } from '../../services/noticeService';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -55,10 +55,11 @@ const NoticeScreen = ({ isIntegrated = false }) => {
                 renderItem={({ item }) => <NoticeCard notice={item} onPress={(notice) => navigation.navigate('NoticeDetail', { notice })} />}
                 ListHeaderComponent={!isIntegrated ? renderHeader : null}
                 ListEmptyComponent={
-                    <View style={styles.emptyBox}>
-                        <Text style={styles.emptyIcon}></Text>
+                    <PremiumCard style={styles.emptyBox} contentStyle={styles.emptyContent}>
+                        <View style={styles.emptyFlap} />
+                        <CellarMark size={44} style={styles.emptyMark} />
                         <Text style={styles.emptyText}>아직 등록된 소식이 없습니다.</Text>
-                    </View>
+                    </PremiumCard>
                 }
                 contentContainerStyle={[
                     styles.listArea,
@@ -89,22 +90,41 @@ const styles = StyleSheet.create({
     headerDivider: CommonStyles.headerDivider,
     subtitle: CommonStyles.subtitle,
 
-    // 빈 상태
     emptyBox: {
-        alignItems: 'center',
-        paddingTop: 100,
-        paddingBottom: 40
+        padding: 16,
     },
-    emptyIcon: {
-        fontSize: 64,
-        marginBottom: 20,
-        opacity: 0.3
+    emptyContent: {
+        width: '100%',
+        minHeight: 134,
+        alignSelf: 'stretch',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(200,163,64,0.28)',
+        backgroundColor: 'rgba(31,18,12,0.46)',
+        overflow: 'hidden',
+        gap: 10,
+    },
+    emptyFlap: {
+        position: 'absolute',
+        top: -54,
+        width: '80%',
+        height: 110,
+        transform: [{ rotate: '45deg' }],
+        borderWidth: 1,
+        borderColor: 'rgba(200,163,64,0.16)',
+        backgroundColor: 'rgba(18,0,8,0.28)',
+    },
+    emptyMark: {
+        alignSelf: 'center',
     },
     emptyText: {
-        fontSize: 15,
-        color: DrawerTheme.woodLight,
-        fontStyle: 'italic',
-        opacity: 0.7
+        width: '100%',
+        fontSize: 13,
+        color: DrawerTheme.ivory,
+        fontWeight: '700',
+        textAlign: 'center',
     },
 });
 

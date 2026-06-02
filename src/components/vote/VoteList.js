@@ -7,11 +7,6 @@ import { CellarMark, PremiumCard } from '../common/PremiumUI';
 export const VoteList = ({ votes, onSelectVote }) => {
     return (
         <View>
-            <PremiumCard variant="walnut" style={styles.previewCard}>
-                <Text style={styles.previewTitle}>최근 소식</Text>
-                <Text style={styles.previewText}>진행 중인 투표와 공지를 이곳에서 확인할 수 있습니다.</Text>
-            </PremiumCard>
-
             {votes.length === 0 ? (
                 <PremiumCard style={styles.emptyBox} contentStyle={styles.emptyContent}>
                     <View style={styles.emptyFlap} />
@@ -32,21 +27,6 @@ export const VoteList = ({ votes, onSelectVote }) => {
 };
 
 const styles = StyleSheet.create({
-    previewCard: {
-        marginBottom: 14,
-    },
-    previewTitle: {
-        color: DrawerTheme.goldBrass,
-        fontSize: 12,
-        fontWeight: '900',
-        letterSpacing: 1.2,
-        marginBottom: 6,
-    },
-    previewText: {
-        color: DrawerTheme.ivory,
-        fontSize: 13,
-        lineHeight: 19,
-    },
     emptyBox: {
         padding: 16,
     },

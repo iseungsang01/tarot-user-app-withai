@@ -228,13 +228,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(224,184,90,0.72)',
   },
   segmentText: {
-    color: DrawerTheme.mutedGold,
+    color: DrawerTheme.goldBright,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1,
+    opacity: 0.92,
+    zIndex: 1,
+    elevation: 1,
   },
   segmentTextActive: {
     color: DrawerTheme.bgBlackCherry,
+    opacity: 1,
   },
   cellarMark: {
     alignItems: 'center',
