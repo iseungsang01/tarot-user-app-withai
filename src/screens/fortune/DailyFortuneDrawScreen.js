@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
   const [todayFortune, setTodayFortune] = useState(null);
   const [selectedCard, setSelectedCard] = useState(null);
   const [resultFortune, setResultFortune] = useState(null);
+  const [selectedCardPreview, setSelectedCardPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -36,6 +37,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
       setTodayFortune(normalizeDailyFortunePayload(stored));
       setSelectedCard(null);
       setResultFortune(null);
+      setSelectedCardPreview(null);
     } catch (error) {
       console.error('Daily fortune draw load error:', error);
     } finally {
@@ -99,6 +101,22 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
   };
 
   const canDraw = canDrawDailyFortune(todayFortune) && !isDrawing;
+  const canPreviewResultCard = Boolean(selectedCard);
+
+  const handleCardStagePress = () => {
+    if (canPreviewResultCard) {
+      setSelectedCardPreview({
+        source: selectedCard.image,
+        name: selectedCard.nameKr || resultFortune?.cardName || selectedCard.name,
+        subName: selectedCard.name || resultFortune?.cardEnglishName,
+      });
+      return;
+    }
+
+    if (canDraw) {
+      handleDraw();
+    }
+  };
 
   return (
     <ScreenContainer safeTop={false} safeBottom={false}>
@@ -126,10 +144,10 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
             <TouchableOpacity
               activeOpacity={0.86}
               style={[styles.cardStage, selectedCard && styles.cardStageRevealed]}
-              onPress={canDraw ? handleDraw : undefined}
-              disabled={!canDraw || loading}
+              onPress={handleCardStagePress}
+              disabled={loading || (!canDraw && !canPreviewResultCard)}
               accessibilityRole="button"
-              accessibilityLabel="오늘의 카드 한 장 뽑기"
+              accessibilityLabel={canPreviewResultCard ? '카드 크게 보기' : '오늘의 카드 한 장 뽑기'}
             >
               {selectedCard ? (
                 <Image source={selectedCard.image} style={styles.cardImage} resizeMode="contain" />
@@ -196,6 +214,31 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
           <Text style={styles.backButtonText}>운세 기록으로 돌아가기</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal visible={Boolean(selectedCardPreview)} transparent animationType="fade" onRequestClose={() => setSelectedCardPreview(null)}>
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setSelectedCardPreview(null)}
+          accessibilityRole="button"
+          accessibilityLabel="카드 상세보기 닫기"
+        >
+          <View style={styles.modalCardWrap}>
+            <TouchableOpacity activeOpacity={1}>
+              {selectedCardPreview && (
+                <>
+                  <Image source={selectedCardPreview.source} style={styles.modalStampImage} resizeMode="contain" />
+                  <Text style={styles.modalStampName}>{selectedCardPreview.name}</Text>
+                  {!!selectedCardPreview.subName && <Text style={styles.modalStampSubName}>{selectedCardPreview.subName}</Text>}
+                  <TouchableOpacity style={styles.modalCloseButton} activeOpacity={0.84} onPress={() => setSelectedCardPreview(null)}>
+                    <Text style={styles.modalCloseText}>닫기</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScreenContainer>
   );
 };
@@ -271,6 +314,13 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 14, fontWeight: '800', color: DrawerTheme.goldBright, textAlign: 'center' },
   backButton: { alignItems: 'center', marginTop: 18, paddingVertical: 14, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,217,119,0.45)', backgroundColor: 'rgba(200,163,64,0.12)' },
   backButtonText: { color: DrawerTheme.ivory, fontSize: 15, fontWeight: '900' },
+  modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'rgba(7,0,9,0.86)' },
+  modalCardWrap: { width: '100%', alignItems: 'center' },
+  modalStampImage: { width: 260, height: 390, maxWidth: '100%' },
+  modalStampName: { marginTop: 16, color: DrawerTheme.ivory, fontSize: 16, fontWeight: '900', textAlign: 'center', letterSpacing: 0.6 },
+  modalStampSubName: { marginTop: 5, color: DrawerTheme.mutedIvory, fontSize: 12, fontWeight: '700', textAlign: 'center', letterSpacing: 0.4 },
+  modalCloseButton: { alignSelf: 'center', marginTop: 14, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,217,119,0.5)', backgroundColor: 'rgba(200,163,64,0.18)' },
+  modalCloseText: { color: '#FFD977', fontSize: 13, fontWeight: '900' },
 });
 
 export default DailyFortuneDrawScreen;

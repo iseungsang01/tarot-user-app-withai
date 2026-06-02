@@ -1,6 +1,6 @@
 import { MAJOR_ARCANA } from '../constants/TarotCards';
 
-export const MAX_DAILY_FORTUNE_DRAWS = 30;
+export const MAX_DAILY_FORTUNE_DRAWS = 3;
 
 export const getLocalDateString = (date = new Date()) => {
   const year = date.getFullYear();
