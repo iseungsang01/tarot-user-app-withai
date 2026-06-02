@@ -56,10 +56,15 @@ const SettingsScreen = ({ navigation }) => {
         }
         setProcessing(true);
         try {
-            const { data: isValid } = await supabase.rpc('verify_password', {
+            const { data: isValid, error: verifyError } = await supabase.rpc('verify_password', {
                 customer_uuid: customer.id,
                 input_password: currentPassword
             });
+            if (verifyError) {
+                console.error('Verify password error:', verifyError);
+                Alert.alert('오류', '비밀번호 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
             if (!isValid) {
                 Alert.alert('오류', '현재 비밀번호가 일치하지 않습니다.');
                 return;
@@ -69,10 +74,13 @@ const SettingsScreen = ({ navigation }) => {
                 new_password: newPassword,
                 p_reason: 'settings_change'
             });
-            if (!error) {
-                showSuccessAlert('UPDATE', Alert, '비밀번호가 변경되었습니다.');
-                setActiveSection(null);
+            if (error) {
+                console.error('Update password error:', error);
+                Alert.alert('오류', '비밀번호 변경 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                return;
             }
+            showSuccessAlert('UPDATE', Alert, '비밀번호가 변경되었습니다.');
+            setActiveSection(null);
         } finally { setProcessing(false); }
     };
 
@@ -83,10 +91,16 @@ const SettingsScreen = ({ navigation }) => {
         }
         setProcessing(true);
         try {
-            const { data: isValid } = await supabase.rpc('verify_password', {
+            const { data: isValid, error: verifyError } = await supabase.rpc('verify_password', {
                 customer_uuid: customer.id,
                 input_password: password
             });
+            if (verifyError) {
+                console.error('Verify password error:', verifyError);
+                Alert.alert('오류', '비밀번호 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                setProcessing(false);
+                return;
+            }
             if (!isValid) {
                 Alert.alert('오류', '비밀번호가 일치하지 않습니다.');
                 setProcessing(false);
