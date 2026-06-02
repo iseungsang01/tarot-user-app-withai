@@ -74,7 +74,9 @@ export const VoteDetail = ({
                             onPress={() => !isGuest && onOptionToggle(opt.id)}
                             activeOpacity={isGuest ? 1 : 0.7}
                         >
-                            <View style={[styles.dot, isSel && styles.dotActive]} />
+                            <View style={[styles.dotWrap, isSel && styles.dotWrapActive]}>
+                                <View style={[styles.dot, isSel && styles.dotActive]} />
+                            </View>
                             <Text style={[styles.optText, isSel && styles.optTextActive]}>{opt.text}</Text>
                         </TouchableOpacity>
                     );
@@ -131,15 +133,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.03)',
         borderRadius: 10,
-        padding: 18,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)'
+        borderColor: 'rgba(255,255,255,0.1)',
+        minHeight: 58,
     },
     optSel: { borderColor: DrawerTheme.goldBrass, backgroundColor: 'rgba(212, 175, 55, 0.05)' },
-    dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.1)', marginRight: 15 },
+    dotWrap: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.16)',
+        backgroundColor: 'rgba(7,0,9,0.18)',
+        alignSelf: 'center',
+    },
+    dotWrapActive: { borderColor: DrawerTheme.goldBrass, backgroundColor: 'rgba(212, 175, 55, 0.08)' },
+    dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.14)' },
     dotActive: { backgroundColor: DrawerTheme.goldBrass },
-    optText: { color: '#AAA', fontSize: 15 },
+    optText: { color: '#AAA', fontSize: 15, lineHeight: 22, flex: 1 },
     optTextActive: { color: '#FFF', fontWeight: 'bold' },
     actionContainer: {
         flexDirection: 'row',

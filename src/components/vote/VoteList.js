@@ -13,8 +13,9 @@ export const VoteList = ({ votes, onSelectVote }) => {
             </PremiumCard>
 
             {votes.length === 0 ? (
-                <PremiumCard style={styles.emptyBox}>
-                    <CellarMark size={44} />
+                <PremiumCard style={styles.emptyBox} contentStyle={styles.emptyContent}>
+                    <View style={styles.emptyFlap} />
+                    <CellarMark size={44} style={styles.emptyMark} />
                     <Text style={styles.emptyText}>진행 중인 투표가 없습니다.</Text>
                 </PremiumCard>
             ) : (
@@ -47,13 +48,39 @@ const styles = StyleSheet.create({
         lineHeight: 19,
     },
     emptyBox: {
+        padding: 16,
+    },
+    emptyContent: {
+        width: '100%',
+        minHeight: 134,
+        alignSelf: 'stretch',
         alignItems: 'center',
-        paddingVertical: 42,
-        gap: 12,
+        justifyContent: 'center',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(200,163,64,0.28)',
+        backgroundColor: 'rgba(31,18,12,0.46)',
+        overflow: 'hidden',
+        gap: 10,
+    },
+    emptyFlap: {
+        position: 'absolute',
+        top: -54,
+        width: '80%',
+        height: 110,
+        transform: [{ rotate: '45deg' }],
+        borderWidth: 1,
+        borderColor: 'rgba(200,163,64,0.16)',
+        backgroundColor: 'rgba(18,0,8,0.28)',
+    },
+    emptyMark: {
+        alignSelf: 'center',
     },
     emptyText: {
-        fontSize: 14,
+        width: '100%',
+        fontSize: 13,
         color: DrawerTheme.ivory,
         fontWeight: '700',
+        textAlign: 'center',
     },
 });
