@@ -67,7 +67,7 @@ export const GoldActionButton = ({ title, children, onPress, disabled, style, te
 );
 
 export const SegmentControl = ({ options, value, onChange, style }) => (
-  <View style={[styles.segment, style]}>
+  <View style={[styles.segment, style]} accessibilityRole="tablist">
     {options.map((option) => {
       const active = option.value === value || option.key === value;
       const optionValue = option.value ?? option.key;
@@ -76,10 +76,12 @@ export const SegmentControl = ({ options, value, onChange, style }) => (
           key={optionValue}
           activeOpacity={0.85}
           onPress={() => onChange(optionValue)}
-          style={[styles.segmentItem, active && styles.segmentItemActive]}
+          style={[styles.segmentItem, active ? styles.segmentItemActive : styles.segmentItemInactive]}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: active }}
         >
           {active ? (
-            <LinearGradient colors={PremiumGradients.gold} style={StyleSheet.absoluteFillObject} />
+            <LinearGradient colors={PremiumGradients.gold} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
           ) : null}
           <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{option.label}</Text>
         </TouchableOpacity>
@@ -223,12 +225,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  segmentItemInactive: {
+    backgroundColor: 'rgba(200,163,64,0.12)',
+  },
   segmentItemActive: {
     borderWidth: 1,
     borderColor: 'rgba(224,184,90,0.72)',
   },
   segmentText: {
-    color: DrawerTheme.goldBright,
+    color: DrawerTheme.ivory,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1,

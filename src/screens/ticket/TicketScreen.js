@@ -102,7 +102,11 @@ const TicketScreen = () => {
         text: '사용',
         onPress: async () => {
           setProcessingCouponId(coupon.id);
-          const { error } = await handleApiCall('TicketScreen.useCoupon', () => couponService.useCoupon(coupon.id, password));
+          const { error } = await handleApiCall(
+            'TicketScreen.useCoupon',
+            () => couponService.useCoupon(coupon.id, password),
+            { silentErrorCodes: ['invalid_admin_password', 'ADMIN_PASSWORD_REQUIRED'] }
+          );
           if (!error) {
             showSuccessAlert('COUPON_USED', Alert, '쿠폰이 사용 처리되었습니다.');
             resetCouponUse();

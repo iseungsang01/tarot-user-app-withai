@@ -25,7 +25,8 @@ test('coupon schema: redeem_coupon validates session and admin password before a
   assert.match(functionBody, /p_session_token text/);
   assert.match(functionBody, /RETURNS TABLE\(success boolean, message text\)/);
   assert.match(functionBody, /RETURN QUERY SELECT false, 'invalid_session'::text/);
-  assert.match(functionBody, /extensions\.crypt\(p_admin_password,\s*v_hashed_password\)/);
+  assert.match(functionBody, /extensions\.crypt\(p_admin_password,\s*v_config_hash\)/);
+  assert.match(functionBody, /current_setting\('app\.admin_password', true\)/);
   assert.match(functionBody, /FOR UPDATE/);
   assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_not_found'::text/);
   assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_already_used'::text/);
@@ -34,7 +35,7 @@ test('coupon schema: redeem_coupon validates session and admin password before a
   assert.match(functionBody, /SET search_path = public, extensions/);
   assert.ok(
     functionBody.indexOf('public.resolve_customer_session(p_session_token)') <
-      functionBody.indexOf('extensions.crypt(p_admin_password, v_hashed_password)'),
+      functionBody.indexOf('extensions.crypt(p_admin_password, v_config_hash)'),
     'customer session should be resolved before admin password verification',
   );
   assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.use_my_coupon_with_admin_password/);

@@ -20,6 +20,11 @@ const requireCustomerSessionToken = async () => {
   return token;
 };
 
+const SILENT_COUPON_USE_ERROR_CODES = new Set([
+  'ADMIN_PASSWORD_REQUIRED',
+  'invalid_admin_password',
+]);
+
 /**
  * 쿠폰 서비스
  * 쿠폰 조회, 사용, 발급
@@ -114,7 +119,7 @@ export const couponService = {
 
       return { error: null, message: result.message };
     } catch (error) {
-      if (error?.code !== 'ADMIN_PASSWORD_REQUIRED') {
+      if (!SILENT_COUPON_USE_ERROR_CODES.has(error?.code)) {
         console.error('Use coupon error:', error);
       }
       return { error };

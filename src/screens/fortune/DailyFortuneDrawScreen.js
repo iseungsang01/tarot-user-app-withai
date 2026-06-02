@@ -114,12 +114,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
           style={styles.header}
         />
 
-        <PremiumCard style={styles.drawPanel}>
-          <Text style={styles.title}>오늘의 카드 뽑기</Text>
-          <Text style={styles.description}>
-            중앙의 덱을 눌러 한 장을 뽑아 보세요. 카드는 앱에서 먼저 확정되고, AI는 그 카드의 의미로 오늘의 조언만 작성합니다.
-          </Text>
-
+        <PremiumCard style={styles.drawPanel} contentStyle={styles.drawPanelContent}>
           <View style={styles.deckArea}>
             {!selectedCard && (
               <>
@@ -184,9 +179,15 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
               <DetailItem label="주의" value={resultFortune.care} />
               <DetailItem label="행동" value={resultFortune.action} />
             </View>
-            <View style={styles.luckyRow}>
-              <Text style={styles.luckyText}>색: {resultFortune.luckyColor}</Text>
-              <Text style={styles.luckyText}>아이템: {resultFortune.luckyItem}</Text>
+            <View style={styles.fortuneFooter}>
+              <View style={styles.fortuneInfo}>
+                <Text style={styles.infoLabel}>행운의 색</Text>
+                <Text style={styles.infoValue}>{resultFortune.luckyColor}</Text>
+              </View>
+              <View style={styles.fortuneInfo}>
+                <Text style={styles.infoLabel}>행운의 아이템</Text>
+                <Text style={styles.infoValue}>{resultFortune.luckyItem}</Text>
+              </View>
             </View>
           </PremiumCard>
         )}
@@ -212,10 +213,9 @@ const DetailItem = ({ label, value }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20 },
   header: { marginBottom: 16 },
-  drawPanel: { alignItems: 'center', overflow: 'hidden' },
-  title: { color: DrawerTheme.antiqueGold, fontSize: 20, fontWeight: '900', marginBottom: 8 },
-  description: { color: DrawerTheme.mutedIvory, fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 20 },
-  deckArea: { width: '100%', minHeight: 322, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  drawPanel: { overflow: 'hidden' },
+  drawPanelContent: { width: '100%', alignItems: 'center', justifyContent: 'center' },
+  deckArea: { width: '100%', minHeight: 322, alignItems: 'center', justifyContent: 'center', marginTop: 0, position: 'relative' },
   deckShadowCard: {
     position: 'absolute',
     width: 188,
@@ -225,9 +225,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200,163,64,0.28)',
     backgroundColor: 'rgba(42,6,44,0.72)',
   },
-  deckShadowLeft: { transform: [{ translateX: -20 }, { translateY: 10 }, { rotate: '-7deg' }] },
-  deckShadowRight: { transform: [{ translateX: 20 }, { translateY: 10 }, { rotate: '7deg' }] },
-  deckShadowBack: { transform: [{ translateY: 18 }], backgroundColor: 'rgba(18,0,8,0.9)' },
+  deckShadowLeft: { transform: [{ translateX: -18 }, { translateY: 12 }, { rotate: '-6deg' }] },
+  deckShadowRight: { transform: [{ translateX: 18 }, { translateY: 12 }, { rotate: '6deg' }] },
+  deckShadowBack: { transform: [{ translateX: 0 }, { translateY: 18 }], backgroundColor: 'rgba(18,0,8,0.9)' },
   cardStage: {
     width: 188,
     height: 292,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   selectedCardEnglish: { color: DrawerTheme.mutedIvory, fontSize: 12, fontWeight: '700', marginTop: 3 },
   loadingBox: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: 'rgba(7,0,9,0.35)' },
   loadingText: { color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '800' },
-  drawButton: { width: '100%', marginTop: 20 },
+  drawButton: { alignSelf: 'center', width: '72%', minWidth: 220, maxWidth: 320, marginTop: 20 },
   resultPanel: { marginTop: 14 },
   resultTitle: { color: DrawerTheme.antiqueGold, fontSize: 18, fontWeight: '900', marginBottom: 10 },
   summaryText: { color: DrawerTheme.goldBright, fontSize: 16, fontWeight: '900', marginBottom: 10 },
@@ -265,8 +265,10 @@ const styles = StyleSheet.create({
   detailItem: { backgroundColor: 'rgba(7,0,9,0.28)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(200,163,64,0.14)' },
   detailLabel: { color: DrawerTheme.antiqueGold, fontSize: 12, fontWeight: '900', marginBottom: 5 },
   detailValue: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 21 },
-  luckyRow: { borderTopWidth: 1, borderTopColor: 'rgba(200,163,64,0.18)', paddingTop: 13, gap: 4 },
-  luckyText: { color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '800' },
+  fortuneFooter: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(200,163,64,0.18)', paddingTop: 15 },
+  fortuneInfo: { alignItems: 'center', flex: 1 },
+  infoLabel: { fontSize: 12, color: DrawerTheme.mutedIvory, marginBottom: 4 },
+  infoValue: { fontSize: 14, fontWeight: '800', color: DrawerTheme.goldBright, textAlign: 'center' },
   backButton: { alignItems: 'center', marginTop: 18, paddingVertical: 14, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,217,119,0.45)', backgroundColor: 'rgba(200,163,64,0.12)' },
   backButtonText: { color: DrawerTheme.ivory, fontSize: 15, fontWeight: '900' },
 });

@@ -204,3 +204,27 @@ test('aiService: daily fortune repairs raw newline inside JSON string', async ()
   assert.equal(result.data.drawCount, 1);
   assert.ok(result.data.drawnAt);
 });
+
+test('aiService: daily fortune collapses degenerate Korean syllable repeats', async () => {
+  const repeatedFortune = '\uC624\uB298\uC740 \uBB34\uC5B8\uAC00\uB97C \uC5B5\uC9C0\uB85C\uB85C\uB85C\uB85C\uB85C\uB85C\uB85C\uB85C \uB04C\uACE0 \uAC00\uC9C0 \uC54A\uC544\uB3C4 \uB429\uB2C8\uB2E4.';
+  const cleanedFortune = '\uC624\uB298\uC740 \uBB34\uC5B8\uAC00\uB97C \uC5B5\uC9C0\uB85C \uB04C\uACE0 \uAC00\uC9C0 \uC54A\uC544\uB3C4 \uB429\uB2C8\uB2E4.';
+  const modelOutput = JSON.stringify({ fortune: repeatedFortune, luckyColor: '\uD30C\uB791', luckyItem: '\uD39C' });
+
+  const { getDailyFortune, normalizeDailyFortunePayload } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await getDailyFortune('tester');
+
+  assert.equal(result.error, null);
+  assert.equal(result.data.fortune, cleanedFortune);
+  assert.equal(normalizeDailyFortunePayload({ fortune: repeatedFortune }).fortune, cleanedFortune);
+});

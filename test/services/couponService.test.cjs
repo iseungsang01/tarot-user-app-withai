@@ -97,3 +97,31 @@ test('couponService: rejects coupon use without admin password before RPC', asyn
   assert.equal(calls.length, 0);
   assert.equal(result.error.code, 'ADMIN_PASSWORD_REQUIRED');
 });
+
+test('couponService: treats invalid admin password as user input without console error logging', async () => {
+  const originalConsoleError = console.error;
+  const errors = [];
+  console.error = (...args) => errors.push(args);
+
+  try {
+    const supabaseClient = {
+      redeemCoupon: async () => ({
+        data: [{ success: false, message: 'invalid_admin_password' }],
+        error: null,
+      }),
+    };
+
+    const { couponService } = loadModule('src/services/couponService.js', {
+      './supabase': { supabase: createSupabaseTableMock() },
+      './supabaseClient': { supabaseClient },
+      '../utils/storage': { storage: createStorageMock() },
+    });
+
+    const result = await couponService.useCoupon(10, 'wrong-password');
+
+    assert.equal(result.error.code, 'invalid_admin_password');
+    assert.equal(errors.length, 0);
+  } finally {
+    console.error = originalConsoleError;
+  }
+});

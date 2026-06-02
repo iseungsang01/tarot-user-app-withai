@@ -579,7 +579,8 @@ SET search_path = public, extensions
 AS $$
 DECLARE
   v_customer_id uuid;
-  v_hashed_password text;
+  v_config_hash text;
+  v_legacy_password text;
   v_coupon public.coupon_history%ROWTYPE;
 BEGIN
   v_customer_id := public.resolve_customer_session(p_session_token);
@@ -588,14 +589,23 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT value INTO v_hashed_password
-  FROM public.app_configs
-  WHERE key = 'admin_password';
+  IF p_admin_password IS NULL OR btrim(p_admin_password) = '' THEN
+    RETURN QUERY SELECT false, 'invalid_admin_password'::text;
+    RETURN;
+  END IF;
 
-  IF p_admin_password IS NULL
-     OR btrim(p_admin_password) = ''
-     OR v_hashed_password IS NULL
-     OR v_hashed_password <> extensions.crypt(p_admin_password, v_hashed_password) THEN
+  IF to_regclass('public.app_configs') IS NOT NULL THEN
+    EXECUTE 'SELECT value FROM public.app_configs WHERE key = $1'
+      INTO v_config_hash
+      USING 'admin_password';
+  END IF;
+
+  v_legacy_password := current_setting('app.admin_password', true);
+
+  IF NOT (
+    (v_config_hash IS NOT NULL AND v_config_hash = extensions.crypt(p_admin_password, v_config_hash))
+    OR (v_legacy_password IS NOT NULL AND v_legacy_password = p_admin_password)
+  ) THEN
     RETURN QUERY SELECT false, 'invalid_admin_password'::text;
     RETURN;
   END IF;

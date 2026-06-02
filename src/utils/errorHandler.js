@@ -11,13 +11,17 @@ import { errorEmitter } from './errorEmitter';
  * @param {Error} error - Supabase 에러 객체
  * @returns {object} { type, title, message, icon }
  */
-export const parseSupabaseError = (error) => {
-  console.error('🔴 [ErrorHandler] Supabase Error:', {
-    message: error?.message,
-    code: error?.code,
-    details: error?.details,
-    hint: error?.hint,
-  });
+export const parseSupabaseError = (error, options = {}) => {
+  const { log = true } = options;
+
+  if (log) {
+    console.error('?? [ErrorHandler] Supabase Error:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+    });
+  }
 
   // 네트워크 에러
   if (!error || error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
@@ -108,14 +112,20 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
     showAlert = false,
     onError = null,
     additionalInfo = {},
+    silentErrorCodes = [],
   } = options;
+
+  const shouldLogError = (error) => !silentErrorCodes.includes(error?.code);
 
   try {
     const result = await apiCall();
 
     if (result.error) {
-      const errorInfo = parseSupabaseError(result.error);
-      logError(context, result.error, additionalInfo);
+      const shouldLog = shouldLogError(result.error);
+      const errorInfo = parseSupabaseError(result.error, { log: shouldLog });
+      if (shouldLog) {
+        logError(context, result.error, additionalInfo);
+      }
 
       if (showAlert) {
         errorEmitter.emit(errorInfo);
@@ -130,8 +140,11 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
 
     return { data: result.data, error: null, errorInfo: null };
   } catch (error) {
-    const errorInfo = parseSupabaseError(error);
-    logError(context, error, additionalInfo);
+    const shouldLog = shouldLogError(error);
+    const errorInfo = parseSupabaseError(error, { log: shouldLog });
+    if (shouldLog) {
+      logError(context, error, additionalInfo);
+    }
 
     if (showAlert) {
       errorEmitter.emit(errorInfo);

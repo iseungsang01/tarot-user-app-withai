@@ -149,14 +149,19 @@ const stripJSONDecorators = (text) => {
         .trim();
 };
 
+const collapseDegenerateKoreanRepeats = (text) => {
+    if (typeof text !== 'string') return '';
+    return text.replace(/([\u3131-\u318E\uAC00-\uD7A3])\1{3,}/g, '$1');
+};
+
 const cleanJSONLikeValue = (value) => {
     if (value === null || value === undefined) return '';
-    return String(value)
+    return collapseDegenerateKoreanRepeats(String(value)
         .replace(/\\n/g, '\n')
         .replace(/\\"/g, '"')
         .replace(/^\s*[{,]?\s*"?/g, '')
         .replace(/"?\s*[,}]?\s*$/g, '')
-        .trim();
+        .trim());
 };
 
 const extractLooseField = (text, fieldName) => {
