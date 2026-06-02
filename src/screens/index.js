@@ -4,6 +4,7 @@ export { default as RegisterScreen } from './auth/RegisterScreen';
 
 // Fortune
 export { default as DailyFortuneScreen } from './fortune/DailyFortuneScreen';
+export { default as DailyFortuneDrawScreen } from './fortune/DailyFortuneDrawScreen';
 
 // History
 export { default as HistoryScreen } from './history/HistoryScreen';

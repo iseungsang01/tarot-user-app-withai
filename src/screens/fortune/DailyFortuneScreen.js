@@ -1,45 +1,46 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldActionButton, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { useAuth } from '../../hooks/useAuth';
-import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
-import { storage } from '../../utils/storage';
 import { MAJOR_ARCANA } from '../../constants/TarotCards';
-
-const FORTUNE_SCROLL_AFTER_REPICK_KEY = 'fortune_scroll_after_repick_once';
-
-const getLocalDateString = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { normalizeDailyFortunePayload } from '../../services/aiService';
+import { storage } from '../../utils/storage';
+import {
+  canDrawDailyFortune,
+  getCardById,
+  getCardImageSource,
+  getDrawButtonLabel,
+  getLocalDateString,
+  getRemainingDraws,
+  getStoredDrawCount,
+} from '../../utils/dailyFortune';
 
 const isErrorFortune = (fortune) => {
   if (!fortune?.fortune) return false;
-  const content = fortune.fortune;
-  return content.includes('오류') || content.includes('초과') || content.includes('부족') || content.includes('Error');
+  return String(fortune.fortune).includes('Error');
 };
 
-const hasValidFortune = (fortune) => !!fortune && !isErrorFortune(fortune);
+const hasValidFortune = (fortune) => !!fortune?.fortune && !isErrorFortune(fortune);
 
-const DailyFortuneScreen = () => {
+const formatDateTitle = (dateStr, todayStr) => {
+  if (!dateStr) return '카드 기록';
+  if (dateStr === todayStr) return '오늘의 카드 기록';
+  const [, month, day] = dateStr.split('-');
+  return `${Number(month)}월 ${Number(day)}일의 카드 기록`;
+};
+
+const DailyFortuneScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { customer } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [checkInLoading, setCheckInLoading] = useState(false);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [allFortunes, setAllFortunes] = useState({});
-  const [selectedFortune, setSelectedFortune] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [todayCheckedIn, setTodayCheckedIn] = useState(false);
-  const [isPickingCard, setIsPickingCard] = useState(false);
+  const [selectedFortune, setSelectedFortune] = useState(null);
+  const [selectedCardPreview, setSelectedCardPreview] = useState(null);
 
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
   const todayStr = getLocalDateString(today);
@@ -47,22 +48,18 @@ const DailyFortuneScreen = () => {
   const loadLocalData = useCallback(async () => {
     setLoading(true);
     try {
-      await storage.get(FORTUNE_SCROLL_AFTER_REPICK_KEY);
       const fortunes = await storage.getAllFortunes();
       const history = await storage.getAttendanceHistory();
       const safeFortunes = Object.fromEntries(
         Object.entries(fortunes || {}).map(([date, fortune]) => [date, normalizeDailyFortunePayload(fortune)])
       );
-      const safeHistory = history || [];
 
       setAllFortunes(safeFortunes);
-      setAttendanceHistory(safeHistory);
-      setTodayCheckedIn(safeHistory.includes(todayStr));
+      setAttendanceHistory(history || []);
       setSelectedDate(todayStr);
       setSelectedFortune(safeFortunes[todayStr] || null);
-      await storage.remove(FORTUNE_SCROLL_AFTER_REPICK_KEY);
     } catch (error) {
-      console.error('Local data load error:', error);
+      console.error('Daily fortune load error:', error);
     } finally {
       setLoading(false);
     }
@@ -70,7 +67,7 @@ const DailyFortuneScreen = () => {
 
   useEffect(() => {
     loadLocalData();
-  }, [customer, loadLocalData]);
+  }, [loadLocalData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,70 +81,14 @@ const DailyFortuneScreen = () => {
     });
   }, []);
 
-  const getCardImageSource = (fortune) => {
-    const localCard = MAJOR_ARCANA.find((card) => card.id === fortune?.cardId);
-    const cardImage = localCard?.image || fortune?.cardImage;
-    if (!cardImage) return null;
-    return typeof cardImage === 'string' ? { uri: cardImage } : cardImage;
-  };
-
-  const handleDrawCard = async (isRepick = false) => {
-    const currentFortune = allFortunes[todayStr];
-    if (!isRepick && hasValidFortune(currentFortune)) return;
-
-    setCheckInLoading(true);
-    try {
-      const randomCard = MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
-      const initialFortuneState = {
-        cardId: randomCard.id,
-        cardName: randomCard.nameKr,
-        cardImage: randomCard.image,
-        fortune: null,
-        luckyColor: null,
-        luckyItem: null,
-      };
-      setSelectedDate(todayStr);
-      setSelectedFortune(initialFortuneState);
-
-      const nickname = customer?.nickname || '고객님';
-      const prevContent = hasValidFortune(currentFortune) ? currentFortune.fortune : '';
-      const [fortuneResult] = await Promise.all([
-        getDailyFortune(nickname, prevContent, randomCard.name, { countUsage: isRepick }),
-        !todayCheckedIn ? storage.saveAttendance(todayStr) : Promise.resolve(),
-      ]);
-
-      if (!todayCheckedIn) {
-        setTodayCheckedIn(true);
-        setAttendanceHistory((prev) => [...new Set([...prev, todayStr])]);
-      }
-
-      if (fortuneResult.error) throw fortuneResult.error;
-
-      const finalFortune = {
-        ...fortuneResult.data,
-        cardId: randomCard.id,
-        cardName: randomCard.nameKr,
-        cardImage: randomCard.image,
-      };
-
-      await storage.saveDailyFortune(finalFortune, todayStr);
-      setAllFortunes((prev) => ({ ...prev, [todayStr]: finalFortune }));
-      setSelectedFortune(finalFortune);
-      setIsPickingCard(false);
-    } catch (error) {
-      console.error('Pick card error:', error);
-      if (!error?.isAuthError && !error?.requiresReLogin) {
-        Alert.alert('오류', '운세를 가져오는 중 문제가 발생했습니다.');
-      }
-    } finally {
-      setCheckInLoading(false);
-    }
-  };
-
   const handleDatePress = (dateStr) => {
-    const fortuneForDay = allFortunes[dateStr];
-    setSelectedFortune(fortuneForDay || null);
     setSelectedDate(dateStr);
+    setSelectedFortune(allFortunes[dateStr] || null);
+  };
+
+  const handleStartCardDraw = () => {
+    if (!canDrawDailyFortune(allFortunes[todayStr])) return;
+    navigation.navigate('DailyFortuneDraw');
   };
 
   const calendarGrid = useMemo(() => {
@@ -172,28 +113,30 @@ const DailyFortuneScreen = () => {
           <View style={[styles.dayCircle, isAttended && styles.attendedCircle, isToday && styles.todayCircle, isSelected && styles.selectedCircle]}>
             <Text style={[styles.dayText, isAttended && styles.attendedText, isToday && styles.todayText, isSelected && styles.selectedText]}>{d}</Text>
           </View>
-          {isAttended && <View style={styles.fortuneMarker} />}
-          {hasFortune && !isAttended && <View style={styles.fortuneMarkerDim} />}
+          {hasFortune && <View style={styles.fortuneMarker} />}
         </TouchableOpacity>
       );
     }
 
     return (
       <View style={styles.calendarGrid}>
-        {['일', '월', '화', '수', '목', '금', '토'].map((w) => (
-          <View key={w} style={styles.dayBox}>
-            <Text style={styles.weekdayText}>{w}</Text>
+        {['일', '월', '화', '수', '목', '금', '토'].map((weekday) => (
+          <View key={weekday} style={styles.dayBox}>
+            <Text style={styles.weekdayText}>{weekday}</Text>
           </View>
         ))}
         {days}
       </View>
     );
-  }, [currentYear, currentMonth, attendanceHistory, allFortunes, selectedDate, todayStr]);
+  }, [allFortunes, attendanceHistory, currentMonth, currentYear, selectedDate, todayStr]);
 
   const todayFortune = allFortunes[todayStr];
-  const hasFortuneToday = !!todayFortune?.fortune && hasValidFortune(todayFortune);
-  const isTodayError = !!todayFortune && isErrorFortune(todayFortune);
-  const isSelectedToday = selectedDate === todayStr;
+  const selectedCardSource = selectedFortune ? getCardImageSource(selectedFortune) : null;
+  const selectedCard = selectedFortune ? getCardById(selectedFortune.cardId) : null;
+  const selectedIsToday = selectedDate === todayStr;
+  const drawCount = getStoredDrawCount(todayFortune);
+  const remainingDraws = getRemainingDraws(todayFortune);
+  const canDrawToday = canDrawDailyFortune(todayFortune);
 
   return (
     <ScreenContainer safeTop={false} safeBottom={false}>
@@ -203,369 +146,161 @@ const DailyFortuneScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <PremiumHeaderPanel
-          title="FORTUNE BOARD"
-          subtitle={`${currentYear}년 ${currentMonth + 1}월의 오늘의 운세를 확인하세요`}
+          title="FORTUNE ARCHIVE"
+          subtitle={`${currentYear}년 ${currentMonth + 1}월의 오늘 운세 보관소`}
           compact
           style={styles.header}
         />
 
         <PremiumCard style={styles.card}>
-          {loading ? <ActivityIndicator color={DrawerTheme.antiqueGold} size="large" style={{ marginVertical: 40 }} /> : calendarGrid}
+          {loading ? <ActivityIndicator color={DrawerTheme.antiqueGold} size="large" style={styles.loading} /> : calendarGrid}
         </PremiumCard>
 
-        <View style={styles.actionSection}>
-          {isSelectedToday ? (
-            <>
-              {!hasFortuneToday && !isTodayError && !selectedFortune && (
-                <View style={styles.doneBanner}>
-                  <Text style={styles.doneText}>카드를 열어 오늘의 메시지를 확인해보세요</Text>
-                </View>
-              )}
+        <PremiumCard style={styles.statusCard}>
+          <Text style={styles.statusTitle}>오늘의 운세 상태</Text>
+          <Text style={styles.statusText}>
+            {hasValidFortune(todayFortune)
+              ? `오늘 ${drawCount}회 뽑았습니다. 남은 횟수는 ${remainingDraws}회입니다.`
+              : '아직 오늘의 카드를 뽑지 않았습니다.'}
+          </Text>
+          <GoldActionButton onPress={handleStartCardDraw} disabled={!canDrawToday} dark={!canDrawToday} style={styles.drawButton}>
+            {getDrawButtonLabel(todayFortune)}
+          </GoldActionButton>
+        </PremiumCard>
 
-              <GoldActionButton
-                onPress={() => setIsPickingCard(true)}
-                disabled={checkInLoading}
-                dark={hasFortuneToday && !isTodayError}
-                style={styles.drawButton}
-              >
-                {checkInLoading
-                  ? '해석 중...'
-                  : isTodayError
-                    ? '카드 다시 뽑기'
-                    : hasFortuneToday
-                      ? '카드 다시 뽑기'
-                      : '오늘의 카드 뽑기'}
-              </GoldActionButton>
-            </>
-          ) : selectedDate ? (
-            <View style={styles.doneBanner}>
-              <Text style={styles.doneText}>{selectedDate.split('-')[2]}일의 기록을 보고 있습니다</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {isPickingCard && (
-          <PremiumCard style={styles.pickerPanel}>
-            <Text style={styles.pickerTitle}>오늘의 카드를 선택하세요</Text>
-            <View style={styles.cardRow}>
-              {[0, 1, 2].map((idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  activeOpacity={0.84}
-                  style={styles.tarotCardBack}
-                  onPress={() => handleDrawCard(hasFortuneToday && !isTodayError)}
-                  disabled={checkInLoading}
-                >
-                  <LinearGradient colors={['#3B0B24', '#09000D']} style={styles.cardBackGradient}>
-                    <View style={styles.cardPattern}>
-                      <View style={styles.innerPattern}>
-                        <Text style={styles.cardPatternText}>T</Text>
-                      </View>
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity onPress={() => setIsPickingCard(false)} style={styles.cancelPick}>
-              <Text style={styles.cancelPickText}>돌아가기</Text>
-            </TouchableOpacity>
-          </PremiumCard>
-        )}
-
-        {selectedFortune && (
+        {selectedFortune ? (
           <PremiumCard style={styles.fortuneCard}>
-            <Text style={styles.fortuneTitle}>{selectedDate === todayStr ? '오늘' : `${selectedDate?.split('-')[1]}월 ${selectedDate?.split('-')[2]}일`}의 카드 기록</Text>
+            <Text style={styles.fortuneTitle}>{formatDateTitle(selectedDate, todayStr)}</Text>
 
-            {selectedFortune.cardImage && (
+            {selectedCardSource && (
               <View style={styles.resultCardContainer}>
-                <Image source={getCardImageSource(selectedFortune)} style={styles.resultCardImage} resizeMode="contain" />
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  onPress={() => setSelectedCardPreview({ source: selectedCardSource, name: selectedCard?.name || selectedFortune.cardEnglishName || selectedFortune.cardName })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${selectedFortune.cardName || '타로 카드'} 크게 보기`}
+                >
+                  <Image source={selectedCardSource} style={styles.resultCardImage} resizeMode="contain" />
+                </TouchableOpacity>
                 <Text style={styles.resultCardName}>{selectedFortune.cardName}</Text>
+                {!!(selectedCard?.name || selectedFortune.cardEnglishName) && (
+                  <Text style={styles.resultCardSubName}>{selectedCard?.name || selectedFortune.cardEnglishName}</Text>
+                )}
               </View>
             )}
 
-            {selectedFortune?.fortune ? (
-              <Text style={styles.fortuneContent}>{selectedFortune.fortune}</Text>
-            ) : (
-              <View style={styles.loadingFortuneText}>
-                <ActivityIndicator size="small" color={DrawerTheme.antiqueGold} />
-                <Text style={styles.interpretingText}>운명의 메시지를 해석하는 중...</Text>
-              </View>
-            )}
+            {!!selectedFortune.summary && <Text style={styles.summaryText}>{selectedFortune.summary}</Text>}
+            <Text style={styles.fortuneContent}>{selectedFortune.fortune}</Text>
+
+            <View style={styles.detailGrid}>
+              <DetailItem label="관계" value={selectedFortune.relationship} />
+              <DetailItem label="일/공부" value={selectedFortune.work} />
+              <DetailItem label="금전" value={selectedFortune.money} />
+              <DetailItem label="주의" value={selectedFortune.care} />
+              <DetailItem label="행동" value={selectedFortune.action} wide />
+            </View>
 
             <View style={styles.fortuneFooter}>
               <View style={styles.fortuneInfo}>
                 <Text style={styles.infoLabel}>행운의 색</Text>
-                <Text style={styles.infoValue}>{selectedFortune?.luckyColor || '...'}</Text>
+                <Text style={styles.infoValue}>{selectedFortune.luckyColor}</Text>
               </View>
               <View style={styles.fortuneInfo}>
                 <Text style={styles.infoLabel}>행운의 아이템</Text>
-                <Text style={styles.infoValue}>{selectedFortune?.luckyItem || '...'}</Text>
+                <Text style={styles.infoValue}>{selectedFortune.luckyItem}</Text>
               </View>
             </View>
           </PremiumCard>
-        )}
-
-        {selectedDate && !selectedFortune && selectedDate !== todayStr && (
+        ) : selectedDate && !selectedIsToday ? (
           <PremiumCard style={styles.noFortuneCard}>
             <Text style={styles.noFortuneText}>이 날짜에는 저장된 카드 기록이 없습니다.</Text>
           </PremiumCard>
-        )}
+        ) : null}
       </ScrollView>
+
+      <Modal visible={Boolean(selectedCardPreview)} transparent animationType="fade" onRequestClose={() => setSelectedCardPreview(null)}>
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setSelectedCardPreview(null)}
+          accessibilityRole="button"
+          accessibilityLabel="타로 카드 확대 닫기"
+        >
+          <View style={styles.modalCardWrap}>
+            <TouchableOpacity activeOpacity={1}>
+              {selectedCardPreview && (
+                <>
+                  <Image source={selectedCardPreview.source} style={styles.modalStampImage} resizeMode="contain" />
+                  <Text style={styles.modalStampName}>{selectedCardPreview.name}</Text>
+                  <TouchableOpacity style={styles.modalCloseButton} activeOpacity={0.84} onPress={() => setSelectedCardPreview(null)}>
+                    <Text style={styles.modalCloseText}>닫기</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScreenContainer>
   );
 };
 
+const DetailItem = ({ label, value, wide = false }) => {
+  if (!value) return null;
+  return (
+    <View style={[styles.detailItem, wide && styles.detailItemWide]}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  card: {
-    padding: 15,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayBox: {
-    width: '14.28%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 2,
-    position: 'relative',
-  },
-  weekdayText: {
-    color: DrawerTheme.mutedIvory,
-    fontSize: 12,
-    fontWeight: '800',
-    opacity: 0.8,
-  },
-  dayCircle: {
-    width: '80%',
-    height: '80%',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(7,0,9,0.38)',
-  },
-  dayText: {
-    color: DrawerTheme.ivory,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  attendedCircle: {
-    backgroundColor: 'rgba(200,163,64,0.12)',
-  },
-  attendedText: {
-    color: DrawerTheme.goldBright,
-    fontWeight: '900',
-  },
-  todayCircle: {
-    borderWidth: 2,
-    borderColor: DrawerTheme.antiqueGold,
-  },
-  todayText: {
-    fontWeight: '900',
-  },
-  selectedCircle: {
-    backgroundColor: DrawerTheme.antiqueGold,
-  },
-  selectedText: {
-    color: DrawerTheme.bgBlackCherry,
-    fontWeight: '900',
-  },
-  fortuneMarker: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: DrawerTheme.antiqueGold,
-    borderWidth: 1,
-    borderColor: DrawerTheme.bgBlackCherry,
-  },
-  fortuneMarkerDim: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: DrawerTheme.antiqueGold,
-    backgroundColor: 'rgba(200,163,64,0.18)',
-  },
-  actionSection: {
-    marginTop: 20,
-    marginBottom: 12,
-    gap: 12,
-  },
-  drawButton: {
-    marginTop: 4,
-  },
-  pickerPanel: {
-    marginBottom: 14,
-    alignItems: 'center',
-  },
-  pickerTitle: {
-    color: DrawerTheme.goldBright,
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    gap: 10,
-  },
-  tarotCardBack: {
-    flex: 1,
-    aspectRatio: 0.64,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.45)',
-    backgroundColor: DrawerTheme.bgBlackCherry,
-  },
-  cardBackGradient: {
-    flex: 1,
-    padding: 7,
-  },
-  cardPattern: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.28)',
-    borderRadius: 10,
-    padding: 5,
-  },
-  innerPattern: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.18)',
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(7,0,9,0.28)',
-  },
-  cardPatternText: {
-    color: DrawerTheme.antiqueGold,
-    fontSize: 28,
-    fontWeight: '900',
-    opacity: 0.82,
-  },
-  cancelPick: {
-    marginTop: 16,
-    padding: 8,
-  },
-  cancelPickText: {
-    color: DrawerTheme.mutedIvory,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  doneBanner: {
-    backgroundColor: 'rgba(31,18,12,0.55)',
-    borderRadius: 15,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.28)',
-  },
-  doneText: {
-    color: DrawerTheme.ivory,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  fortuneCard: {
-    marginTop: 10,
-  },
-  fortuneTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: DrawerTheme.antiqueGold,
-    marginBottom: 12,
-  },
-  fortuneContent: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: DrawerTheme.ivory,
-    marginBottom: 20,
-  },
-  fortuneFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(200,163,64,0.18)',
-    paddingTop: 15,
-  },
-  fortuneInfo: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: DrawerTheme.mutedIvory,
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: DrawerTheme.goldBright,
-  },
-  noFortuneCard: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  noFortuneText: {
-    color: DrawerTheme.mutedIvory,
-    fontSize: 14,
-  },
-  resultCardContainer: {
-    alignItems: 'center',
-    marginVertical: 15,
-    backgroundColor: 'rgba(7,0,9,0.35)',
-    padding: 15,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.18)',
-  },
-  resultCardImage: {
-    width: 140,
-    height: 233,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.35)',
-  },
-  resultCardName: {
-    color: DrawerTheme.goldBright,
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 5,
-  },
-  loadingFortuneText: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(7,0,9,0.35)',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  interpretingText: {
-    color: DrawerTheme.goldBright,
-    fontSize: 14,
-    fontWeight: '700',
-    fontStyle: 'italic',
-  },
+  container: { flex: 1, paddingHorizontal: 20 },
+  header: { marginBottom: 16 },
+  card: { padding: 15 },
+  loading: { marginVertical: 40 },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayBox: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', padding: 2, position: 'relative' },
+  weekdayText: { color: DrawerTheme.mutedIvory, fontSize: 12, fontWeight: '800', opacity: 0.8 },
+  dayCircle: { width: '80%', height: '80%', borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(7,0,9,0.38)' },
+  dayText: { color: DrawerTheme.ivory, fontSize: 14, fontWeight: '600' },
+  attendedCircle: { backgroundColor: 'rgba(200,163,64,0.12)' },
+  attendedText: { color: DrawerTheme.goldBright, fontWeight: '900' },
+  todayCircle: { borderWidth: 2, borderColor: DrawerTheme.antiqueGold },
+  todayText: { fontWeight: '900' },
+  selectedCircle: { backgroundColor: DrawerTheme.antiqueGold },
+  selectedText: { color: DrawerTheme.bgBlackCherry, fontWeight: '900' },
+  fortuneMarker: { position: 'absolute', bottom: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: DrawerTheme.antiqueGold, borderWidth: 1, borderColor: DrawerTheme.bgBlackCherry },
+  statusCard: { marginTop: 18, marginBottom: 12 },
+  statusTitle: { color: DrawerTheme.antiqueGold, fontSize: 17, fontWeight: '900', marginBottom: 8 },
+  statusText: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 22, marginBottom: 14 },
+  drawButton: { marginTop: 4 },
+  fortuneCard: { marginTop: 10 },
+  fortuneTitle: { fontSize: 18, fontWeight: '900', color: DrawerTheme.antiqueGold, marginBottom: 12 },
+  resultCardContainer: { alignItems: 'center', marginVertical: 15, backgroundColor: 'rgba(7,0,9,0.35)', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(200,163,64,0.18)' },
+  resultCardImage: { width: 140, height: 233, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(200,163,64,0.35)' },
+  resultCardName: { color: DrawerTheme.goldBright, fontSize: 18, fontWeight: '900', marginTop: 5 },
+  resultCardSubName: { color: DrawerTheme.mutedIvory, fontSize: 12, fontWeight: '700', marginTop: 3 },
+  summaryText: { color: DrawerTheme.goldBright, fontSize: 16, fontWeight: '900', marginBottom: 10 },
+  fortuneContent: { fontSize: 15, lineHeight: 24, color: DrawerTheme.ivory, marginBottom: 18 },
+  detailGrid: { gap: 10, marginBottom: 18 },
+  detailItem: { backgroundColor: 'rgba(7,0,9,0.28)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(200,163,64,0.14)' },
+  detailItemWide: { borderColor: 'rgba(224,193,104,0.22)' },
+  detailLabel: { color: DrawerTheme.antiqueGold, fontSize: 12, fontWeight: '900', marginBottom: 5 },
+  detailValue: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 21 },
+  fortuneFooter: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(200,163,64,0.18)', paddingTop: 15 },
+  fortuneInfo: { alignItems: 'center', flex: 1 },
+  infoLabel: { fontSize: 12, color: DrawerTheme.mutedIvory, marginBottom: 4 },
+  infoValue: { fontSize: 14, fontWeight: '800', color: DrawerTheme.goldBright, textAlign: 'center' },
+  noFortuneCard: { marginTop: 10, alignItems: 'center' },
+  noFortuneText: { color: DrawerTheme.mutedIvory, fontSize: 14 },
+  modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'rgba(7,0,9,0.86)' },
+  modalCardWrap: { width: '100%', alignItems: 'center' },
+  modalStampImage: { width: 260, height: 390, maxWidth: '100%' },
+  modalStampName: { marginTop: 16, color: DrawerTheme.ivory, fontSize: 16, fontWeight: '900', textAlign: 'center', letterSpacing: 0.6 },
+  modalCloseButton: { alignSelf: 'center', marginTop: 14, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,217,119,0.5)', backgroundColor: 'rgba(200,163,64,0.18)' },
+  modalCloseText: { color: '#FFD977', fontSize: 13, fontWeight: '900' },
 });
 
 export default DailyFortuneScreen;

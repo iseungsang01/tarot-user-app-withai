@@ -163,7 +163,7 @@ const extractLooseField = (text, fieldName) => {
     const cleaned = stripJSONDecorators(text);
     if (!cleaned) return '';
 
-    const nextFieldPattern = '"?(?:fortune|luckyColor|luckyItem)"?\\s*[:：]';
+    const nextFieldPattern = '"?(?:summary|fortune|relationship|work|money|care|action|luckyColor|luckyItem)"?\\s*[:\uff1a]';
     const pattern = new RegExp(`"?${fieldName}"?\\s*[:：]\\s*([\\s\\S]*?)(?=,?\\s*${nextFieldPattern}|\\s*}\\s*$|$)`, 'i');
     const match = cleaned.match(pattern);
     if (!match?.[1]) return '';
@@ -174,28 +174,51 @@ const extractLooseField = (text, fieldName) => {
 export const normalizeDailyFortunePayload = (payload) => {
     if (!payload) return null;
 
-    if (typeof payload === 'object') {
-        const nested = typeof payload.fortune === 'string' ? parseFirstJSONObject(payload.fortune) : null;
-        if (nested) return normalizeDailyFortunePayload({ ...payload, ...nested });
+    const normalizeObject = (source) => {
+        const nested = typeof source.fortune === 'string' ? parseFirstJSONObject(source.fortune) : null;
+        if (nested) return normalizeDailyFortunePayload({ ...source, ...nested });
 
-        const looseNestedFortune = typeof payload.fortune === 'string' ? extractLooseField(payload.fortune, 'fortune') : '';
-        const fortune = looseNestedFortune || payload.fortune || '';
-        return {
-            ...payload,
-            fortune: cleanJSONLikeValue(fortune) || '오늘의 운세를 불러올 수 없습니다.',
-            luckyColor: cleanJSONLikeValue(payload.luckyColor || extractLooseField(payload.fortune, 'luckyColor')) || '골드',
-            luckyItem: cleanJSONLikeValue(payload.luckyItem || extractLooseField(payload.fortune, 'luckyItem')) || '작은 노트',
+        const fortuneText = typeof source.fortune === 'string' ? source.fortune : '';
+        const pick = (fieldName) => {
+            const looseValue = extractLooseField(fortuneText, fieldName);
+            return cleanJSONLikeValue(fieldName === 'fortune' ? (looseValue || source[fieldName]) : (source[fieldName] || looseValue));
         };
-    }
+        const normalized = {
+            ...source,
+            summary: pick('summary') || '오늘의 메시지',
+            fortune: pick('fortune') || '오늘의 운세를 불러오지 못했습니다. 잠시 숨을 고르고 차분하게 하루를 시작해 보세요.',
+            relationship: pick('relationship') || '상대의 속도를 존중하며 부드럽게 대화해 보세요.',
+            work: pick('work') || '가장 중요한 일 하나를 먼저 정리해 보세요.',
+            money: pick('money') || '충동적인 선택보다 필요한 지출인지 한 번 더 확인해 보세요.',
+            care: pick('care') || '무리하지 말고 컨디션의 작은 신호를 살펴보세요.',
+            action: pick('action') || '오늘 할 일 하나를 적고 바로 시작해 보세요.',
+            luckyColor: pick('luckyColor') || '골드',
+            luckyItem: pick('luckyItem') || '작은 노트',
+        };
+
+        const parsedDrawCount = Number(normalized.drawCount);
+        normalized.drawCount = Number.isFinite(parsedDrawCount) && parsedDrawCount > 0 ? parsedDrawCount : 1;
+        normalized.drawnAt = normalized.drawnAt || new Date().toISOString();
+        return normalized;
+    };
+
+    if (typeof payload === 'object') return normalizeObject(payload);
 
     const parsed = parseFirstJSONObject(payload);
     if (parsed) return normalizeDailyFortunePayload(parsed);
 
-    return {
-        fortune: extractLooseField(payload, 'fortune') || cleanJSONLikeValue(stripJSONDecorators(payload)) || '오늘의 운세 데이터가 없습니다.',
-        luckyColor: extractLooseField(payload, 'luckyColor') || '골드',
-        luckyItem: extractLooseField(payload, 'luckyItem') || '작은 노트',
-    };
+    const raw = stripJSONDecorators(payload);
+    return normalizeObject({
+        summary: extractLooseField(raw, 'summary'),
+        fortune: extractLooseField(raw, 'fortune') || cleanJSONLikeValue(raw),
+        relationship: extractLooseField(raw, 'relationship'),
+        work: extractLooseField(raw, 'work'),
+        money: extractLooseField(raw, 'money'),
+        care: extractLooseField(raw, 'care'),
+        action: extractLooseField(raw, 'action'),
+        luckyColor: extractLooseField(raw, 'luckyColor'),
+        luckyItem: extractLooseField(raw, 'luckyItem'),
+    });
 };
 
 
@@ -477,36 +500,77 @@ export const getWelcomeMessage = async () => {
 // 3. 오늘의 운세 (Daily Fortune)
 // ─────────────────────────────────────────────────────────────
 
-export const getDailyFortune = async (userName = '사용자', previousFortune = '', cardName = '', usageOptions = {}) => {
+const stringifyCardContext = (cardContext = {}) => {
+    const domains = cardContext.domains || {};
+    return `id: ${cardContext.id || ''}
+name: ${cardContext.name || ''}
+nameKr: ${cardContext.nameKr || ''}
+keywords: ${(cardContext.keywords || []).join(', ')}
+light: ${cardContext.light || ''}
+shadow: ${cardContext.shadow || ''}
+advice: ${cardContext.advice || ''}
+
+[분야별 참고]
+관계: ${domains.relationship || ''}
+일/공부: ${domains.work || ''}
+금전: ${domains.money || ''}
+컨디션: ${domains.health || ''}`;
+};
+
+export const getDailyFortune = async (userName = '사용자', previousFortune = '', cardContext = null, usageOptions = {}) => {
+    const safeCardContext = cardContext || {};
     const messages = [
         {
             role: 'system',
-            content: `당신은 오늘의 운세를 알려주는 신비로운 타로 상담사입니다.
-사용자의 이름을 부르며, 오늘 하루를 위한 따뜻한 조언과 운세를 제공하세요.
-${cardName ? `사용자가 뽑은 타로 카드는 '${cardName}'입니다. 이 카드의 상징과 의미를 바탕으로 오늘의 운세를 해석해주세요.` : '오늘의 타로 카드를 하나 선정하여 그 의미를 바탕으로 운세를 알려주세요.'}
-답변은 3-4문장 정도로 간결하고 희망차게 작성하세요.
-
-${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0, 50)}...'라는 내용의 운세를 확인했습니다.
-이번에는 이전과는 다른 새로운 관점, 다른 타로 카드 상징, 혹은 다른 테마(재물, 인간관계, 건강 등)에 집중하여 '전혀 다른' 운세를 작성해주세요.` : ''}
-
-반드시 JSON 형식으로 응답하세요:
-{
-  "fortune": "오늘의 운세 내용 (이전과는 다른 새로운 내용)",
-  "luckyColor": "추천 행운의 색상",
-  "luckyItem": "행운의 아이템"
-}`,
+            content: `당신은 drawer 앱의 오늘의 타로 메시지를 작성하는 해석자입니다.
+오늘의 카드는 이미 앱에서 선택되었습니다.
+AI는 카드를 선택하거나 바꾸지 마세요.
+제공된 카드 context만 바탕으로 운세 문장을 작성하세요.
+과도한 예언, 불안 조성, 단정적 표현은 금지합니다.
+운세는 자기 성찰과 하루 조언 중심으로 작성합니다.
+반드시 JSON만 출력하세요. JSON 바깥의 설명, 마크다운, 코드펜스는 금지합니다.`,
         },
         {
             role: 'user',
-            content: `${userName}님의 오늘의 운세를 알려주세요.${previousFortune ? ' 방금 전과는 다른 새로운 운세를 원합니다.' : ''}`,
+            content: `[사용자]
+이름: ${userName || '사용자'}
+${previousFortune ? `이전 오늘 운세 요약: ${String(previousFortune).substring(0, 120)}` : ''}
+
+[오늘의 카드]
+${stringifyCardContext(safeCardContext)}
+
+[작성 규칙]
+- 한국어 존댓말
+- 예언처럼 단정하지 말 것
+- 불안감을 조성하지 말 것
+- 카드 의미를 단순 나열하지 말고 자연스러운 하루 조언으로 풀 것
+- fortune은 3~4문장
+- summary는 20자 이내
+- relationship, work, money, care는 각각 1~2문장
+- action은 오늘 바로 할 수 있는 구체적 행동 1개
+- luckyColor와 luckyItem은 짧고 구체적으로 작성
+- 반드시 JSON만 출력
+
+[출력 JSON]
+{
+  "summary": "오늘의 핵심 메시지",
+  "fortune": "오늘의 운세 본문",
+  "relationship": "관계 조언",
+  "work": "일/공부 조언",
+  "money": "금전 조언",
+  "care": "주의할 점",
+  "action": "오늘 바로 해볼 행동",
+  "luckyColor": "행운의 색",
+  "luckyItem": "행운의 아이템"
+}`,
         },
     ];
 
     const { data, error } = await callAIProxy(
         messages,
         {
-            temperature: 0.9,
-            maxTokens: 450,
+            temperature: 0.75,
+            maxTokens: 700,
             signal: usageOptions.signal || null,
         },
         'getDailyFortune',
@@ -521,6 +585,7 @@ ${previousFortune ? `중요: 사용자가 이미 '${previousFortune.substring(0,
         return { data: normalizeDailyFortunePayload(data), error: null };
     }
 };
+
 
 export default {
     summarizeReview,

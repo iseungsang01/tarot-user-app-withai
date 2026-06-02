@@ -74,11 +74,17 @@ test('aiService: daily fortune extracts JSON object from decorated model output'
   const result = await getDailyFortune('tester');
 
   assert.equal(result.error, null);
-  assert.deepEqual(result.data, {
-    fortune: '차분하게 기회를 살피면 좋은 하루입니다.',
-    luckyColor: '남색',
-    luckyItem: '노트',
-  });
+  assert.equal(result.data.fortune, '차분하게 기회를 살피면 좋은 하루입니다.');
+  assert.equal(result.data.luckyColor, '남색');
+  assert.equal(result.data.luckyItem, '노트');
+  assert.equal(typeof result.data.summary, 'string');
+  assert.equal(typeof result.data.relationship, 'string');
+  assert.equal(typeof result.data.work, 'string');
+  assert.equal(typeof result.data.money, 'string');
+  assert.equal(typeof result.data.care, 'string');
+  assert.equal(typeof result.data.action, 'string');
+  assert.equal(result.data.drawCount, 1);
+  assert.ok(result.data.drawnAt);
 });
 
 test('aiService: daily fortune sanitizes malformed JSON-like fortune output', async () => {
@@ -126,11 +132,17 @@ test('aiService: daily fortune tolerates trailing comma and smart quotes', async
   const result = await getDailyFortune('tester');
 
   assert.equal(result.error, null);
-  assert.deepEqual(result.data, {
-    fortune: '문이 열리는 하루입니다.',
-    luckyColor: '아이보리',
-    luckyItem: '펜',
-  });
+  assert.equal(result.data.fortune, '문이 열리는 하루입니다.');
+  assert.equal(result.data.luckyColor, '아이보리');
+  assert.equal(result.data.luckyItem, '펜');
+  assert.equal(typeof result.data.summary, 'string');
+  assert.equal(typeof result.data.relationship, 'string');
+  assert.equal(typeof result.data.work, 'string');
+  assert.equal(typeof result.data.money, 'string');
+  assert.equal(typeof result.data.care, 'string');
+  assert.equal(typeof result.data.action, 'string');
+  assert.equal(result.data.drawCount, 1);
+  assert.ok(result.data.drawnAt);
 });
 
 test('aiService: daily fortune raw Korean fallback receives safe lucky defaults', async () => {
@@ -149,11 +161,17 @@ test('aiService: daily fortune raw Korean fallback receives safe lucky defaults'
   const result = await getDailyFortune('tester');
 
   assert.equal(result.error, null);
-  assert.deepEqual(result.data, {
-    fortune: '오늘은 차분하게 기회를 살피면 좋은 하루입니다.',
-    luckyColor: '골드',
-    luckyItem: '작은 노트',
-  });
+  assert.equal(result.data.fortune, '오늘은 차분하게 기회를 살피면 좋은 하루입니다.');
+  assert.equal(result.data.luckyColor, '골드');
+  assert.equal(result.data.luckyItem, '작은 노트');
+  assert.equal(typeof result.data.summary, 'string');
+  assert.equal(typeof result.data.relationship, 'string');
+  assert.equal(typeof result.data.work, 'string');
+  assert.equal(typeof result.data.money, 'string');
+  assert.equal(typeof result.data.care, 'string');
+  assert.equal(typeof result.data.action, 'string');
+  assert.equal(result.data.drawCount, 1);
+  assert.ok(result.data.drawnAt);
 });
 
 test('aiService: daily fortune repairs raw newline inside JSON string', async () => {
@@ -174,9 +192,15 @@ test('aiService: daily fortune repairs raw newline inside JSON string', async ()
   const result = await getDailyFortune('tester');
 
   assert.equal(result.error, null);
-  assert.deepEqual(result.data, {
-    fortune: '첫 문장입니다.\n둘째 문장입니다.',
-    luckyColor: '골드',
-    luckyItem: '작은 노트',
-  });
+  assert.equal(result.data.fortune, '첫 문장입니다.\n둘째 문장입니다.');
+  assert.equal(result.data.luckyColor, '골드');
+  assert.equal(result.data.luckyItem, '작은 노트');
+  assert.equal(typeof result.data.summary, 'string');
+  assert.equal(typeof result.data.relationship, 'string');
+  assert.equal(typeof result.data.work, 'string');
+  assert.equal(typeof result.data.money, 'string');
+  assert.equal(typeof result.data.care, 'string');
+  assert.equal(typeof result.data.action, 'string');
+  assert.equal(result.data.drawCount, 1);
+  assert.ok(result.data.drawnAt);
 });

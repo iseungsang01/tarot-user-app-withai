@@ -16,6 +16,7 @@ import {
   ForcedPasswordChangeScreen,
   VisitDetailScreen,
   DailyFortuneScreen,
+  DailyFortuneDrawScreen,
   NoticeDetailScreen,
   NewsScreen,
   TicketScreen,
@@ -322,6 +323,7 @@ const MainNavigator = () => {
     >
       <Stack.Screen name="ForcedPasswordChange" component={ForcedPasswordChangeScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="MainTabs" component={TabNavigator} />
+      <Stack.Screen name="DailyFortuneDraw" component={DailyFortuneDrawScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />

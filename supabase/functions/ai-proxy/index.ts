@@ -84,23 +84,21 @@ const responseSchemasByTask: Record<string, Record<string, unknown>> = {
   getDailyFortune: {
     type: 'object',
     properties: {
-      fortune: {
-        type: 'string',
-        description: '오늘의 운세 본문',
-      },
-      luckyColor: {
-        type: 'string',
-        description: '추천 행운의 색상',
-      },
-      luckyItem: {
-        type: 'string',
-        description: '추천 행운의 아이템',
-      },
+      summary: { type: 'string', description: 'Core daily message' },
+      fortune: { type: 'string', description: 'Daily fortune body' },
+      relationship: { type: 'string', description: 'Relationship advice' },
+      work: { type: 'string', description: 'Work or study advice' },
+      money: { type: 'string', description: 'Money advice' },
+      care: { type: 'string', description: 'Care point' },
+      action: { type: 'string', description: 'Concrete action for today' },
+      luckyColor: { type: 'string', description: 'Lucky color' },
+      luckyItem: { type: 'string', description: 'Lucky item' },
     },
-    required: ['fortune', 'luckyColor', 'luckyItem'],
+    required: ['summary', 'fortune', 'relationship', 'work', 'money', 'care', 'action', 'luckyColor', 'luckyItem'],
     additionalProperties: false,
   },
 };
+
 
 function buildGenerationConfig(task = ''): GoogleGenerationConfig {
   const generationConfig: GoogleGenerationConfig = {
