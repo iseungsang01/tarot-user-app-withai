@@ -31,18 +31,16 @@ const Tab = createBottomTabNavigator();
 const COACH_STEPS = [
   { key: 'tab-home', title: '1) 서랍으로 이동', description: '하단의 서랍 탭을 눌러 기록 화면으로 이동해 주세요.', requireTargetTap: true },
   { key: 'home-stamp', title: '2) 스탬프 확인', description: '상단 요약의 스탬프 영역을 눌러 스탬프 화면으로 들어가 보세요.', requireTargetTap: true },
-  { key: 'home-coupon', title: '3) 쿠폰 확인', description: '다시 홈으로 돌아와 보유 쿠폰 영역을 눌러 쿠폰함으로 이동해 보세요.', requireTargetTap: true },
-  { key: 'home-archive-mode', title: '4) ALL · ON · OFF 필터', description: 'ALL/ON/OFF 버튼을 눌러 기록 유형을 전환해 보세요.', requireTargetTap: true },
-  { key: 'home-time-filter', title: '5) 전체 · 연도별 · 월별', description: '기간 필터를 눌러 원하는 시점의 기록만 빠르게 찾아보세요.', requireTargetTap: true },
-  { key: 'tab-notice', title: '6) 소식 확인', description: '하단 소식 탭에서 최신 공지와 알림을 확인하세요.', requireTargetTap: true },
-  { key: 'tab-settings', title: '7) 설정 확인', description: '하단 설정 탭에서 계정과 앱 설정을 확인하세요.', requireTargetTap: true },
-  { key: 'tab-home', title: '8) 가이드 종료', description: '다시 서랍으로 돌아오면 가이드가 완료됩니다.', requireTargetTap: true },
+  { key: 'home-archive-mode', title: '3) ALL · ON · OFF 필터', description: 'ALL/ON/OFF 버튼을 눌러 기록 유형을 전환해 보세요.', requireTargetTap: true },
+  { key: 'home-time-filter', title: '4) 전체 · 연도별 · 월별', description: '기간 필터를 눌러 원하는 시점의 기록만 빠르게 찾아보세요.', requireTargetTap: true },
+  { key: 'tab-notice', title: '5) 소식 확인', description: '하단 소식 탭에서 최신 공지와 알림을 확인하세요.', requireTargetTap: true },
+  { key: 'tab-settings', title: '6) 설정 확인', description: '하단 설정 탭에서 계정과 앱 설정을 확인하세요.', requireTargetTap: true },
+  { key: 'tab-home', title: '7) 가이드 종료', description: '다시 서랍으로 돌아오면 가이드가 완료됩니다.', requireTargetTap: true },
 ];
 
 const STEP_ROUTE_MAP = {
   'tab-home': 'Home',
   'home-stamp': 'Home',
-  'home-coupon': 'Home',
   'home-archive-mode': 'Home',
   'home-time-filter': 'Home',
   'tab-notice': 'News',

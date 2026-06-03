@@ -5,16 +5,11 @@ import { ArchiveTitleHeader } from '../common/PremiumUI';
 
 export const HistoryHeader = ({
     stats,
-    couponCount,
-    onNavigateCoupon,
     onNavigateStamp,
-    onCoachAdvanceCoupon,
     onCoachAdvanceStamp,
     onCaptureStampFrame,
-    onCaptureCouponFrame
 }) => {
     const stampRef = useRef(null);
-    const couponRef = useRef(null);
 
     const captureRefFrame = (ref, capture) => {
         if (!ref?.current || !capture) return;
@@ -47,20 +42,6 @@ export const HistoryHeader = ({
                     <Text style={styles.statLabel}>방문 기록</Text>
                     <Text style={styles.statValue}>{stats.visit_count}</Text>
                 </View>
-                <View style={styles.divider} />
-                <TouchableOpacity
-                    ref={couponRef}
-                    style={styles.statUnit}
-                    onPress={() => {
-                        onNavigateCoupon?.();
-                        onCoachAdvanceCoupon?.();
-                    }}
-                    onLayout={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
-                    onPressIn={() => captureRefFrame(couponRef, onCaptureCouponFrame)}
-                >
-                    <Text style={styles.statLabel}>보유 쿠폰</Text>
-                    <Text style={[styles.statValue, styles.goldValue]}>{couponCount}</Text>
-                </TouchableOpacity>
             </View>
         </View>
     );
@@ -108,9 +89,6 @@ const styles = StyleSheet.create({
         color: DrawerTheme.ivory,
         fontWeight: '700',
         fontFamily: serif,
-    },
-    goldValue: {
-        color: DrawerTheme.brightGold,
     },
     divider: {
         width: 1,

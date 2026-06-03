@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GradientBackground } from '../../components';
-import { CommonStyles } from '../../styles/CommonStyles';
+import { ArchiveTitleHeader, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { toDisplayImageUri } from '../../utils/imageUri';
 import ResponsiveImage from '../../components/common/ResponsiveImage';
@@ -12,19 +11,20 @@ const BugReportDetailScreen = ({ route }) => {
     const { report } = route.params || {};
 
     if (!report) {
-        return <GradientBackground><View style={styles.emptyWrap}><Text style={styles.empty}>상세 정보를 찾을 수 없습니다.</Text></View></GradientBackground>;
+        return <ScreenContainer><View style={styles.emptyWrap}><Text style={styles.empty}>상세 정보를 찾을 수 없습니다.</Text></View></ScreenContainer>;
     }
 
     const imageUri = toDisplayImageUri(report.screenshot || report.image_base64 || report.image_url || null);
 
     return (
-        <GradientBackground>
-            <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }]}>
-                <View style={styles.header}>
-                    <View style={styles.titleRow}><Text style={styles.title}>BUG REPORT DETAIL</Text></View>
-                    <View style={styles.headerDivider} />
-                    <Text style={styles.subtitle}>접수한 버그의 상세 내용을 확인하세요</Text>
-                </View>
+        <ScreenContainer safeTop={false} safeBottom={false}>
+            <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 30 }]}>
+                <ArchiveTitleHeader
+                    eyebrow="Bug Report"
+                    title="REPORT DETAIL"
+                    subtitle="버그 접수 상세 내역"
+                    style={styles.header}
+                />
                 <View style={styles.card}>
                     <Text style={styles.titleText}>{report.title}</Text>
                     <Text style={styles.meta}>상태: {report.status}</Text>
@@ -33,17 +33,13 @@ const BugReportDetailScreen = ({ route }) => {
                     <ResponsiveImage uri={imageUri} style={styles.image} />
                 </View>
             </ScrollView>
-        </GradientBackground>
+        </ScreenContainer>
     );
 };
 
 const styles = StyleSheet.create({
     container: { paddingHorizontal: 20 },
-    header: CommonStyles.headerBoard,
-    titleRow: CommonStyles.titleRow,
-    title: CommonStyles.title,
-    headerDivider: CommonStyles.headerDivider,
-    subtitle: CommonStyles.subtitle,
+    header: { marginBottom: 16 },
     card: { backgroundColor: 'rgba(0,0,0,0.45)', borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 18 },
     titleText: { color: '#fff', fontWeight: '800', fontSize: 20, marginBottom: 12 },
     meta: { color: DrawerTheme.woodLight, marginBottom: 6 },

@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { StyleSheet, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GradientBackground, SettingReportManager } from '../../components';
+import { ArchiveTitleHeader, ScreenContainer, SettingReportManager } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { noticeService } from '../../services/noticeService';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { CommonStyles } from '../../styles/CommonStyles';
 
 const getStatusColor = (s) => ({ 접수: '#ffa500', 확인중: '#2196f3', 완료: '#4caf50' }[s] || DrawerTheme.woodLight);
 
@@ -38,26 +37,23 @@ const BugReportScreen = ({ navigation }) => {
     };
 
     return (
-        <GradientBackground>
-            <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }]}>
-                <View style={styles.header}>
-                    <View style={styles.titleRow}><Text style={styles.title}>BUG REPORT</Text></View>
-                    <View style={styles.headerDivider} />
-                    <Text style={styles.subtitle}>앱 오류를 자세히 접수하고 진행 상태를 확인하세요</Text>
-                </View>
+        <ScreenContainer safeTop={false} safeBottom={false}>
+            <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 30 }]}>
+                <ArchiveTitleHeader
+                    eyebrow="Bug Report"
+                    title="BUG REPORT"
+                    subtitle="앱 버그 접수 내역"
+                    style={styles.header}
+                />
                 <SettingReportManager myReports={myReports} onSubmit={handleSubmitReport} getStatusColor={getStatusColor} processing={processing} onOpenDetail={(report) => navigation.navigate('BugReportDetail', { report })} />
             </ScrollView>
-        </GradientBackground>
+        </ScreenContainer>
     );
 };
 
 const styles = StyleSheet.create({
     container: { paddingHorizontal: 20 },
-    header: CommonStyles.headerBoard,
-    titleRow: CommonStyles.titleRow,
-    title: CommonStyles.title,
-    headerDivider: CommonStyles.headerDivider,
-    subtitle: CommonStyles.subtitle,
+    header: { marginBottom: 16 },
 });
 
 export default BugReportScreen;

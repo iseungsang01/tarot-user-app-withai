@@ -126,9 +126,9 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <ArchiveTitleHeader
-          eyebrow="DAILY OMENS"
+          eyebrow="Fortune Draw"
           title="CARD RITUAL"
-          subtitle="Fortune Draw"
+          subtitle="운세 카드 뽑기"
           style={styles.header}
         />
 

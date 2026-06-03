@@ -4,7 +4,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVisits } from './useVisits';
 import { useAuth } from './useAuth';
 import { visitService } from '../services/visitService';
-import { couponService } from '../services/couponService';
 import { handleApiCall, showSuccessAlert } from '../utils/errorHandler';
 
 const LOCAL_STORAGE_KEY = 'offline_visit_history';
@@ -34,7 +33,6 @@ export const useHistoryLogic = (navigation) => {
     // Local state
     const [personalNotes, setPersonalNotes] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [couponCount, setCouponCount] = useState(0);
     const [stats, setStats] = useState({
         current_stamps: customer?.current_stamps || 0,
         visit_count: customer?.visit_count || 0
@@ -80,35 +78,18 @@ export const useHistoryLogic = (navigation) => {
         }
     }, [customer?.id]);
 
-    const loadCouponCount = useCallback(async (signal) => {
-        if (!customer?.id) return;
-        try {
-            const { count, error } = await couponService.getValidCouponCount(customer.id, signal);
-            if (signal && signal.aborted) return;
-            if (!error && typeof count === 'number') {
-                setCouponCount(count);
-            } else {
-                setCouponCount(0);
-            }
-        } catch (err) {
-            if (signal && signal.aborted) return;
-            console.error("loadCouponCount error:", err);
-        }
-    }, [customer?.id]);
-
     const refreshAllData = useCallback(async (signal) => {
         try {
             await Promise.all([
                 refetch(),
                 loadLocalData(),
-                loadStats(signal),
-                loadCouponCount(signal)
+                loadStats(signal)
             ]);
         } catch (e) {
             if (signal && signal.aborted) return;
             console.error(e);
         }
-    }, [refetch, loadLocalData, loadStats, loadCouponCount]);
+    }, [refetch, loadLocalData, loadStats]);
 
     const handleRefresh = async () => {
         if (abortControllerRef.current) {
@@ -283,7 +264,6 @@ export const useHistoryLogic = (navigation) => {
                 current_stamps: stats.current_stamps || customer?.current_stamps || 0,
                 visit_count: stats.visit_count || customer?.visit_count || 0
             },
-            couponCount,
             visits: allVisits,
             displayData,
             archiveMode,

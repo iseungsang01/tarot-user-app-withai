@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SettingPasswordForm, GradientBackground } from '../../components';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArchiveTitleHeader, PremiumCard, ScreenContainer, SettingPasswordForm } from '../../components';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
 const ForcedPasswordChangeScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { customer, refreshCustomer, logout } = useAuth();
   const [processing, setProcessing] = useState(false);
 
@@ -41,11 +44,27 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
   };
 
   return (
-    <GradientBackground>
-      <View style={styles.container}>
-        <Text style={styles.title}>비밀번호 변경이 필요합니다</Text>
-        <Text style={styles.description}>초기/임시 비밀번호 계정은 로그인 후 반드시 새 비밀번호로 변경해야 합니다.</Text>
-        <SettingPasswordForm onSubmit={handlePasswordReset} processing={processing} requireCurrentPassword={false} />
+    <ScreenContainer safeTop={false} safeBottom={false}>
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 30 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <ArchiveTitleHeader
+          eyebrow="Password Reset"
+          title="PASSWORD RESET"
+          subtitle="비밀번호 재설정"
+          style={styles.header}
+        />
+
+        <PremiumCard variant="walnut" style={styles.noticeCard}>
+          <Text style={styles.title}>비밀번호 변경이 필요합니다</Text>
+          <Text style={styles.description}>초기/임시 비밀번호 계정은 로그인 후 반드시 새 비밀번호로 변경해야 합니다.</Text>
+        </PremiumCard>
+
+        <View style={styles.formWrap}>
+          <SettingPasswordForm onSubmit={handlePasswordReset} processing={processing} requireCurrentPassword={false} />
+        </View>
         <TouchableOpacity
           accessibilityRole="button"
           onPress={logout}
@@ -55,27 +74,29 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
         >
           <Text style={styles.cancelText}>취소하고 로그인 화면으로 돌아가기</Text>
         </TouchableOpacity>
-      </View>
-    </GradientBackground>
+      </ScrollView>
+    </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 24,
+    flexGrow: 1,
+    paddingHorizontal: 20,
     justifyContent: 'center',
   },
+  header: { marginBottom: 16 },
+  noticeCard: { marginBottom: 14 },
+  formWrap: { marginTop: 2 },
   title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
+    color: DrawerTheme.goldBright,
+    fontSize: 20,
+    fontWeight: '900',
     marginBottom: 10,
   },
   description: {
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 20,
-    marginBottom: 16,
+    color: DrawerTheme.ivory,
+    lineHeight: 21,
   },
   cancelButton: {
     alignSelf: 'center',
