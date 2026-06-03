@@ -76,7 +76,7 @@ const LoginScreen = ({ navigation }) => {
                     <ArchiveTitleHeader
                         eyebrow="Member Drawer"
                         title="DRAWER"
-                        subtitle="멤버십 입장 후 기록 확인"
+                        subtitle="타로 기록을 나만의 서랍 속에 간직하세요"
                         style={styles.headerArea}
                     />
 
