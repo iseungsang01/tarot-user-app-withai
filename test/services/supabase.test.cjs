@@ -73,3 +73,39 @@ test('supabase service: exposes stored custom customer RPC token explicitly', as
     else process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = oldKey;
   }
 });
+
+test('supabase service: exposes stored AI guest session token explicitly', async () => {
+  const oldUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const oldKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
+
+  try {
+    const { ensureAuthenticatedSession } = loadModule('src/services/supabase.js', {
+      '@react-native-async-storage/async-storage': {
+        __esModule: true,
+        default: {
+          getItem: async (key) => {
+            assert.equal(key, 'tarot_customer_session');
+            return JSON.stringify({ token: 'guest-token', customerId: 'guest', type: 'ai_guest_session' });
+          },
+        },
+      },
+      '@supabase/supabase-js': { createClient: () => ({}) },
+    });
+
+    const result = await ensureAuthenticatedSession();
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.session, {
+      token: 'guest-token',
+      customerId: 'guest',
+      type: 'ai_guest_session',
+    });
+  } finally {
+    if (oldUrl === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    else process.env.EXPO_PUBLIC_SUPABASE_URL = oldUrl;
+    if (oldKey === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = oldKey;
+  }
+});

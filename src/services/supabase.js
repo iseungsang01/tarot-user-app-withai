@@ -115,7 +115,7 @@ export const ensureAuthenticatedSession = async () => {
         session: {
           token: customerSession.token,
           customerId: customerSession.customerId,
-          type: 'customer_rpc_session',
+          type: customerSession.type || 'customer_rpc_session',
         },
         error: null,
       };

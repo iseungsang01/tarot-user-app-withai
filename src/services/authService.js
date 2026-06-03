@@ -16,12 +16,13 @@ const resetLoginGuard = async () => storage.remove(LOGIN_GUARD_KEY);
 
 const normalizeCustomer = (payload) => payload?.customer || payload?.profile || payload;
 
-const saveAuthenticatedCustomer = async ({ customer, sessionToken }) => {
+const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType = 'customer_rpc_session' }) => {
   if (!customer || !sessionToken) return null;
 
   await storage.save(CUSTOMER_SESSION_KEY, {
     token: sessionToken,
     customerId: customer.id,
+    type: sessionType,
     savedAt: new Date().toISOString(),
   });
   await storage.save(CUSTOMER_KEY, customer);
@@ -146,7 +147,9 @@ export const authService = {
 
     const cleanupTasks = [];
 
-    if (session?.token) {
+    if (session?.token && session.type === 'ai_guest_session') {
+      cleanupTasks.push(settleWithin(supabaseClient.logoutAIGuestSession({ p_session_token: session.token })));
+    } else if (session?.token) {
       cleanupTasks.push(settleWithin(supabaseClient.logoutCustomer({ p_session_token: session.token })));
     }
 
@@ -159,6 +162,15 @@ export const authService = {
       if (!session?.token) {
         await storage.remove(CUSTOMER_KEY);
         return null;
+      }
+
+      if (session.type === 'ai_guest_session' || session.customerId === 'guest') {
+        const storedGuest = await storage.get(CUSTOMER_KEY);
+        if (storedGuest?.isGuest) return storedGuest;
+
+        const guestUser = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
+        await storage.save(CUSTOMER_KEY, guestUser);
+        return guestUser;
       }
 
       const { data, error } = await supabaseClient.getMyProfile({ p_session_token: session.token });
@@ -243,6 +255,31 @@ export const authService = {
     } catch (error) {
       console.error('❌ 시스템 에러:', error);
       return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
+    }
+  },
+
+  async guestLogin() {
+    try {
+      const { data: resultData, error: rpcError } = await supabaseClient.issueAIGuestSession();
+
+      if (rpcError || !resultData?.success || !resultData?.session_token) {
+        return {
+          data: null,
+          error: { message: rpcError?.message || resultData?.message || '게스트 세션을 만들지 못했습니다.' },
+        };
+      }
+
+      const guestUser = resultData.guest || { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
+      const savedGuest = await saveAuthenticatedCustomer({
+        customer: guestUser,
+        sessionToken: resultData.session_token,
+        sessionType: 'ai_guest_session',
+      });
+
+      return { data: savedGuest, error: null };
+    } catch (error) {
+      console.error('Guest Login Error:', error);
+      return { data: null, error: { message: '게스트 로그인 중 오류가 발생했습니다.' } };
     }
   },
 

@@ -95,6 +95,33 @@ test('authService: 로그인 성공 시 고객과 RPC 세션 토큰을 저장한
   assert.deepEqual(result.data, customer);
   assert.deepEqual(await storage.get('tarot_customer'), customer);
   assert.equal((await storage.get('tarot_customer_session')).token, 'session-token');
+  assert.equal((await storage.get('tarot_customer_session')).type, 'customer_rpc_session');
+});
+
+test('authService: guestLogin stores an AI guest session token for daily fortune calls', async () => {
+  const storage = createStorageMock();
+  const guest = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
+
+  const supabaseClient = {
+    issueAIGuestSession: async () => ({
+      data: { success: true, session_token: 'guest-token', guest },
+      error: null,
+    }),
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await authService.guestLogin();
+  const session = await storage.get('tarot_customer_session');
+
+  assert.deepEqual(result.data, guest);
+  assert.deepEqual(await storage.get('tarot_customer'), guest);
+  assert.equal(session.token, 'guest-token');
+  assert.equal(session.customerId, 'guest');
+  assert.equal(session.type, 'ai_guest_session');
 });
 
 test('authService: 성공 응답에 세션 토큰이 없으면 세션 실패를 반환한다', async () => {
@@ -140,6 +167,28 @@ test('authService: 저장된 세션 토큰으로 회원정보를 복구한다', 
   assert.deepEqual(await storage.get('tarot_customer'), customer);
 });
 
+test('authService: stored AI guest sessions restore guest without profile RPC', async () => {
+  const storage = createStorageMock();
+  const guest = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
+  await storage.save('tarot_customer_session', { token: 'guest-token', customerId: 'guest', type: 'ai_guest_session' });
+  await storage.save('tarot_customer', guest);
+
+  const supabaseClient = {
+    getMyProfile: async () => {
+      throw new Error('guest should not call profile RPC');
+    },
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await authService.getStoredCustomer();
+
+  assert.deepEqual(result, guest);
+});
+
 test('authService: 회원가입은 Supabase Auth ID 없이 RPC 가입 후 로그인한다', async () => {
   const storage = createStorageMock();
   const calls = [];
@@ -164,7 +213,7 @@ test('authService: 회원가입은 Supabase Auth ID 없이 RPC 가입 후 로그
   const result = await authService.register('010-1111-2222', 'pw', 'tester');
 
   assert.deepEqual(result.data, customer);
-  assert.deepEqual(calls[0], ['register', { p_phone: '010-1111-2222', p_password: 'pw0000', p_nickname: 'tester' }]);
+  assert.deepEqual(calls[0], ['register', { p_phone: '010-1111-2222', p_password: 'pw', p_nickname: 'tester' }]);
   assert.equal(Object.prototype.hasOwnProperty.call(calls[0][1], 'p_id'), false);
   assert.equal(calls[1][0], 'login');
 });
@@ -210,6 +259,31 @@ test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제
   await authService.logout();
 
   assert.deepEqual(revoked, [{ p_session_token: 'saved-token' }]);
+  assert.equal(await storage.get('tarot_customer_session'), null);
+  assert.equal(await storage.get('tarot_customer'), null);
+});
+
+test('authService: guest logout revokes AI guest session token', async () => {
+  const storage = createStorageMock();
+  await storage.save('tarot_customer_session', { token: 'guest-token', customerId: 'guest', type: 'ai_guest_session' });
+  await storage.save('tarot_customer', { id: 'guest', isGuest: true });
+  const revoked = [];
+
+  const supabaseClient = {
+    logoutAIGuestSession: async (payload) => {
+      revoked.push(payload);
+      return { data: true, error: null };
+    },
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  await authService.logout();
+
+  assert.deepEqual(revoked, [{ p_session_token: 'guest-token' }]);
   assert.equal(await storage.get('tarot_customer_session'), null);
   assert.equal(await storage.get('tarot_customer'), null);
 });

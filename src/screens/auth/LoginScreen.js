@@ -76,7 +76,7 @@ const LoginScreen = ({ navigation }) => {
                     <ArchiveTitleHeader
                         eyebrow="Member Drawer"
                         title="DRAWER"
-                        subtitle="보관된 상담 기록을 확인하려면 멤버십 입장을 완료하세요"
+                        subtitle="멤버십 입장 후 기록 확인"
                         style={styles.headerArea}
                     />
 

@@ -29,7 +29,6 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         customer,
         isVisitsLoading,
         refreshing,
-        stats,
         visits,
         archiveMode,
         timeFilter,
@@ -70,12 +69,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
 
     const renderHeader = () => (
         <View style={styles.headerContainer}>
-            <HistoryHeader
-                stats={stats}
-                onNavigateStamp={() => navigation.navigate('Ticket')}
-                onCoachAdvanceStamp={() => advanceCoachStep?.('home-stamp', { navigateNext: false })}
-                onCaptureStampFrame={(frame) => onCaptureCoachFrame?.('home-stamp', frame)}
-            />
+            <HistoryHeader />
             <HistoryFilterBar
                 archiveMode={archiveMode}
                 onSetArchiveMode={setArchiveMode}

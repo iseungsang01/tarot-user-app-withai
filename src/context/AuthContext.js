@@ -93,14 +93,19 @@ export const AuthProvider = ({ children }) => {
   }, [customer?.id, customer?.isGuest]);
 
   const guestLogin = async () => {
+    setLoadingState(prev => ({ ...prev, loggingIn: true }));
     try {
-      const guestUser = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
-      setCustomer(guestUser);
-      resetAuthNoticeState();
-      return { data: guestUser, error: null };
+      const { data, error } = await authService.guestLogin();
+      if (data) {
+        setCustomer(data);
+        resetAuthNoticeState();
+      }
+      return { data, error };
     } catch (error) {
       logError('AuthContext.guestLogin', error);
       return { data: null, error: { message: '게스트 로그인 실패' } };
+    } finally {
+      setLoadingState(prev => ({ ...prev, loggingIn: false }));
     }
   };
 

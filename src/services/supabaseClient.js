@@ -17,6 +17,14 @@ export const supabaseClient = {
     return supabase.rpc('logout_customer', payload);
   },
 
+  issueAIGuestSession() {
+    return supabase.rpc('issue_ai_guest_session');
+  },
+
+  logoutAIGuestSession(payload) {
+    return supabase.rpc('logout_ai_guest_session', payload);
+  },
+
   updateMyNickname(payload) {
     return supabase.rpc('update_my_nickname', payload);
   },

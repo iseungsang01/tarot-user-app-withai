@@ -87,6 +87,28 @@ test('session schema: resolve_customer_session is defined and login issues sessi
   assert.match(loginFunction, /'session_token', v_session_token/);
 });
 
+test('session schema: AI guest sessions are server-issued and resolvable by the AI proxy only', () => {
+  const issueFunction = getFunctionBody('issue_ai_guest_session');
+  const resolveFunction = getFunctionBody('resolve_ai_proxy_session');
+  const logoutFunction = getFunctionBody('logout_ai_guest_session');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS public\.ai_guest_sessions/);
+  assert.match(schema, /token_hash text NOT NULL UNIQUE/);
+  assert.match(schema, /CREATE POLICY "No Direct Access ai_guest_sessions"/);
+  assert.match(schema, /REVOKE ALL ON public\.ai_guest_sessions FROM anon, authenticated/);
+  assert.match(issueFunction, /extensions\.gen_random_bytes\(32\)/);
+  assert.match(issueFunction, /extensions\.digest\(v_session_token, 'sha256'\)/);
+  assert.match(issueFunction, /'session_token', v_session_token/);
+  assert.match(resolveFunction, /public\.resolve_customer_session\(p_session_token\)/);
+  assert.match(resolveFunction, /FROM public\.ai_guest_sessions/);
+  assert.match(resolveFunction, /'guest:' \|\| v_guest_session_id::text/);
+  assert.match(logoutFunction, /SET revoked_at = now\(\)/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.issue_ai_guest_session\(\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.resolve_ai_proxy_session\(text\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.logout_ai_guest_session\(text\) TO anon, authenticated;/);
+});
+
 test('password schema: customer password change clears forced-change flag', () => {
   const functionBody = getFunctionBody('update_customer_password');
 

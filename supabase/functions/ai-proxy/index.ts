@@ -234,12 +234,11 @@ Deno.serve(async (req) => {
 
     let userId: string | null = null;
     if (token) {
-      const { data: profileData, error: profileError } = await adminClient.rpc('get_my_profile', {
+      const { data: sessionData, error: sessionError } = await adminClient.rpc('resolve_ai_proxy_session', {
         p_session_token: token,
       });
-      const customerId = profileData?.customer?.id || profileData?.id || null;
-      if (!profileError && profileData?.success && customerId) {
-        userId = customerId;
+      if (!sessionError && sessionData?.success && sessionData?.user_id) {
+        userId = String(sessionData.user_id);
       }
     }
 
