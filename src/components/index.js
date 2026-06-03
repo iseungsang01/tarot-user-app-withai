@@ -1,13 +1,11 @@
 export { GradientBackground } from './common/GradientBackground';
 export {
   ScreenContainer,
-  PremiumHeaderPanel,
   ArchiveTitleHeader,
   PremiumCard,
   GoldActionButton,
   SegmentControl,
   DrawerMark,
-  PremiumGradients,
 } from './common/PremiumUI';
 export { LoadingSpinner } from './common/LoadingSpinner';
 export { CustomButton } from './common/CustomButton';
@@ -19,7 +17,6 @@ export { CouponCard } from './settings/CouponCard';
 export { SettingPasswordForm } from './settings/SettingPasswordForm';
 export { SettingReportManager } from './settings/SettingReportManager';
 export { SettingDeleteAccount } from './settings/SettingDeleteAccount';
-export { VoteCard } from './vote/VoteCard';
 export { VoteList } from './vote/VoteList';
 export { VoteDetail } from './vote/VoteDetail';
 export { AISummaryPanel, AIHistoryAnalysisPanel } from './history/AIInsightPanel';

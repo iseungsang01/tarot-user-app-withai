@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { errorEmitter } from '../utils/errorEmitter';
 
-export const ErrorContext = createContext();
+const ErrorContext = createContext();
 
 export const ErrorProvider = ({ children }) => {
   const [error, setError] = useState(null);

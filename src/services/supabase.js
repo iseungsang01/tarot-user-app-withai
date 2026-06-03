@@ -36,7 +36,7 @@ export const getSupabase = () => {
   return cachedSupabaseClient;
 };
 
-export const normalizeAuthError = (error, fallbackMessage = '인증이 만료되었습니다. 다시 로그인해주세요.') => {
+const normalizeAuthError = (error, fallbackMessage = '인증이 만료되었습니다. 다시 로그인해주세요.') => {
   const message = error?.message || fallbackMessage;
   return {
     message,
@@ -46,7 +46,7 @@ export const normalizeAuthError = (error, fallbackMessage = '인증이 만료되
   };
 };
 
-export const isAuthContextError = (error) => {
+const isAuthContextError = (error) => {
   if (!error) return false;
 
   if (AUTH_ERROR_CODES.has(String(error.code || ''))) return true;

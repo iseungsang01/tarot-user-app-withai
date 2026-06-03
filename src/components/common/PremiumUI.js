@@ -6,9 +6,8 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-export const PremiumGradients = {
+const PremiumGradients = {
   screen: ['#070009', '#130014', '#24051F', '#100006'],
-  panel: ['rgba(31,18,12,0.96)', 'rgba(18,0,8,0.96)'],
   card: ['rgba(30,10,21,0.88)', 'rgba(15,3,10,0.94)'],
   walnut: ['rgba(50,29,18,0.98)', 'rgba(24,10,6,0.98)'],
   gold: ['#C8A340', '#A77A2F', '#7A5522'],
@@ -35,15 +34,6 @@ export const ScreenContainer = ({ children, style, contentStyle, safeTop = true,
     </LinearGradient>
   );
 };
-
-export const PremiumHeaderPanel = ({ title, subtitle, children, compact = false, style }) => (
-  <LinearGradient colors={PremiumGradients.panel} style={[styles.headerPanel, compact && styles.headerCompact, style]}>
-    <Text style={styles.headerTitle}>{title}</Text>
-    <View style={styles.divider} />
-    {!!subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
-    {children}
-  </LinearGradient>
-);
 
 export const ArchiveTitleHeader = ({ eyebrow, title, subtitle, children, style, contentStyle }) => (
   <View style={[styles.archiveTitleWrap, style]}>
@@ -156,44 +146,6 @@ const styles = StyleSheet.create({
     bottom: 80,
     borderRadius: 130,
     backgroundColor: 'rgba(74,15,43,0.2)',
-  },
-  headerPanel: {
-    borderRadius: 18,
-    paddingVertical: 20,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.34)',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  headerCompact: {
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    color: DrawerTheme.brightGold,
-    fontSize: 22,
-    fontWeight: '700',
-    fontFamily: serif,
-    letterSpacing: 3,
-    textAlign: 'center',
-  },
-  divider: {
-    width: 54,
-    height: 1,
-    backgroundColor: DrawerTheme.antiqueGold,
-    opacity: 0.72,
-    marginVertical: 10,
-  },
-  headerSubtitle: {
-    color: DrawerTheme.ivory,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-    fontWeight: '500',
   },
   archiveTitleWrap: {
     width: '100%',

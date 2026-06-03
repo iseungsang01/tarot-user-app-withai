@@ -23,17 +23,6 @@ export const ERROR_MESSAGES = {
   validation: '입력값을 확인해주세요.',
 };
 
-export const SUCCESS_MESSAGES = {
-  login: '✅ 로그인 성공!',
-  logout: '로그아웃 되었습니다.',
-  save: '✨ 저장되었습니다!',
-  update: '✅ 수정되었습니다!',
-  delete: '🗑️ 삭제되었습니다.',
-  submit: '✅ 접수되었습니다!',
-  vote: '✅ 투표가 완료되었습니다!',
-  couponUsed: '✅ 쿠폰이 사용되었습니다!',
-};
-
 export const STORAGE_KEYS = {
   COACH_MARKS: 'has_seen_main_coach_marks_v1',
 };

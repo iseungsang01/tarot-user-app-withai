@@ -1,12 +1,12 @@
 const DATA_URI_PREFIX = /^data:image\/[a-zA-Z0-9+.-]+;base64,/;
 
-export const isDataImageUri = (value = '') => typeof value === 'string' && DATA_URI_PREFIX.test(value);
+const isDataImageUri = (value = '') => typeof value === 'string' && DATA_URI_PREFIX.test(value);
 
 export const isRemoteUri = (value = '') => typeof value === 'string' && /^https?:\/\//i.test(value);
 
 export const isLocalFileUri = (value = '') => typeof value === 'string' && /^(file|content|asset):\/\//i.test(value);
 
-export const isDirectImageUri = (value = '') => isDataImageUri(value) || isRemoteUri(value) || isLocalFileUri(value);
+const isDirectImageUri = (value = '') => isDataImageUri(value) || isRemoteUri(value) || isLocalFileUri(value);
 
 export const toDisplayImageUri = (value) => {
   if (!value || typeof value !== 'string') return null;

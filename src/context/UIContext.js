@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/Config';
 import { AuthContext } from './AuthContext';
 
-export const UIContext = createContext();
+const UIContext = createContext();
 
 export const UIProvider = ({ children }) => {
   const { customer } = useContext(AuthContext);

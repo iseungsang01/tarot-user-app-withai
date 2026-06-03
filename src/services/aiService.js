@@ -496,18 +496,6 @@ export const sendChatMessage = async (conversationHistory, userMessage) => {
     return callAIProxy(messages, { temperature: 0.8, maxTokens: 600 }, 'sendChatMessage');
 };
 
-export const getWelcomeMessage = async () => {
-    const messages = [
-        { role: 'system', content: TAROT_SYSTEM_PROMPT },
-        {
-            role: 'user',
-            content: '안녕하세요, 처음 방문했습니다. 인사와 함께 어떤 고민이든 편하게 이야기할 수 있다고 따뜻하게 맞이해주세요.',
-        },
-    ];
-
-    return callAIProxy(messages, { temperature: 0.9, maxTokens: 200 }, 'getWelcomeMessage');
-};
-
 // ─────────────────────────────────────────────────────────────
 // 3. 오늘의 운세 (Daily Fortune)
 // ─────────────────────────────────────────────────────────────
@@ -604,7 +592,6 @@ export default {
     analyzeVisitHistory,
     polishReviewText,
     sendChatMessage,
-    getWelcomeMessage,
     getDailyFortune,
     normalizeDailyFortunePayload,
 };

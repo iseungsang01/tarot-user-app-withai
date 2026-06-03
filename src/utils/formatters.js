@@ -27,25 +27,6 @@ export const formatPhoneNumber = (value) => {
 };
 
 /**
- * 날짜 포맷팅 (날짜만, 시간 제외)
- * ISO 문자열을 한국어 형식으로 변환
- * 
- * @param {string} dateStr - ISO 날짜 문자열
- * @returns {string} 포맷된 날짜
- * 
- * @example
- * formatDateOnly('2024-12-25T10:30:00') // '2024년 12월 25일'
- */
-export const formatDateOnly = (dateStr) => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-/**
  * 날짜 포맷팅 (짧은 형식)
  * ISO 문자열을 '12월25일' 형식으로 변환
  * 

@@ -16,17 +16,3 @@
  * validatePhoneNumber('01012345678')   // false (하이픈 필수)
  */
 export const validatePhoneNumber = (phone) => /^010-\d{4}-\d{4}$/.test(phone);
-
-/**
- * 빈 문자열 검증
- * 공백만 있는 경우도 빈 문자열로 판단
- * 
- * @param {string} text - 검증할 문자열
- * @returns {boolean} 비어있으면 true
- * 
- * @example
- * isEmpty('') // true
- * isEmpty('   ') // true
- * isEmpty('text') // false
- */
-export const isEmpty = (text) => !text || text.trim().length === 0;

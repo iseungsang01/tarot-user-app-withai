@@ -11,7 +11,7 @@ import { errorEmitter } from './errorEmitter';
  * @param {Error} error - Supabase 에러 객체
  * @returns {object} { type, title, message, icon }
  */
-export const parseSupabaseError = (error, options = {}) => {
+const parseSupabaseError = (error, options = {}) => {
   const { log = true } = options;
 
   if (log) {
