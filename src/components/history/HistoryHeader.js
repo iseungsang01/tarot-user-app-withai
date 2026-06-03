@@ -12,6 +12,6 @@ const styles = StyleSheet.create({
     wrap: {
         width: '100%',
         alignItems: 'center',
-        paddingBottom: 12,
+        paddingBottom: 4,
     },
 });
