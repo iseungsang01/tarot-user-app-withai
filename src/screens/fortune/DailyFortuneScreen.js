@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GoldActionButton, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { MAJOR_ARCANA } from '../../constants/TarotCards';
 import { normalizeDailyFortunePayload } from '../../services/aiService';
@@ -142,13 +142,13 @@ const DailyFortuneScreen = ({ navigation }) => {
     <ScreenContainer safeTop={false} safeBottom={false}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 140 }}
+        contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 140 }}
         showsVerticalScrollIndicator={false}
       >
-        <PremiumHeaderPanel
+        <ArchiveTitleHeader
+          eyebrow="Card Fortune"
           title="FORTUNE ARCHIVE"
-          subtitle={`${currentYear}년 ${currentMonth + 1}월의 오늘 운세 보관함`}
-          compact
+          subtitle="오늘의 운세 보관함"
           style={styles.header}
         />
 

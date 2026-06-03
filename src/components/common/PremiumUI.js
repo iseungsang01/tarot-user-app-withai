@@ -45,6 +45,30 @@ export const PremiumHeaderPanel = ({ title, subtitle, children, compact = false,
   </LinearGradient>
 );
 
+export const ArchiveTitleHeader = ({ eyebrow, title, subtitle, children, style, contentStyle }) => (
+  <View style={[styles.archiveTitleWrap, style]}>
+    <View style={styles.archiveFixedTitleBlock}>
+      <Text style={styles.archiveEyebrow}>{eyebrow || ' '}</Text>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+        style={styles.archiveTitle}
+      >
+        {title}
+      </Text>
+      <Text style={styles.archiveSubtitle}>{subtitle || ' '}</Text>
+      <View style={styles.archiveOrnamentRow}>
+        <View style={styles.archiveOrnamentLine} />
+        <View style={styles.archiveOrnamentRing} />
+        <View style={styles.archiveOrnamentLine} />
+      </View>
+    </View>
+    {!!children && <View style={[styles.archiveHeaderContent, contentStyle]}>{children}</View>}
+  </View>
+);
+
+
 export const PremiumCard = ({ children, variant = 'card', style, contentStyle }) => (
   <LinearGradient
     colors={variant === 'walnut' ? PremiumGradients.walnut : PremiumGradients.card}
@@ -171,6 +195,91 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  archiveTitleWrap: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 0,
+    paddingBottom: 14,
+  },
+  archiveFixedTitleBlock: {
+    width: '100%',
+    height: 106,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  archiveEyebrow: {
+    position: 'absolute',
+    top: 0,
+    height: 14,
+    includeFontPadding: false,
+    color: DrawerTheme.mutedIvory,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '800',
+    letterSpacing: 3.2,
+    textAlign: 'center',
+    opacity: 0.78,
+  },
+  archiveTitle: {
+    position: 'absolute',
+    top: 22,
+    width: '100%',
+    includeFontPadding: false,
+    color: DrawerTheme.brightGold,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900',
+    fontFamily: serif,
+    letterSpacing: 3.2,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.86)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 3,
+  },
+  archiveSubtitle: {
+    position: 'absolute',
+    top: 56,
+    height: 18,
+    includeFontPadding: false,
+    color: DrawerTheme.ivory,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textAlign: 'center',
+    opacity: 0.9,
+    textShadowColor: 'rgba(0,0,0,0.72)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  archiveOrnamentRow: {
+    position: 'absolute',
+    top: 84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '56%',
+  },
+  archiveOrnamentLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: DrawerTheme.antiqueGold,
+    opacity: 0.68,
+  },
+  archiveOrnamentRing: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: DrawerTheme.antiqueGold,
+    marginHorizontal: 10,
+    opacity: 0.78,
+    backgroundColor: 'rgba(9,0,13,0.22)',
+  },
+  archiveHeaderContent: {
+    width: '100%',
+    marginTop: 14,
   },
   card: {
     borderRadius: 16,

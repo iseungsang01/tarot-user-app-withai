@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, T
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GoldActionButton, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useAuth } from '../../hooks/useAuth';
 import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
@@ -122,13 +122,13 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
     <ScreenContainer safeTop={false} safeBottom={false}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 36 }}
+        contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 36 }}
         showsVerticalScrollIndicator={false}
       >
-        <PremiumHeaderPanel
+        <ArchiveTitleHeader
+          eyebrow="DAILY OMENS"
           title="CARD RITUAL"
-          subtitle="덱에서 오늘의 카드 한 장을 뽑습니다"
-          compact
+          subtitle="Fortune Draw"
           style={styles.header}
         />
 

@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PremiumHeaderPanel, ScreenContainer, SegmentControl } from '../../components';
+import { ArchiveTitleHeader, ScreenContainer, SegmentControl } from '../../components';
 import VoteScreen from '../vote/VoteScreen';
 import NoticeScreen from '../notice/NoticeScreen';
 
@@ -16,15 +16,15 @@ const NewsScreen = () => {
 
   return (
     <ScreenContainer safeTop={false} safeBottom={false}>
-      <View style={[styles.headerWrap, { paddingTop: insets.top + 12 }]}>
-        <PremiumHeaderPanel title="NOTICE BOARD" subtitle="투표와 공지를 보드에서 확인하세요" compact>
+      <View style={[styles.headerWrap, { paddingTop: insets.top + 10 }]}>
+        <ArchiveTitleHeader eyebrow="News Drawer" title="NOTICE BOARD" subtitle="소식 보관함">
           <SegmentControl
             options={SECTIONS}
             value={activeSection}
             onChange={setActiveSection}
             style={styles.segmentRow}
           />
-        </PremiumHeaderPanel>
+        </ArchiveTitleHeader>
       </View>
 
       <View style={styles.content}>

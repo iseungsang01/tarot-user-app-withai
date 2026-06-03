@@ -2,6 +2,7 @@ export { GradientBackground } from './common/GradientBackground';
 export {
   ScreenContainer,
   PremiumHeaderPanel,
+  ArchiveTitleHeader,
   PremiumCard,
   GoldActionButton,
   SegmentControl,

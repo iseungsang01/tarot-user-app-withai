@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     CellarMark,
     GoldActionButton,
+    ArchiveTitleHeader,
     PremiumCard,
-    PremiumHeaderPanel,
     ScreenContainer,
     SettingPasswordForm,
     SettingDeleteAccount
@@ -123,12 +123,12 @@ const SettingsScreen = ({ navigation }) => {
             <ScrollView
                 contentContainerStyle={[
                     styles.scrollContent,
-                    { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 108 }
+                    { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 108 }
                 ]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                <PremiumHeaderPanel title="SETTINGS" subtitle={`${customer?.nickname || 'Guest'}님의 계정과 앱 설정을 관리하세요`} compact />
+                <ArchiveTitleHeader eyebrow="Account Drawer" title="SETTINGS" subtitle="계정 설정 보관함" />
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{MENU_ITEMS.info}</Text>

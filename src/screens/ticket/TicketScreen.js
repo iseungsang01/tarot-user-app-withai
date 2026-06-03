@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, I
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { CouponCard, CellarMark, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, CouponCard, CellarMark, PremiumCard, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { couponService } from '../../services/couponService';
 import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
@@ -125,11 +125,11 @@ const TicketScreen = () => {
     <ScreenContainer safeTop={false} safeBottom={false}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 108 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 108 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
         showsVerticalScrollIndicator={false}
       >
-      <PremiumHeaderPanel title="STAMP & COUPON" subtitle="스탬프와 쿠폰을 한눈에 확인하세요" compact>
+      <ArchiveTitleHeader eyebrow="Stamp Coupon" title="COUPON ARCHIVE" subtitle="스탬프 쿠폰 보관함">
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryChip}>
@@ -145,7 +145,7 @@ const TicketScreen = () => {
             <Text style={styles.summaryLabel}>생일</Text>
           </View>
         </View>
-      </PremiumHeaderPanel>
+      </ArchiveTitleHeader>
 
       <PremiumCard variant="walnut" style={styles.panel}>
         <View style={styles.panelHeader}>
