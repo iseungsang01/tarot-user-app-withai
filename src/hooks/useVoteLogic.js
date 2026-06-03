@@ -32,10 +32,10 @@ export const useVoteLogic = () => {
     // Load list of votes and my responses
     const loadVotes = useCallback(async () => {
         // 1. 투표 목록 로드
-        const { data: votesData, error: votesError } = await handleApiCall('VoteScreen.loadVotes', () => voteService.getVotes());
+        const { data: votesData, error: votesError } = await handleApiCall('VotePanel.loadVotes', () => voteService.getVotes());
 
         // 2. 내 투표 기록 로드 (병렬 처리)
-        const { data: myResponseMap } = await handleApiCall('VoteScreen.loadMyResp', () => voteService.getMyAllResponses(customer.id), { showAlert: false });
+        const { data: myResponseMap } = await handleApiCall('VotePanel.loadMyResp', () => voteService.getMyAllResponses(customer.id), { showAlert: false });
 
         if (!votesError && votesData) {
             setVotes(votesData);
@@ -54,8 +54,8 @@ export const useVoteLogic = () => {
         setVoteDataLoading(true);
         try {
             const [resRes, countRes] = await Promise.all([
-                handleApiCall('VoteScreen.loadVoteResults', () => voteService.getVoteResults(vId), { showAlert: false }),
-                handleApiCall('VoteScreen.loadCount', () => voteService.getVoteParticipants(vId), { showAlert: false })
+                handleApiCall('VotePanel.loadVoteResults', () => voteService.getVoteResults(vId), { showAlert: false }),
+                handleApiCall('VotePanel.loadCount', () => voteService.getVoteParticipants(vId), { showAlert: false })
             ]);
 
             const finalResults = resRes.data?.results || {};
@@ -165,7 +165,7 @@ export const useVoteLogic = () => {
             if (isCancelRequest) {
                 try {
                     const { error } = await handleApiCall(
-                        'VoteScreen.cancelVote',
+                        'VotePanel.cancelVote',
                         () => voteService.cancelVote(selectedVote.id, customer.id)
                     );
 
@@ -196,7 +196,7 @@ export const useVoteLogic = () => {
 
             // Submit
             const res = await handleApiCall(
-                'VoteScreen.submitVote',
+                'VotePanel.submitVote',
                 () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id),
                 { successMessage: isEditMode ? '투표가 수정되었습니다.' : '투표가 완료되었습니다.' }
             );

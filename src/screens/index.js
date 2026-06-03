@@ -1,4 +1,4 @@
-// Auth
+﻿// Auth
 export { default as LoginScreen } from './auth/LoginScreen';
 export { default as RegisterScreen } from './auth/RegisterScreen';
 
@@ -10,8 +10,7 @@ export { default as DailyFortuneDrawScreen } from './fortune/DailyFortuneDrawScr
 export { default as HistoryScreen } from './history/HistoryScreen';
 export { default as VisitDetailScreen } from './history/VisitDetailScreen';
 
-// Notice / News
-export { default as NoticeScreen } from './notice/NoticeScreen';
+// News / Notice
 export { default as NoticeDetailScreen } from './notice/NoticeDetailScreen';
 export { default as NewsScreen } from './news/NewsScreen';
 
@@ -23,6 +22,5 @@ export { default as ForcedPasswordChangeScreen } from './settings/ForcedPassword
 export { default as PasswordResetScreen } from './settings/PasswordResetScreen';
 export { default as DeleteAccountScreen } from './settings/DeleteAccountScreen';
 
-// Vote / Ticket
-export { default as VoteScreen } from './vote/VoteScreen';
+// Ticket
 export { default as TicketScreen } from './ticket/TicketScreen';

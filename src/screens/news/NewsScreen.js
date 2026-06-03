@@ -1,9 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SegmentControl } from '../../components';
-import VoteScreen from '../vote/VoteScreen';
-import NoticeScreen from '../notice/NoticeScreen';
+import VotePanel from './panels/VotePanel';
+import NoticePanel from './panels/NoticePanel';
 
 const SECTIONS = [
   { key: 'votes', label: 'VOTE' },
@@ -28,16 +28,13 @@ const NewsScreen = () => {
       </View>
 
       <View style={styles.content}>
-        {activeSection === 'votes' ? <VoteScreen isIntegrated /> : <NoticeScreen isIntegrated />}
+        {activeSection === 'votes' ? <VotePanel /> : <NoticePanel />}
       </View>
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   headerWrap: {
     paddingHorizontal: 14,
     paddingBottom: 4,

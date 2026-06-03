@@ -107,7 +107,7 @@ export const SegmentControl = ({ options, value, onChange, style }) => (
           {active ? (
             <LinearGradient colors={PremiumGradients.softGold} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
           ) : null}
-          <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{option.label}</Text>
+          <Text style={[styles.segmentText, active ? styles.segmentTextActive : styles.segmentTextInactive]}>{option.label}</Text>
         </TouchableOpacity>
       );
     })}
@@ -349,6 +349,10 @@ const styles = StyleSheet.create({
     opacity: 0.92,
     zIndex: 1,
     elevation: 1,
+  },
+  segmentTextInactive: {
+    color: '#FFFFFF',
+    opacity: 1,
   },
   segmentTextActive: {
     color: DrawerTheme.bgBlackCherry,
