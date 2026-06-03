@@ -73,6 +73,10 @@ function getBearerToken(req: Request) {
   return raw.slice(7).trim();
 }
 
+function getCustomerSessionToken(req: Request) {
+  return req.headers.get('x-customer-session-token')?.trim() || getBearerToken(req);
+}
+
 type GoogleGenerationConfig = {
   temperature: number;
   maxOutputTokens: number;
@@ -222,7 +226,7 @@ Deno.serve(async (req) => {
     requireEnv('SUPABASE_ANON_KEY', SUPABASE_ANON_KEY);
     requireEnv('SUPABASE_SERVICE_ROLE_KEY', SUPABASE_SERVICE_ROLE_KEY);
 
-    const token = getBearerToken(req);
+    const token = getCustomerSessionToken(req);
     if (REQUIRE_AUTH && !token) {
       return new Response(
         JSON.stringify({ error: '인증 정보가 필요합니다.' }),

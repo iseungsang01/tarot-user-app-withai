@@ -126,7 +126,7 @@ const LoginScreen = ({ navigation }) => {
                                         try {
                                             const { error } = await guestLogin();
                                             if (error) {
-                                                setMessage({ text: '게스트 로그인 오류', type: 'error' });
+                                                setMessage({ text: error.message || '게스트 로그인 오류', type: 'error' });
                                             }
                                         } catch (e) {
                                             setMessage({ text: '게스트 로그인 중 오류가 발생했습니다.', type: 'error' });

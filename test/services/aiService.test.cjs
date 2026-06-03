@@ -56,6 +56,31 @@ test('aiService: surfaces Edge Function JSON error details', async () => {
   assert.equal(result.error.status, 500);
 });
 
+test('aiService: sends customer session token in a custom header', async () => {
+  let invokedOptions = null;
+
+  const { getDailyFortune } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async (_, options) => {
+            invokedOptions = options;
+            return { data: { data: '{"fortune":"ok","luckyColor":"gold","luckyItem":"note"}', usage: {}, provider: 'mock' }, error: null };
+          },
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'guest-token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await getDailyFortune('guest');
+
+  assert.equal(result.error, null);
+  assert.equal(invokedOptions.headers['x-customer-session-token'], 'guest-token');
+  assert.equal(Object.prototype.hasOwnProperty.call(invokedOptions.headers, 'Authorization'), false);
+});
+
 test('aiService: daily fortune extracts JSON object from decorated model output', async () => {
   const modelOutput = `오늘의 운세입니다.\n\n\`\`\`json\n{\n  "fortune": "차분하게 기회를 살피면 좋은 하루입니다.",\n  "luckyColor": "남색",\n  "luckyItem": "노트"\n}\n\`\`\``;
 

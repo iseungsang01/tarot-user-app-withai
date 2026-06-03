@@ -81,6 +81,14 @@ const getRpcFailureMessage = (rpcError) => {
   return '서버 연결 중 오류가 발생했습니다.';
 };
 
+const getGuestLoginFailureMessage = (rpcError, resultData) => {
+  if (rpcError?.code === 'PGRST202' && rpcError?.message?.includes('issue_ai_guest_session')) {
+    return '게스트 로그인 서버 설정이 아직 적용되지 않았습니다. 관리자에게 문의해주세요.';
+  }
+
+  return rpcError?.message || resultData?.message || '게스트 세션을 만들지 못했습니다.';
+};
+
 export const authService = {
   async login(phoneNumber, password) {
     try {
@@ -265,7 +273,10 @@ export const authService = {
       if (rpcError || !resultData?.success || !resultData?.session_token) {
         return {
           data: null,
-          error: { message: rpcError?.message || resultData?.message || '게스트 세션을 만들지 못했습니다.' },
+          error: {
+            message: getGuestLoginFailureMessage(rpcError, resultData),
+            code: rpcError?.code || resultData?.code || 'GUEST_SESSION_FAILED',
+          },
         };
       }
 

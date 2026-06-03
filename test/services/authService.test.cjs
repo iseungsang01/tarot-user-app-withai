@@ -124,6 +124,32 @@ test('authService: guestLogin stores an AI guest session token for daily fortune
   assert.equal(session.type, 'ai_guest_session');
 });
 
+test('authService: guestLogin reports missing server RPC setup clearly', async () => {
+  const storage = createStorageMock();
+
+  const supabaseClient = {
+    issueAIGuestSession: async () => ({
+      data: null,
+      error: {
+        code: 'PGRST202',
+        message: 'Could not find the function public.issue_ai_guest_session without parameters in the schema cache',
+      },
+    }),
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await authService.guestLogin();
+
+  assert.equal(result.data, null);
+  assert.equal(result.error.code, 'PGRST202');
+  assert.equal(result.error.message, '게스트 로그인 서버 설정이 아직 적용되지 않았습니다. 관리자에게 문의해주세요.');
+  assert.equal(await storage.get('tarot_customer_session'), null);
+});
+
 test('authService: 성공 응답에 세션 토큰이 없으면 세션 실패를 반환한다', async () => {
   const storage = createStorageMock();
 
