@@ -83,11 +83,11 @@ export const GoldActionButton = ({ title, children, onPress, disabled, style, te
 export const SegmentControl = ({ options, value, onChange, style }) => (
   <View style={[styles.segment, style]} accessibilityRole="tablist">
     {options.map((option) => {
-      const active = option.value === value || option.key === value;
       const optionValue = option.value ?? option.key;
+      const active = optionValue === value;
       return (
         <TouchableOpacity
-          key={optionValue}
+          key={`${optionValue}-${active ? 'active' : 'inactive'}`}
           activeOpacity={0.85}
           onPress={() => onChange(optionValue)}
           style={[styles.segmentItem, active ? styles.segmentItemActive : styles.segmentItemInactive]}
@@ -97,7 +97,18 @@ export const SegmentControl = ({ options, value, onChange, style }) => (
           {active ? (
             <LinearGradient colors={PremiumGradients.softGold} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
           ) : null}
-          <Text style={[styles.segmentText, active ? styles.segmentTextActive : styles.segmentTextInactive]}>{option.label}</Text>
+          <Text
+            style={[
+              styles.segmentText,
+              active ? styles.segmentTextActive : styles.segmentTextInactive,
+              {
+                color: active ? DrawerTheme.bgBlackCherry : '#FFFFFF',
+                opacity: 1,
+              },
+            ]}
+          >
+            {option.label}
+          </Text>
         </TouchableOpacity>
       );
     })}
