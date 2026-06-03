@@ -9,9 +9,15 @@ export const VoteList = ({ votes, onSelectVote }) => {
         <View>
             {votes.length === 0 ? (
                 <PremiumCard style={styles.emptyBox} contentStyle={styles.emptyContent}>
-                    <View style={styles.emptyFlap} />
-                    <CellarMark size={44} style={styles.emptyMark} />
-                    <Text style={styles.emptyText}>진행 중인 투표가 없습니다.</Text>
+                    <View style={styles.boardIllustration}>
+                        <View style={styles.boardFrame}>
+                            <View style={styles.boardLine} />
+                            <CellarMark size={24} filled style={styles.boardSeal} />
+                            <View style={[styles.boardLine, styles.boardLineShort]} />
+                        </View>
+                    </View>
+                    <Text style={styles.emptyTitle}>진행 중인 투표가 없습니다</Text>
+                    <Text style={styles.emptySupport}>새로운 투표가 열리면 이곳에서 확인할 수 있습니다.</Text>
                 </PremiumCard>
             ) : (
                 votes.map(v => (
@@ -32,7 +38,7 @@ const styles = StyleSheet.create({
     },
     emptyContent: {
         width: '100%',
-        minHeight: 134,
+        minHeight: 176,
         alignSelf: 'stretch',
         alignItems: 'center',
         justifyContent: 'center',
@@ -41,26 +47,56 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(200,163,64,0.28)',
         backgroundColor: 'rgba(31,18,12,0.46)',
         overflow: 'hidden',
-        gap: 10,
+        gap: 8,
     },
-    emptyFlap: {
-        position: 'absolute',
-        top: -54,
-        width: '80%',
-        height: 110,
-        transform: [{ rotate: '45deg' }],
+    boardIllustration: {
+        width: 78,
+        height: 58,
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(200,163,64,0.16)',
-        backgroundColor: 'rgba(18,0,8,0.28)',
+        backgroundColor: 'rgba(9,0,13,0.38)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
     },
-    emptyMark: {
-        alignSelf: 'center',
+    boardFrame: {
+        width: 54,
+        height: 36,
+        borderRadius: 9,
+        borderWidth: 1,
+        borderColor: 'rgba(200,163,64,0.28)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
     },
-    emptyText: {
+    boardLine: {
+        width: 28,
+        height: 1,
+        backgroundColor: 'rgba(244,232,208,0.22)',
+    },
+    boardLineShort: {
+        width: 18,
+    },
+    boardSeal: {
+        position: 'absolute',
+        right: -10,
+        bottom: -10,
+    },
+    emptyTitle: {
         width: '100%',
-        fontSize: 13,
+        fontSize: 15,
         color: DrawerTheme.ivory,
         fontWeight: '700',
         textAlign: 'center',
+    },
+    emptySupport: {
+        width: '86%',
+        fontSize: 12,
+        lineHeight: 18,
+        color: DrawerTheme.mutedIvory,
+        fontWeight: '400',
+        textAlign: 'center',
+        opacity: 0.82,
     },
 });

@@ -12,8 +12,8 @@ export const CommonStyles = {
         paddingVertical: 25,
         paddingHorizontal: 20,
         marginBottom: 25,
-        borderWidth: 1.5,
-        borderColor: DrawerTheme.woodFrame,
+        borderWidth: 1,
+        borderColor: 'rgba(200,163,64,0.34)',
         alignItems: 'center',
         ...Platform.select({
             ios: {
@@ -33,22 +33,22 @@ export const CommonStyles = {
     },
     title: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontWeight: '700',
         color: DrawerTheme.goldBrass,
         letterSpacing: 3,
         fontFamily: Platform.OS === 'ios' ? 'Cochin' : 'serif'
     },
     headerDivider: {
         width: 50,
-        height: 2,
+        height: 1,
         backgroundColor: DrawerTheme.goldBrass,
         marginVertical: 10,
-        opacity: 0.7
+        opacity: 0.72
     },
     subtitle: {
         fontSize: 12,
         color: DrawerTheme.ivory,
-        opacity: 0.9,
+        opacity: 0.86,
         textAlign: 'center'
     }
 };

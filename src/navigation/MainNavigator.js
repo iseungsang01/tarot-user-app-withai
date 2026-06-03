@@ -63,8 +63,8 @@ const TabIcon = ({ source, focused, hasNotification }) => (
   <View style={styles.iconContainer}>
     <LocalSvg
       asset={source}
-      width={23}
-      height={23}
+        width={20}
+        height={20}
       style={[
         styles.iconImage,
         { opacity: focused ? 1 : 0.68 },
@@ -230,24 +230,24 @@ const TabNavigator = () => {
           headerShown: false,
           unmountOnBlur: true,
           tabBarStyle: {
-            backgroundColor: DrawerTheme.bgBlackPurple,
-            borderTopColor: 'rgba(200,163,64,0.72)',
-            borderTopWidth: 1,
+            backgroundColor: 'rgba(9,0,13,0.94)',
+            borderTopColor: 'rgba(200,163,64,0.18)',
+            borderTopWidth: StyleSheet.hairlineWidth,
             paddingBottom: insets.bottom,
-            paddingTop: 7,
-            height: 74 + insets.bottom,
+            paddingTop: 4,
+            height: 64 + insets.bottom,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: -8 },
-            shadowOpacity: 0.42,
-            shadowRadius: 10,
-            elevation: 12,
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.24,
+            shadowRadius: 8,
+            elevation: 8,
           },
           tabBarActiveTintColor: DrawerTheme.antiqueGold,
-          tabBarInactiveTintColor: DrawerTheme.mutedGold,
+          tabBarInactiveTintColor: 'rgba(142,122,154,0.58)',
           tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '700',
-            marginBottom: insets.bottom > 0 ? 0 : 4,
+            fontSize: 9.5,
+            fontWeight: '600',
+            marginBottom: insets.bottom > 0 ? 0 : 3,
             letterSpacing: 0.2,
           },
           tabBarItemStyle: {
@@ -336,14 +336,14 @@ const styles = StyleSheet.create({
   tabRoot: { flex: 1 },
   iconContainer: {
     position: 'relative',
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   iconImage: {
-    width: 23,
-    height: 23,
+    width: 20,
+    height: 20,
   },
   iconImageActive: {
     shadowColor: DrawerTheme.brassHighlight,

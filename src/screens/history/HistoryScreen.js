@@ -308,7 +308,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';
-    const status = isWritten && !isPlaceholder ? 'OPENED' : 'SEALED';
+    const status = isWritten && !isPlaceholder ? '열람' : '봉인';
 
     return (
         <View style={styles.drawerWrapper}>
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     },
     bgCellar: {
         ...StyleSheet.absoluteFillObject,
-        opacity: 0.24,
+        opacity: 0.16,
     },
     bgCellarImage: {
         width: '100%',
@@ -438,12 +438,12 @@ const styles = StyleSheet.create({
     list: {
         flex: 1,
         width: '100%',
-        marginBottom: 74,
+        marginBottom: 64,
         overflow: 'hidden',
     },
     scrollContainer: {
         paddingHorizontal: 16,
-        paddingBottom: 136,
+        paddingBottom: 156,
         width: '100%',
         maxWidth: 393,
         alignSelf: 'center',
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     },
     backLip: {
         width: '100%',
-        height: 8,
+        height: 5,
         backgroundColor: '#1A0E08',
         borderTopWidth: 1,
         borderBottomWidth: 1,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     },
     topMolding: {
         width: '100%',
-        height: 11,
+        height: 8,
         borderTopLeftRadius: 5,
         borderTopRightRadius: 5,
         borderTopWidth: 1,
@@ -499,15 +499,15 @@ const styles = StyleSheet.create({
     },
     topSubMolding: {
         width: '100%',
-        height: 8,
+        height: 5,
         borderTopWidth: 1,
         borderBottomWidth: 1,
         borderColor: 'rgba(0,0,0,0.62)',
     },
     mainBody: {
-        borderLeftWidth: 5,
-        borderRightWidth: 5,
-        borderColor: 'rgba(12,6,4,0.92)',
+        borderLeftWidth: 2,
+        borderRightWidth: 2,
+        borderColor: 'rgba(12,6,4,0.62)',
         overflow: 'hidden',
     },
     mainBodyHeaderExtension: {
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 4,
         width: 2,
-        backgroundColor: 'rgba(224,184,90,0.22)',
+        backgroundColor: 'rgba(224,184,90,0.1)',
     },
     sideRailRight: {
         position: 'absolute',
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         right: 4,
         width: 2,
-        backgroundColor: 'rgba(224,184,90,0.22)',
+        backgroundColor: 'rgba(224,184,90,0.1)',
     },
     drawerContent: {
         paddingVertical: 4,
@@ -569,27 +569,27 @@ const styles = StyleSheet.create({
     drawerWrapper: {
         width: '100%',
         marginBottom: 9,
-        borderBottomWidth: 4,
-        borderBottomColor: 'rgba(5,2,1,0.92)',
+        borderBottomWidth: 2,
+        borderBottomColor: 'rgba(5,2,1,0.58)',
     },
     drawer: {
         width: '100%',
-        minHeight: 98,
-        borderRadius: 6,
+        minHeight: 86,
+        borderRadius: 12,
         padding: 9,
         borderTopWidth: 1,
-        borderBottomWidth: 4,
-        borderTopColor: 'rgba(200,163,64,0.28)',
-        borderBottomColor: 'rgba(0,0,0,0.66)',
+        borderBottomWidth: 2,
+        borderTopColor: 'rgba(244,232,208,0.08)',
+        borderBottomColor: 'rgba(0,0,0,0.42)',
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.42,
-        shadowRadius: 14,
-        elevation: 6,
+        shadowOpacity: 0.28,
+        shadowRadius: 10,
+        elevation: 4,
     },
     drawerTexture: {
-        opacity: 0.95,
+        opacity: 0.82,
     },
     unwrittenDrawer: {
         opacity: 0.78,
@@ -639,10 +639,10 @@ const styles = StyleSheet.create({
         maxWidth: 82,
         minHeight: 30,
         paddingHorizontal: 10,
-        borderRadius: 4,
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: 'rgba(224,184,90,0.72)',
-        backgroundColor: 'rgba(31,18,12,0.82)',
+        borderColor: 'rgba(224,184,90,0.28)',
+        backgroundColor: 'rgba(31,18,12,0.58)',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -674,12 +674,12 @@ const styles = StyleSheet.create({
         left: '30%',
         right: '35%',
         bottom: 7,
-        color: 'rgba(244,232,208,0.78)',
-        fontSize: 10,
+        color: 'rgba(244,232,208,0.84)',
+        fontSize: 11,
         lineHeight: 14,
         fontWeight: '600',
         textAlign: 'center',
-        opacity: 0.58,
+        opacity: 0.72,
     },
     checkboxContainer: {
         position: 'absolute',

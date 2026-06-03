@@ -142,12 +142,12 @@ const DailyFortuneScreen = ({ navigation }) => {
     <ScreenContainer safeTop={false} safeBottom={false}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 140 }}
         showsVerticalScrollIndicator={false}
       >
         <PremiumHeaderPanel
           title="FORTUNE ARCHIVE"
-          subtitle={`${currentYear}년 ${currentMonth + 1}월의 오늘 운세 보관소`}
+          subtitle={`${currentYear}년 ${currentMonth + 1}월의 오늘 운세 보관함`}
           compact
           style={styles.header}
         />
@@ -160,8 +160,8 @@ const DailyFortuneScreen = ({ navigation }) => {
           <Text style={styles.statusTitle}>오늘의 운세 상태</Text>
           <Text style={styles.statusText}>
             {hasValidFortune(todayFortune)
-              ? `오늘 ${drawCount}회 뽑았습니다. 남은 횟수는 ${remainingDraws}회입니다.`
-              : '아직 오늘의 카드를 뽑지 않았습니다.'}
+              ? `오늘 열람 ${drawCount}회 · 남은 횟수 ${remainingDraws}회`
+              : '아직 오늘의 카드를 열람하지 않았습니다.'}
           </Text>
           <GoldActionButton onPress={handleStartCardDraw} disabled={!canDrawToday} dark={!canDrawToday} style={styles.drawButton}>
             {getDrawButtonLabel(todayFortune)}
@@ -256,26 +256,26 @@ const DetailItem = ({ label, value, wide = false }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20 },
-  header: { marginBottom: 16 },
-  card: { padding: 15 },
+  container: { flex: 1, paddingHorizontal: 16 },
+  header: { marginBottom: 12 },
+  card: { padding: 13 },
   loading: { marginVertical: 40 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayBox: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', padding: 2, position: 'relative' },
-  weekdayText: { color: DrawerTheme.mutedIvory, fontSize: 12, fontWeight: '800', opacity: 0.8 },
-  dayCircle: { width: '80%', height: '80%', borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(7,0,9,0.38)' },
-  dayText: { color: DrawerTheme.ivory, fontSize: 14, fontWeight: '600' },
+  dayBox: { width: '14.28%', aspectRatio: 1.05, justifyContent: 'center', alignItems: 'center', padding: 2, position: 'relative' },
+  weekdayText: { color: DrawerTheme.mutedIvory, fontSize: 11, fontWeight: '700', opacity: 0.72 },
+  dayCircle: { width: '76%', height: '76%', borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(7,0,9,0.3)' },
+  dayText: { color: DrawerTheme.ivory, fontSize: 13, fontWeight: '500' },
   attendedCircle: { backgroundColor: 'rgba(200,163,64,0.12)' },
   attendedText: { color: DrawerTheme.goldBright, fontWeight: '900' },
-  todayCircle: { borderWidth: 2, borderColor: DrawerTheme.antiqueGold },
+  todayCircle: { borderWidth: 1, borderColor: DrawerTheme.antiqueGold },
   todayText: { fontWeight: '900' },
   selectedCircle: { backgroundColor: DrawerTheme.antiqueGold },
   selectedText: { color: DrawerTheme.bgBlackCherry, fontWeight: '900' },
-  fortuneMarker: { position: 'absolute', bottom: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: DrawerTheme.antiqueGold, borderWidth: 1, borderColor: DrawerTheme.bgBlackCherry },
-  statusCard: { marginTop: 18, marginBottom: 12 },
-  statusTitle: { color: DrawerTheme.antiqueGold, fontSize: 17, fontWeight: '900', marginBottom: 8 },
-  statusText: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 22, marginBottom: 14 },
-  drawButton: { marginTop: 4 },
+  fortuneMarker: { position: 'absolute', bottom: 3, right: 4, width: 6, height: 6, borderRadius: 3, backgroundColor: DrawerTheme.antiqueGold, opacity: 0.86 },
+  statusCard: { marginTop: 12, marginBottom: 10 },
+  statusTitle: { color: DrawerTheme.antiqueGold, fontSize: 15, fontWeight: '700', marginBottom: 7 },
+  statusText: { color: DrawerTheme.ivory, fontSize: 13, lineHeight: 20, marginBottom: 12 },
+  drawButton: { marginTop: 2 },
   fortuneCard: { marginTop: 10 },
   fortuneTitle: { fontSize: 18, fontWeight: '900', color: DrawerTheme.antiqueGold, marginBottom: 12 },
   resultCardContainer: { alignItems: 'center', marginVertical: 15, backgroundColor: 'rgba(7,0,9,0.35)', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(200,163,64,0.18)' },

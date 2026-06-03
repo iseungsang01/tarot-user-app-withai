@@ -9,9 +9,10 @@ const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 export const PremiumGradients = {
   screen: ['#070009', '#130014', '#24051F', '#100006'],
   panel: ['rgba(31,18,12,0.96)', 'rgba(18,0,8,0.96)'],
-  card: ['rgba(30,10,21,0.96)', 'rgba(15,3,10,0.98)'],
+  card: ['rgba(30,10,21,0.88)', 'rgba(15,3,10,0.94)'],
   walnut: ['rgba(50,29,18,0.98)', 'rgba(24,10,6,0.98)'],
-  gold: ['#C7A24B', '#A77A2F', '#7A5522'],
+  gold: ['#C8A340', '#A77A2F', '#7A5522'],
+  softGold: ['rgba(200,163,64,0.82)', 'rgba(167,122,47,0.76)', 'rgba(111,78,30,0.78)'],
   wine: ['#3B0B24', '#17000F'],
 };
 
@@ -81,7 +82,7 @@ export const SegmentControl = ({ options, value, onChange, style }) => (
           accessibilityState={{ selected: active }}
         >
           {active ? (
-            <LinearGradient colors={PremiumGradients.gold} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
+            <LinearGradient colors={PremiumGradients.softGold} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
           ) : null}
           <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{option.label}</Text>
         </TouchableOpacity>
@@ -134,11 +135,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(74,15,43,0.2)',
   },
   headerPanel: {
-    borderRadius: 16,
-    paddingVertical: 22,
+    borderRadius: 18,
+    paddingVertical: 20,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: 'rgba(200,163,64,0.52)',
+    borderColor: 'rgba(200,163,64,0.34)',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -152,16 +153,16 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: DrawerTheme.brightGold,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: serif,
-    letterSpacing: 3.2,
+    letterSpacing: 3,
     textAlign: 'center',
   },
   divider: {
     width: 54,
     height: 1,
     backgroundColor: DrawerTheme.antiqueGold,
-    opacity: 0.9,
+    opacity: 0.72,
     marginVertical: 10,
   },
   headerSubtitle: {
@@ -169,18 +170,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   card: {
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(184,135,53,0.46)',
+    borderColor: 'rgba(244,232,208,0.08)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.32,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 4,
     overflow: 'hidden',
   },
   buttonWrap: {
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(224,184,90,0.65)',
+    borderColor: 'rgba(224,184,90,0.38)',
     paddingHorizontal: 18,
   },
   disabled: {
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   },
   goldButtonText: {
     color: DrawerTheme.bgBlackCherry,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
     letterSpacing: 1.1,
   },
@@ -211,10 +212,10 @@ const styles = StyleSheet.create({
   segment: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: 'rgba(184,135,53,0.48)',
+    borderColor: 'rgba(184,135,53,0.28)',
     borderRadius: 999,
     padding: 4,
-    backgroundColor: 'rgba(7,0,9,0.68)',
+    backgroundColor: 'rgba(7,0,9,0.56)',
     gap: 4,
   },
   segmentItem: {
@@ -226,16 +227,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   segmentItemInactive: {
-    backgroundColor: 'rgba(200,163,64,0.12)',
+    backgroundColor: 'rgba(244,232,208,0.04)',
   },
   segmentItemActive: {
     borderWidth: 1,
-    borderColor: 'rgba(224,184,90,0.72)',
+    borderColor: 'rgba(224,184,90,0.42)',
   },
   segmentText: {
     color: DrawerTheme.ivory,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 1,
     opacity: 0.92,
     zIndex: 1,
