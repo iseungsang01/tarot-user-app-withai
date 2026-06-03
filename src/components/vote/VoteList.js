@@ -2,7 +2,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { VoteCard } from './VoteCard';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { CellarMark, PremiumCard } from '../common/PremiumUI';
+import { DrawerMark, PremiumCard } from '../common/PremiumUI';
 
 export const VoteList = ({ votes, onSelectVote }) => {
     return (
@@ -12,7 +12,7 @@ export const VoteList = ({ votes, onSelectVote }) => {
                     <View style={styles.boardIllustration}>
                         <View style={styles.boardFrame}>
                             <View style={styles.boardLine} />
-                            <CellarMark size={24} filled style={styles.boardSeal} />
+                            <DrawerMark size={24} filled style={styles.boardSeal} />
                             <View style={[styles.boardLine, styles.boardLineShort]} />
                         </View>
                     </View>

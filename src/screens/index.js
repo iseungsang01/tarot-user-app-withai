@@ -20,6 +20,8 @@ export { default as SettingsScreen } from './settings/SettingsScreen';
 export { default as BugReportScreen } from './settings/BugReportScreen';
 export { default as BugReportDetailScreen } from './settings/BugReportDetailScreen';
 export { default as ForcedPasswordChangeScreen } from './settings/ForcedPasswordChangeScreen';
+export { default as PasswordResetScreen } from './settings/PasswordResetScreen';
+export { default as DeleteAccountScreen } from './settings/DeleteAccountScreen';
 
 // Vote / Ticket
 export { default as VoteScreen } from './vote/VoteScreen';

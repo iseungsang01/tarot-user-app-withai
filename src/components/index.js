@@ -6,7 +6,7 @@ export {
   PremiumCard,
   GoldActionButton,
   SegmentControl,
-  CellarMark,
+  DrawerMark,
   PremiumGradients,
 } from './common/PremiumUI';
 export { LoadingSpinner } from './common/LoadingSpinner';

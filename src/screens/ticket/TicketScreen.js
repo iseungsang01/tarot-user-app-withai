@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, I
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { ArchiveTitleHeader, CouponCard, CellarMark, PremiumCard, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, CouponCard, DrawerMark, PremiumCard, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { couponService } from '../../services/couponService';
 import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
@@ -205,7 +205,7 @@ const TicketScreen = () => {
         {coupons.length === 0 ? (
           <View style={styles.emptyEnvelope}>
             <View style={styles.envelopeFlap} />
-            <CellarMark size={44} />
+            <DrawerMark size={44} />
             <Text style={styles.emptyText}>보유한 쿠폰이 없습니다</Text>
           </View>
         ) : (

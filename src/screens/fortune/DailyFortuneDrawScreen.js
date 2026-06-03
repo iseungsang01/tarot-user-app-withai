@@ -210,9 +210,11 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
           </PremiumCard>
         )}
 
-        <TouchableOpacity style={styles.backButton} activeOpacity={0.84} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>운세 기록으로 돌아가기</Text>
-        </TouchableOpacity>
+        {!isDrawing && (
+          <TouchableOpacity style={styles.backButton} activeOpacity={0.84} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>운세 기록으로 돌아가기</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       <Modal visible={Boolean(selectedCardPreview)} transparent animationType="fade" onRequestClose={() => setSelectedCardPreview(null)}>

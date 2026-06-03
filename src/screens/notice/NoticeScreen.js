@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { CellarMark, GradientBackground, LoadingSpinner, NoticeCard, PremiumCard } from '../../components';
+import { DrawerMark, GradientBackground, LoadingSpinner, NoticeCard, PremiumCard } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { noticeService } from '../../services/noticeService';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -57,7 +57,7 @@ const NoticeScreen = ({ isIntegrated = false }) => {
                 ListEmptyComponent={
                     <PremiumCard style={styles.emptyBox} contentStyle={styles.emptyContent}>
                         <View style={styles.emptyFlap} />
-                        <CellarMark size={44} style={styles.emptyMark} />
+                        <DrawerMark size={44} style={styles.emptyMark} />
                         <Text style={styles.emptyText}>아직 등록된 소식이 없습니다.</Text>
                     </PremiumCard>
                 }

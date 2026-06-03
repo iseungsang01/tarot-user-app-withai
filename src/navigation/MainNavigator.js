@@ -22,6 +22,8 @@ import {
   TicketScreen,
   BugReportScreen,
   BugReportDetailScreen,
+  PasswordResetScreen,
+  DeleteAccountScreen,
 } from '../screens';
 import { useAuth } from '../hooks/useAuth';
 
@@ -326,6 +328,8 @@ const MainNavigator = () => {
       <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="PasswordReset" component={PasswordResetScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />
     </Stack.Navigator>
   );
 };

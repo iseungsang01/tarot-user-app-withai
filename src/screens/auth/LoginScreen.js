@@ -1,13 +1,15 @@
 ﻿import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { GoldActionButton, PremiumCard, PremiumHeaderPanel, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { formatPhoneNumber } from '../../utils/formatters';
 import { validatePhoneNumber } from '../../utils/validators';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { createValidationError } from '../../utils/errorHandler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const LoginScreen = ({ navigation }) => {
+    const insets = useSafeAreaInsets();
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState({ text: '', type: '' });
@@ -67,9 +69,13 @@ const LoginScreen = ({ navigation }) => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.container}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-                    <PremiumHeaderPanel
-                        title="TAROT CELLAR"
+                <ScrollView
+                    contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
+                    bounces={false}
+                >
+                    <ArchiveTitleHeader
+                        eyebrow="Member Drawer"
+                        title="DRAWER"
                         subtitle="보관된 상담 기록을 확인하려면 멤버십 입장을 완료하세요"
                         style={styles.headerArea}
                     />
@@ -180,12 +186,11 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
-        justifyContent: 'center',
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 40,
     },
     headerArea: {
-        marginBottom: 24,
+        marginBottom: 16,
     },
     mainCard: {
         padding: 24,

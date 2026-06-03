@@ -68,7 +68,6 @@ export const ArchiveTitleHeader = ({ eyebrow, title, subtitle, children, style, 
   </View>
 );
 
-
 export const PremiumCard = ({ children, variant = 'card', style, contentStyle }) => (
   <LinearGradient
     colors={variant === 'walnut' ? PremiumGradients.walnut : PremiumGradients.card}
@@ -115,20 +114,20 @@ export const SegmentControl = ({ options, value, onChange, style }) => (
   </View>
 );
 
-export const CellarMark = ({ size = 14, filled = false, style }) => (
+export const DrawerMark = ({ size = 14, filled = false, style }) => (
   <View
     style={[
-      styles.cellarMark,
+      styles.drawerMark,
       {
         width: size,
         height: size,
         borderRadius: size / 2,
       },
-      filled && styles.cellarMarkFilled,
+      filled && styles.drawerMarkFilled,
       style,
     ]}
   >
-    <View style={[styles.cellarMarkInner, { width: size * 0.36, height: size * 0.36, borderRadius: size * 0.18 }]} />
+    <View style={[styles.drawerMarkInner, { width: size * 0.36, height: size * 0.36, borderRadius: size * 0.18 }]} />
   </View>
 );
 
@@ -355,18 +354,18 @@ const styles = StyleSheet.create({
     color: DrawerTheme.bgBlackCherry,
     opacity: 1,
   },
-  cellarMark: {
+  drawerMark: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(200,163,64,0.62)',
     backgroundColor: 'rgba(9,0,13,0.72)',
   },
-  cellarMarkFilled: {
+  drawerMarkFilled: {
     backgroundColor: DrawerTheme.antiqueGold,
     borderColor: DrawerTheme.brightGold,
   },
-  cellarMarkInner: {
+  drawerMarkInner: {
     borderWidth: 1,
     borderColor: 'rgba(18,0,8,0.72)',
     backgroundColor: 'rgba(18,0,8,0.28)',

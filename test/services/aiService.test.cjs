@@ -228,3 +228,60 @@ test('aiService: daily fortune collapses degenerate Korean syllable repeats', as
   assert.equal(result.data.fortune, cleanedFortune);
   assert.equal(normalizeDailyFortunePayload({ fortune: repeatedFortune }).fortune, cleanedFortune);
 });
+
+test('aiService: daily fortune collapses degenerate repeated English tokens', async () => {
+  const repeatedFortune = '오늘은 스스로의 리듬을 own own own own 확인하며 천천히 움직이면 좋습니다.';
+  const cleanedFortune = '오늘은 스스로의 리듬을 own 확인하며 천천히 움직이면 좋습니다.';
+  const modelOutput = JSON.stringify({
+    fortune: repeatedFortune,
+    relationship: 'distance distance distance 보다 진심을 먼저 보세요.',
+    luckyColor: 'blue blue blue blue',
+    luckyItem: 'note',
+  });
+
+  const { getDailyFortune, normalizeDailyFortunePayload } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await getDailyFortune('tester');
+
+  assert.equal(result.error, null);
+  assert.equal(result.data.fortune, cleanedFortune);
+  assert.equal(result.data.relationship, 'distance 보다 진심을 먼저 보세요.');
+  assert.equal(result.data.luckyColor, 'blue');
+  assert.equal(normalizeDailyFortunePayload({ fortune: repeatedFortune }).fortune, cleanedFortune);
+});
+
+test('aiService: chat responses collapse degenerate repeated English tokens before display', async () => {
+  const { sendChatMessage } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({
+            data: {
+              data: '카드는 지금 자신의 속도를 own own own own 믿어도 된다고 말합니다.',
+              usage: {},
+              provider: 'mock',
+            },
+            error: null,
+          }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await sendChatMessage([], '오늘 운세 알려줘');
+
+  assert.equal(result.error, null);
+  assert.equal(result.data, '카드는 지금 자신의 속도를 own 믿어도 된다고 말합니다.');
+});

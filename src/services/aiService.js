@@ -154,9 +154,16 @@ const collapseDegenerateKoreanRepeats = (text) => {
     return text.replace(/([\u3131-\u318E\uAC00-\uD7A3])\1{3,}/g, '$1');
 };
 
+const collapseDegenerateWordRepeats = (text) => {
+    if (typeof text !== 'string') return '';
+    return text.replace(/\b([\p{L}\p{N}][\p{L}\p{N}'’-]{1,30})(?:\s+\1\b){2,}/giu, '$1');
+};
+
+const sanitizeAIText = (text) => collapseDegenerateWordRepeats(collapseDegenerateKoreanRepeats(text));
+
 const cleanJSONLikeValue = (value) => {
     if (value === null || value === undefined) return '';
-    return collapseDegenerateKoreanRepeats(String(value)
+    return sanitizeAIText(String(value)
         .replace(/\\n/g, '\n')
         .replace(/\\"/g, '"')
         .replace(/^\s*[{,]?\s*"?/g, '')
@@ -301,7 +308,7 @@ const callAIProxy = async (messages, options = {}, task = 'chat') => {
 
 
         return {
-            data: data.data,
+            data: sanitizeAIText(data.data),
             usage: data.usage,
             provider: data.provider,
             error: null,
