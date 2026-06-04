@@ -8,7 +8,7 @@ const schemaPath = path.join(__dirname, '../../supabase/schema.sql');
 function getFunctionBody(functionName) {
   const schema = fs.readFileSync(schemaPath, 'utf8');
   const pattern = new RegExp(
-    `CREATE OR REPLACE FUNCTION public\\.${functionName}[\\s\\S]*?\\n\\$\\$;`,
+    `CREATE OR REPLACE FUNCTION public\\.${functionName}\\s*\\([\\s\\S]*?\\n\\$\\$;`,
     'm',
   );
   const match = schema.match(pattern);
@@ -26,6 +26,7 @@ test('coupon schema: redeem_coupon validates session and admin password before a
   assert.match(functionBody, /RETURNS TABLE\(success boolean, message text\)/);
   assert.match(functionBody, /RETURN QUERY SELECT false, 'invalid_session'::text/);
   assert.match(functionBody, /extensions\.crypt\(p_admin_password,\s*v_config_hash\)/);
+  assert.match(functionBody, /current_setting\('app\.admin_password_hash', true\)/);
   assert.match(functionBody, /current_setting\('app\.admin_password', true\)/);
   assert.match(functionBody, /FOR UPDATE/);
   assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_not_found'::text/);
@@ -35,7 +36,7 @@ test('coupon schema: redeem_coupon validates session and admin password before a
   assert.match(functionBody, /SET search_path = public, extensions/);
   assert.ok(
     functionBody.indexOf('public.resolve_customer_session(p_session_token)') <
-      functionBody.indexOf('extensions.crypt(p_admin_password, v_config_hash)'),
+      functionBody.indexOf("current_setting('app.admin_password_hash', true)"),
     'customer session should be resolved before admin password verification',
   );
   assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.use_my_coupon_with_admin_password/);
@@ -65,6 +66,26 @@ test('coupon schema: customer coupon lookup RPCs use session token ownership', (
   assert.match(countFunction, /RETURN COALESCE\(v_count, 0\)/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_coupons\(text, boolean\) TO anon, authenticated;/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_coupon_count\(text, boolean\) TO anon, authenticated;/);
+});
+
+test('visit schema: customer visit lookup RPCs use session token ownership', () => {
+  const listFunction = getFunctionBody('get_my_visits');
+  const detailFunction = getFunctionBody('get_my_visit');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+
+  for (const functionBody of [listFunction, detailFunction]) {
+    assert.match(functionBody, /p_session_token text/);
+    assert.match(functionBody, /public\.resolve_customer_session\(p_session_token\)/);
+    assert.match(functionBody, /vh\.customer_id = v_customer_id/);
+    assert.match(functionBody, /vh\.is_deleted = false/);
+    assert.match(functionBody, /SET search_path = public/);
+  }
+
+  assert.match(listFunction, /ORDER BY vh\.visit_date DESC/);
+  assert.match(detailFunction, /p_visit_id integer/);
+  assert.match(detailFunction, /vh\.id = p_visit_id/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_visits\(text\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_visit\(text, integer\) TO anon, authenticated;/);
 });
 
 test('session schema: resolve_customer_session is defined and login issues session tokens', () => {

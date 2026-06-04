@@ -1,3 +1,6 @@
+-- Squashed baseline migration generated from supabase/schema.sql.
+-- Applies the complete integrated app schema on a fresh Supabase local database.
+
 -- Tarot Manager/User App - Supabase final integrated schema
 -- Source consolidated from provided integrated SQL plus current customer-app RPC usages.
 -- Scope: manager CRUD tables/RLS + customer-session RPCs shared with customer app.

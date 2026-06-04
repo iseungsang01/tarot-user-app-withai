@@ -46,6 +46,10 @@ export const supabaseClient = {
       .order('visit_date', { ascending: false });
   },
 
+  getMyVisits(payload) {
+    return supabase.rpc('get_my_visits', payload);
+  },
+
   updateVisit(visitId, payload) {
     return supabase.from('visit_history').update(payload).eq('id', visitId).select().single();
   },
@@ -61,6 +65,10 @@ export const supabaseClient = {
       .eq('id', visitId)
       .eq('is_deleted', false)
       .single();
+  },
+
+  getMyVisit(payload) {
+    return supabase.rpc('get_my_visit', payload).single();
   },
 
   softDeleteVisit(visitId) {

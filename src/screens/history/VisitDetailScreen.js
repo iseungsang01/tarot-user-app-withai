@@ -153,8 +153,14 @@ const VisitDetailScreen = ({ route, navigation }) => {
             } else {
                 // --- [ON 모드] 서버 저장 로직 ---
                 // 서버 데이터는 이미 visit_history에 행(Row)이 있으므로 보통 updateVisit만 수행합니다.
+                const localOnlyPayload = {
+                    card_review: payload.card_review,
+                    card_image: payload.card_image,
+                    title: payload.title,
+                    ai_insight: payload.ai_insight
+                };
                 const { error } = await handleApiCall('Visit.save', () =>
-                    visitService.updateVisit(visitId, payload)
+                    visitService.updateVisit(visitId, localOnlyPayload)
                 );
                 if (error) throw error;
             }

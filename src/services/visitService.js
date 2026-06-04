@@ -30,12 +30,14 @@ export const visitService = {
     if (customerId === 'guest') return { data: [], error: null };
 
     try {
-      const authError = await requireSession();
-      if (authError) return { data: [], error: authError };
+      const sessionState = await getSessionState();
+      if (!sessionState.ok) return { data: [], error: sessionState.error };
 
-      const { data, error } = await supabaseClient.getVisits(customerId);
+      const { data, error } = sessionState.session?.token && supabaseClient.getMyVisits
+        ? await supabaseClient.getMyVisits({ p_session_token: sessionState.session.token })
+        : await supabaseClient.getVisits(customerId);
 
-      if (error) throw withAuthErrorHandling(error, authError?.message);
+      if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
       return { data, error: null };
     } catch (error) {
       console.error('❌ [visitService] getVisits 오류:', error.message);
@@ -101,12 +103,17 @@ export const visitService = {
 
   async getVisit(visitId) {
     try {
-      const authError = await requireSession();
-      if (authError) return { data: null, error: authError };
+      const sessionState = await getSessionState();
+      if (!sessionState.ok) return { data: null, error: sessionState.error };
 
-      const { data, error } = await supabaseClient.getVisit(visitId);
+      const { data, error } = sessionState.session?.token && supabaseClient.getMyVisit
+        ? await supabaseClient.getMyVisit({
+          p_session_token: sessionState.session.token,
+          p_visit_id: visitId,
+        })
+        : await supabaseClient.getVisit(visitId);
 
-      if (error) return { data: null, error: withAuthErrorHandling(error, authError?.message) };
+      if (error) return { data: null, error: withAuthErrorHandling(error, sessionState.error?.message) };
 
       return {
         data: {
@@ -129,10 +136,6 @@ export const visitService = {
     try {
       const authError = await requireSession();
       if (authError) return { error: authError };
-
-      const { error } = await supabaseClient.softDeleteVisit(visitId);
-
-      if (error) throw withAuthErrorHandling(error, authError?.message);
 
       await storage.deleteCardImage(visitId);
       await storage.deleteCardReview(visitId);

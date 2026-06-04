@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../services/supabase';
+import { visitService } from '../services/visitService';
 import { storage } from '../utils/storage';
 
 const VISITS_KEY = ['visits'];
@@ -23,12 +23,7 @@ export const useVisits = (customerId) => {
                 return [];
             }
 
-            const { data, error } = await supabase
-                .from('visit_history')
-                .select('id, customer_id, visit_date')
-                .eq('customer_id', customerId)
-                .eq('is_deleted', false)
-                .order('visit_date', { ascending: false });
+            const { data, error } = await visitService.getVisits(customerId);
 
             if (error) throw error;
 
@@ -55,22 +50,13 @@ export const useVisits = (customerId) => {
     // 2. 삭제 (Mutation)
     const deleteMutation = useMutation({
         mutationFn: async (visitId) => {
-            const { error } = await supabase
-                .from('visit_history')
-                .update({ is_deleted: true })
-                .eq('id', visitId);
+            const { error } = await visitService.deleteVisit(visitId);
 
             if (error) throw error;
-
-            // 로컬 데이터도 정리
-            await storage.deleteCardImage(visitId);
-            await storage.deleteCardReview(visitId);
-            await storage.deleteCardTitle(visitId);
-            await storage.deleteCardAIInsight(visitId);
             return visitId;
         },
         onSuccess: () => {
-            // 목록 새로고침
+            // Refresh the drawer list after clearing local annotations.
             queryClient.invalidateQueries([...VISITS_KEY, customerId]);
         }
     });
@@ -80,25 +66,14 @@ export const useVisits = (customerId) => {
         mutationFn: async (visitIds) => {
             if (!visitIds || visitIds.length === 0) return [];
 
-            const { error } = await supabase
-                .from('visit_history')
-                .update({ is_deleted: true })
-                .in('id', visitIds);
-
-            if (error) throw error;
-
-            // 로컬 데이터 병렬 정리
-            await Promise.all(visitIds.flatMap(id => [
-                storage.deleteCardImage(id),
-                storage.deleteCardReview(id),
-                storage.deleteCardTitle(id),
-                storage.deleteCardAIInsight(id)
-            ]));
+            const results = await Promise.all(visitIds.map(id => visitService.deleteVisit(id)));
+            const failed = results.find(result => result?.error);
+            if (failed) throw failed.error;
 
             return visitIds;
         },
         onSuccess: () => {
-            // 목록 새로고침
+            // Refresh the drawer list after clearing local annotations.
             queryClient.invalidateQueries([...VISITS_KEY, customerId]);
         }
     });
