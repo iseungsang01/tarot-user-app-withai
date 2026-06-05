@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/Config';
 import { AuthContext } from './AuthContext';
@@ -11,25 +11,46 @@ export const UIProvider = ({ children }) => {
   const [coachMarksSessionId, setCoachMarksSessionId] = useState(null);
   const [uiLoading, setUiLoading] = useState(true);
 
+  const startCoachMarks = useCallback((sessionId) => {
+    const nextSessionId = sessionId ?? `${Date.now()}`;
+    setCoachMarksSessionId(nextSessionId);
+    setShowCoachMarks(true);
+  }, []);
+
   useEffect(() => {
+    let isMounted = true;
+
     const hydrateUIState = async () => {
       setUiLoading(true);
       try {
-        if (!customer) return setShowCoachMarks(false);
-        // 코치마크는 자동 노출 시 핵심 UI 터치를 가로채는 문제가 있어
-        // 사용자가 명시적으로 요청한 경우에만 triggerCoachMarks()로 노출한다.
-        // 저장된 완료 여부는 유지하되, 초기 진입에서 자동 활성화하지 않는다.
-        await AsyncStorage.getItem(STORAGE_KEYS.COACH_MARKS);
-        setShowCoachMarks(false);
+        if (!customer) {
+          if (isMounted) {
+            setShowCoachMarks(false);
+            setCoachMarksSessionId(null);
+          }
+          return;
+        }
+
+        const hasSeenCoachMarks = await AsyncStorage.getItem(STORAGE_KEYS.COACH_MARKS);
+        if (isMounted && hasSeenCoachMarks !== 'true') {
+          startCoachMarks(`first-run-${customer.id ?? Date.now()}`);
+        } else if (isMounted) {
+          setShowCoachMarks(false);
+          setCoachMarksSessionId(null);
+        }
       } catch (error) {
         console.error('UIContext.hydrateUIState error:', error);
       } finally {
-        setUiLoading(false);
+        if (isMounted) setUiLoading(false);
       }
     };
 
     hydrateUIState();
-  }, [customer?.id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [customer?.id, startCoachMarks]);
 
   const completeCoachMarks = useCallback(async () => {
     try {
@@ -41,17 +62,23 @@ export const UIProvider = ({ children }) => {
     }
   }, []);
 
-  const startCoachMarks = useCallback((sessionId) => {
-    const nextSessionId = sessionId ?? `${Date.now()}`;
-    setCoachMarksSessionId(nextSessionId);
-    setShowCoachMarks(true);
-  }, []);
-
-  const triggerCoachMarks = useCallback((sessionId) => startCoachMarks(sessionId), [startCoachMarks]);
+  const triggerCoachMarks = useCallback(
+    (sessionId) => {
+      startCoachMarks(sessionId ?? `replay-${Date.now()}`);
+    },
+    [startCoachMarks]
+  );
 
   return (
     <UIContext.Provider
-      value={{ showCoachMarks, coachMarksSessionId, uiLoading, completeCoachMarks, startCoachMarks, triggerCoachMarks }}
+      value={{
+        showCoachMarks,
+        coachMarksSessionId,
+        uiLoading,
+        completeCoachMarks,
+        startCoachMarks,
+        triggerCoachMarks,
+      }}
     >
       {children}
     </UIContext.Provider>

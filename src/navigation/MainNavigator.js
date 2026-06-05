@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LocalSvg } from 'react-native-svg/css';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -31,23 +31,63 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const COACH_STEPS = [
-  { key: 'tab-home', title: '1) 서랍으로 이동', description: '하단의 서랍 탭을 눌러 기록 화면으로 이동해 주세요.', requireTargetTap: true },
-  { key: 'home-archive-mode', title: '2) ALL · ON · OFF 필터', description: 'ALL/ON/OFF 버튼을 눌러 기록 유형을 전환해 보세요.', requireTargetTap: true },
-  { key: 'home-time-filter', title: '3) 전체 · 연도별 · 월별', description: '기간 필터를 눌러 원하는 시점의 기록만 빠르게 찾아보세요.', requireTargetTap: true },
-  { key: 'tab-notice', title: '4) 소식 확인', description: '하단 소식 탭에서 최신 공지와 알림을 확인하세요.', requireTargetTap: true },
-  { key: 'tab-settings', title: '5) 설정 확인', description: '하단 설정 탭에서 계정과 앱 설정을 확인하세요.', requireTargetTap: true },
-  { key: 'tab-home', title: '6) 가이드 종료', description: '다시 서랍으로 돌아오면 가이드가 완료됩니다.', requireTargetTap: true },
+  {
+    key: 'tab-home',
+    route: 'Home',
+    title: '서랍 보관함',
+    description: '방문 기록과 타로 기록이 모이는 첫 화면이에요. 오래된 서랍을 열듯 기록을 확인할 수 있어요.',
+    allowTargetPress: true,
+  },
+  {
+    key: 'home-archive-mode',
+    route: 'Home',
+    title: '서랍 기록 구분',
+    description: 'ON/OFF/ALL 버튼으로 작성된 기록과 개인 기록을 나누어 볼 수 있어요.',
+    interactive: true,
+  },
+  {
+    key: 'home-time-filter',
+    route: 'Home',
+    title: '기간 필터',
+    description: '전체, 연도별, 월별 필터로 원하는 시점의 기록을 빠르게 찾아보세요.',
+    interactive: true,
+  },
+  {
+    key: 'tab-ticket',
+    route: 'Ticket',
+    title: '쿠폰함',
+    description: '보유 쿠폰과 사용할 수 있는 혜택을 확인하는 공간이에요.',
+    allowTargetPress: true,
+  },
+  {
+    key: 'tab-fortune',
+    route: 'DailyFortune',
+    title: '오늘의 운세',
+    description: '하루의 흐름이 궁금할 때 타로 운세를 뽑아볼 수 있어요.',
+    allowTargetPress: true,
+  },
+  {
+    key: 'tab-notice',
+    route: 'News',
+    title: '소식',
+    description: '공지, 이벤트, 새 알림을 확인하는 게시판이에요.',
+    allowTargetPress: true,
+  },
+  {
+    key: 'tab-settings',
+    route: 'Settings',
+    title: '설정',
+    description: '계정 정보, 비밀번호, 문의 내역, 앱 가이드를 다시 확인할 수 있어요.',
+    allowTargetPress: true,
+  },
+  {
+    key: 'tab-home',
+    route: 'Home',
+    title: '가이드 완료',
+    description: '언제든 설정에서 앱 이용 가이드를 다시 볼 수 있어요. 이제 서랍을 열어 기록을 살펴보세요.',
+    allowTargetPress: true,
+  },
 ];
-
-const STEP_ROUTE_MAP = {
-  'tab-home': 'Home',
-  'home-archive-mode': 'Home',
-  'home-time-filter': 'Home',
-  'tab-notice': 'News',
-  'tab-settings': 'Settings',
-};
-
-const TARGET_TAP_ADVANCE_KEYS = new Set(['tab-home', 'tab-notice', 'tab-settings']);
 
 const TAB_ICONS = {
   archive: require('../../assets/tarot-cellar/icon-archive.svg'),
@@ -61,8 +101,8 @@ const TabIcon = ({ source, focused, hasNotification }) => (
   <View style={styles.iconContainer}>
     <LocalSvg
       asset={source}
-        width={20}
-        height={20}
+      width={20}
+      height={20}
       style={[
         styles.iconImage,
         { opacity: focused ? 1 : 0.68 },
@@ -84,6 +124,16 @@ const CoachableTabButton = ({ onCaptureFrame, ...props }) => {
     });
   };
 
+  useEffect(() => {
+    const firstCapture = setTimeout(captureFrame, 0);
+    const secondCapture = setTimeout(captureFrame, 120);
+
+    return () => {
+      clearTimeout(firstCapture);
+      clearTimeout(secondCapture);
+    };
+  }, [onCaptureFrame]);
+
   return <TouchableOpacity ref={ref} {...props} onLayout={captureFrame} onPressIn={captureFrame} />;
 };
 
@@ -101,7 +151,6 @@ const TabNavigator = () => {
   const tabRootRef = useRef(null);
   const [tabRootWindowOffset, setTabRootWindowOffset] = useState({ x: 0, y: 0 });
   const [isTabRootOffsetReady, setIsTabRootOffsetReady] = useState(false);
-  const zeroFrameCountsRef = useRef({});
 
   const captureTabRootOffset = useCallback(() => {
     if (!tabRootRef.current) return;
@@ -112,19 +161,11 @@ const TabNavigator = () => {
     });
   }, []);
 
-  const registerFrame = (key, frame) => {
-    if (!frame) return;
+  const registerFrame = useCallback((key, frame) => {
+    if (!frame || frame.width <= 0 || frame.height <= 0) return;
 
     if (!isTabRootOffsetReady) {
-      return;
-    }
-
-    const isZeroFrame = frame.x === 0 && frame.y === 0;
-    const nextZeroCount = isZeroFrame ? (zeroFrameCountsRef.current[key] || 0) + 1 : 0;
-    zeroFrameCountsRef.current[key] = nextZeroCount;
-
-    if (isZeroFrame && nextZeroCount >= 2) {
-      console.warn(`[CoachMarks] Ignore repeated zero frame for "${key}"`, { frame, zeroCount: nextZeroCount });
+      requestAnimationFrame(captureTabRootOffset);
       return;
     }
 
@@ -135,84 +176,81 @@ const TabNavigator = () => {
     };
 
     setFrames((prev) => ({ ...prev, [key]: normalizedFrame }));
-  };
+  }, [captureTabRootOffset, isTabRootOffsetReady, tabRootWindowOffset.x, tabRootWindowOffset.y]);
+
+  const navigateToStep = useCallback((step) => {
+    if (step?.route) navRef.current?.navigate(step.route);
+  }, []);
 
   useEffect(() => {
     if (!showCoachMarks || !coachMarksSessionId) return;
 
     setStepIndex(0);
     setFrames({});
-    zeroFrameCountsRef.current = {};
+    setIsTabRootOffsetReady(false);
 
     requestAnimationFrame(() => {
       captureTabRootOffset();
+      navigateToStep(COACH_STEPS[0]);
     });
-  }, [showCoachMarks, coachMarksSessionId, captureTabRootOffset]);
+  }, [showCoachMarks, coachMarksSessionId, captureTabRootOffset, navigateToStep]);
 
-  const stepsWithFrame = useMemo(() => COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] })), [frames]);
+  const stepsWithFrame = useMemo(
+    () => COACH_STEPS.map((step) => ({ ...step, frame: frames[step.key] })),
+    [frames]
+  );
   const currentStep = stepsWithFrame[stepIndex];
   const isCoachVisible = showCoachMarks && !!currentStep?.frame;
 
   useEffect(() => {
-    if (!showCoachMarks) return;
-    if (currentStep?.frame) return;
+    if (!showCoachMarks || currentStep?.frame) return undefined;
 
-    const retryFrameCapture = requestAnimationFrame(() => {
+    const retryFrameCapture = setInterval(() => {
       captureTabRootOffset();
-    });
+      navigateToStep(currentStep);
+    }, 250);
 
-    const fallbackTimer = setTimeout(() => {
-      if (!stepsWithFrame[stepIndex]?.frame) {
-        console.warn('[CoachMarks] Missing step frame. Completing guide safely.', {
-          stepIndex,
-          stepKey: stepsWithFrame[stepIndex]?.key,
-        });
-        completeCoachMarks();
-      }
-    }, 300);
+    return () => clearInterval(retryFrameCapture);
+  }, [showCoachMarks, currentStep, captureTabRootOffset, navigateToStep]);
 
-    return () => {
-      cancelAnimationFrame(retryFrameCapture);
-      clearTimeout(fallbackTimer);
-    };
-  }, [showCoachMarks, currentStep, stepIndex, stepsWithFrame, captureTabRootOffset, completeCoachMarks]);
-
-  const finishCoach = () => {
+  const finishCoach = useCallback(() => {
     completeCoachMarks();
     setStepIndex(0);
-  };
+  }, [completeCoachMarks]);
 
-  const advanceStep = useCallback((expectedStepKey, options = {}) => {
-    const { navigateNext = true } = options;
-    const current = stepsWithFrame[stepIndex];
-    if (!current) return;
-    if (expectedStepKey && current.key !== expectedStepKey) return;
-
-    if (stepIndex >= stepsWithFrame.length - 1) {
+  const moveToStep = useCallback((nextIndex) => {
+    if (nextIndex < 0) return;
+    if (nextIndex >= stepsWithFrame.length) {
       finishCoach();
       return;
     }
 
-    setStepIndex((prev) => {
-      const nextIndex = Math.min(prev + 1, stepsWithFrame.length - 1);
-      const nextStep = stepsWithFrame[nextIndex];
-      const nextRouteName = STEP_ROUTE_MAP[nextStep?.key];
-      if (navigateNext && nextRouteName) navRef.current?.navigate(nextRouteName);
-      return nextIndex;
-    });
-  }, [stepIndex, stepsWithFrame]);
+    const nextStep = stepsWithFrame[nextIndex];
+    navigateToStep(nextStep);
+    requestAnimationFrame(captureTabRootOffset);
+    setStepIndex(nextIndex);
+  }, [captureTabRootOffset, finishCoach, navigateToStep, stepsWithFrame]);
 
-  const onCoachTargetPress = () => {
+  const advanceStep = useCallback((expectedStepKey) => {
+    const current = stepsWithFrame[stepIndex];
+    if (!current) return;
+    if (expectedStepKey && current.key !== expectedStepKey) return;
+    moveToStep(stepIndex + 1);
+  }, [moveToStep, stepIndex, stepsWithFrame]);
+
+  const previousStep = useCallback(() => {
+    moveToStep(stepIndex - 1);
+  }, [moveToStep, stepIndex]);
+
+  const onCoachTargetPress = useCallback(() => {
     const current = stepsWithFrame[stepIndex];
     if (!current) return;
 
-    const routeName = STEP_ROUTE_MAP[current.key];
-    if (routeName) navRef.current?.navigate(routeName);
-
-    if (TARGET_TAP_ADVANCE_KEYS.has(current.key)) {
+    navigateToStep(current);
+    if (current.interactive || current.allowTargetPress) {
       advanceStep(current.key);
     }
-  };
+  }, [advanceStep, navigateToStep, stepIndex, stepsWithFrame]);
 
   return (
     <View
@@ -272,11 +310,23 @@ const TabNavigator = () => {
             />
           )}
         </Tab.Screen>
-        <Tab.Screen name="Ticket" component={TicketScreen} options={{ tabBarLabel: '쿠폰', tabBarIcon: tabIcon(TAB_ICONS.ticket) }} />
+        <Tab.Screen
+          name="Ticket"
+          component={TicketScreen}
+          options={{
+            tabBarLabel: '쿠폰',
+            tabBarIcon: tabIcon(TAB_ICONS.ticket),
+            tabBarButton: (props) => <CoachableTabButton {...props} onCaptureFrame={(frame) => registerFrame('tab-ticket', frame)} />,
+          }}
+        />
         <Tab.Screen
           name="DailyFortune"
           component={DailyFortuneScreen}
-          options={{ tabBarLabel: '운세', tabBarIcon: tabIcon(TAB_ICONS.ritual) }}
+          options={{
+            tabBarLabel: '운세',
+            tabBarIcon: tabIcon(TAB_ICONS.ritual),
+            tabBarButton: (props) => <CoachableTabButton {...props} onCaptureFrame={(frame) => registerFrame('tab-fortune', frame)} />,
+          }}
         />
         <Tab.Screen
           name="News"
@@ -302,7 +352,8 @@ const TabNavigator = () => {
         <CoachMarksOverlay
           steps={stepsWithFrame}
           stepIndex={stepIndex}
-          onNext={onCoachTargetPress}
+          onNext={() => advanceStep()}
+          onPrevious={previousStep}
           onTargetPress={onCoachTargetPress}
           onClose={finishCoach}
         />

@@ -16,10 +16,10 @@ import { APP_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const MENU_ITEMS = {
-  info: '내 정보',
+  info: '계정 정보',
   guide: '앱 이용 가이드 다시보기',
   password: '비밀번호 재설정',
-  reports: '앱 버그 접수/내역 보기',
+  reports: '버그 접수/내역 보기',
   delete: '회원 탈퇴',
 };
 
@@ -27,6 +27,13 @@ const SettingsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { customer, logout } = useAuth();
   const { triggerCoachMarks } = useUI();
+
+  const replayGuide = () => {
+    navigation.navigate('Home');
+    requestAnimationFrame(() => {
+      triggerCoachMarks(`settings-replay-${Date.now()}`);
+    });
+  };
 
   return (
     <ScreenContainer safeTop={false} safeBottom={false}>
@@ -45,25 +52,18 @@ const SettingsScreen = ({ navigation }) => {
           <PremiumCard style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>닉네임</Text>
-              <Text style={styles.infoValue}>{customer?.nickname}</Text>
+              <Text style={styles.infoValue}>{customer?.nickname || '-'}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>연락처</Text>
-              <Text style={styles.infoValue}>{customer?.isGuest ? '게스트' : customer?.phone_number}</Text>
+              <Text style={styles.infoValue}>{customer?.isGuest ? '게스트' : customer?.phone_number || '-'}</Text>
             </View>
           </PremiumCard>
         </View>
 
         <View style={styles.section}>
-          <MenuRow
-            label={MENU_ITEMS.guide}
-            onPress={() => {
-              navigation.navigate('Home');
-              navigation.getParent()?.navigate('Home');
-              triggerCoachMarks();
-            }}
-          />
+          <MenuRow label={MENU_ITEMS.guide} onPress={replayGuide} />
         </View>
 
         {!customer?.isGuest && (
