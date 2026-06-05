@@ -88,6 +88,16 @@ test('visit schema: customer visit lookup RPCs use session token ownership', () 
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.get_my_visit\(text, integer\) TO anon, authenticated;/);
 });
 
+test('visit schema: customer deletion flag hides visits without removing admin records', () => {
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+
+  assert.match(schema, /is_hidden_by_customer boolean NOT NULL DEFAULT false/);
+  assert.match(schema, /idx_visit_history_customer_visible/);
+  assert.match(schema, /WHERE is_deleted = false AND is_hidden_by_customer = false/);
+  assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.hide_my_visit/);
+  assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.hide_my_visit/);
+});
+
 test('session schema: resolve_customer_session is defined and login issues session tokens', () => {
   const resolveFunction = getFunctionBody('resolve_customer_session');
   const loginFunction = getFunctionBody('login_customer');

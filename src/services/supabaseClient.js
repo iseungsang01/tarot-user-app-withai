@@ -43,6 +43,7 @@ export const supabaseClient = {
       .select('id, customer_id, visit_date')
       .eq('customer_id', customerId)
       .eq('is_deleted', false)
+      .eq('is_hidden_by_customer', false)
       .order('visit_date', { ascending: false });
   },
 
@@ -64,11 +65,20 @@ export const supabaseClient = {
       .select('id, customer_id, visit_date')
       .eq('id', visitId)
       .eq('is_deleted', false)
+      .eq('is_hidden_by_customer', false)
       .single();
   },
 
   getMyVisit(payload) {
     return supabase.rpc('get_my_visit', payload).single();
+  },
+
+  hideVisitFromCustomer(visitId, customerId) {
+    return supabase
+      .from('visit_history')
+      .update({ is_hidden_by_customer: true })
+      .eq('id', visitId)
+      .eq('customer_id', customerId);
   },
 
   softDeleteVisit(visitId) {

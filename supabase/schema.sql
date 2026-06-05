@@ -38,11 +38,14 @@ CREATE TABLE IF NOT EXISTS public.visit_history (
   customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
   visit_date timestamptz NOT NULL DEFAULT now(),
   stamp_count integer NOT NULL DEFAULT 1 CHECK (stamp_count > 0),
-  is_deleted boolean NOT NULL DEFAULT false
+  is_deleted boolean NOT NULL DEFAULT false,
+  is_hidden_by_customer boolean NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.visit_history
   ADD COLUMN IF NOT EXISTS stamp_count integer NOT NULL DEFAULT 1 CHECK (stamp_count > 0);
+ALTER TABLE public.visit_history
+  ADD COLUMN IF NOT EXISTS is_hidden_by_customer boolean NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS public.coupon_history (
   id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -110,6 +113,9 @@ CREATE INDEX IF NOT EXISTS idx_visit_history_customer
   ON public.visit_history(customer_id);
 CREATE INDEX IF NOT EXISTS idx_visit_history_visit_date
   ON public.visit_history(visit_date DESC);
+CREATE INDEX IF NOT EXISTS idx_visit_history_customer_visible
+  ON public.visit_history(customer_id, visit_date DESC)
+  WHERE is_deleted = false AND is_hidden_by_customer = false;
 CREATE INDEX IF NOT EXISTS idx_coupon_history_customer
   ON public.coupon_history(customer_id);
 CREATE INDEX IF NOT EXISTS idx_coupon_history_issued_at
@@ -887,5 +893,3 @@ GRANT EXECUTE ON FUNCTION public.cancel_vote_response(text, integer) TO anon, au
 GRANT EXECUTE ON FUNCTION public.get_vote_summary(integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_bug_reports(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_bug_report(text, text, text, text, text, jsonb) TO anon, authenticated;
-
-

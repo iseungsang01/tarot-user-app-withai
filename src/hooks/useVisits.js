@@ -50,7 +50,7 @@ export const useVisits = (customerId) => {
     // 2. 삭제 (Mutation)
     const deleteMutation = useMutation({
         mutationFn: async (visitId) => {
-            const { error } = await visitService.deleteVisit(visitId);
+            const { error } = await visitService.deleteVisit(visitId, customerId);
 
             if (error) throw error;
             return visitId;
@@ -66,7 +66,7 @@ export const useVisits = (customerId) => {
         mutationFn: async (visitIds) => {
             if (!visitIds || visitIds.length === 0) return [];
 
-            const results = await Promise.all(visitIds.map(id => visitService.deleteVisit(id)));
+            const results = await Promise.all(visitIds.map(id => visitService.deleteVisit(id, customerId)));
             const failed = results.find(result => result?.error);
             if (failed) throw failed.error;
 

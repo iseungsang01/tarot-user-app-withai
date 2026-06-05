@@ -17,6 +17,11 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
       return;
     }
 
+    if (newPassword.length < 6) {
+      Alert.alert('오류', '비밀번호는 6자 이상이어야합니다');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       Alert.alert('입력 오류', '새 비밀번호 확인이 일치하지 않습니다.');
       return;
