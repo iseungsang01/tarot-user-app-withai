@@ -5,6 +5,7 @@ import { ArchiveTitleHeader, PremiumCard, ScreenContainer, SettingPasswordForm }
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { getPasswordValidationMessage, validatePassword } from '../../utils/validators';
 
 const ForcedPasswordChangeScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -17,8 +18,8 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      Alert.alert('오류', '비밀번호는 6자 이상이어야합니다');
+    if (!validatePassword(newPassword)) {
+      Alert.alert('오류', getPasswordValidationMessage());
       return;
     }
 

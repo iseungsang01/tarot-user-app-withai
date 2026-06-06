@@ -1,12 +1,10 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVisits } from './useVisits';
 import { useAuth } from './useAuth';
 import { visitService } from '../services/visitService';
 import { handleApiCall, showSuccessAlert } from '../utils/errorHandler';
-
-const LOCAL_STORAGE_KEY = 'offline_visit_history';
+import { storage, STORAGE_KEYS } from '../utils/storage';
 
 export const useHistoryLogic = (navigation) => {
     const { customer, refreshCustomer } = useAuth();
@@ -53,8 +51,7 @@ export const useHistoryLogic = (navigation) => {
     // Data Loading
     const loadLocalData = useCallback(async () => {
         try {
-            const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
-            const localData = stored ? JSON.parse(stored) : [];
+            const localData = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
             const formattedNotes = localData.map(v => ({ ...v, is_manual: true }));
             setPersonalNotes(formattedNotes);
         } catch (e) {
@@ -184,10 +181,9 @@ export const useHistoryLogic = (navigation) => {
             }
 
             if (itemToDelete.is_manual) {
-                const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
-                const list = stored ? JSON.parse(stored) : [];
+                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
                 const filtered = list.filter(v => v.id !== visitId);
-                await AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(filtered));
+                await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, filtered);
                 await loadLocalData();
             } else {
                 await deleteVisit(visitId);
@@ -233,10 +229,9 @@ export const useHistoryLogic = (navigation) => {
                             }
 
                             if (localIds.length > 0) {
-                                const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
-                                const list = stored ? JSON.parse(stored) : [];
+                                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
                                 const filtered = list.filter(v => !localIds.includes(v.id));
-                                await AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(filtered));
+                                await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, filtered);
                                 await loadLocalData();
                             }
 

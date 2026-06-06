@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../constants/Config';
+import { storage, STORAGE_KEYS } from '../utils/storage';
 import { AuthContext } from './AuthContext';
 
 const UIContext = createContext();
@@ -31,8 +30,8 @@ export const UIProvider = ({ children }) => {
           return;
         }
 
-        const hasSeenCoachMarks = await AsyncStorage.getItem(STORAGE_KEYS.COACH_MARKS);
-        if (isMounted && hasSeenCoachMarks !== 'true') {
+        const hasSeenCoachMarks = await storage.get(STORAGE_KEYS.COACH_MARKS);
+        if (isMounted && hasSeenCoachMarks !== true) {
           startCoachMarks(`first-run-${customer.id ?? Date.now()}`);
         } else if (isMounted) {
           setShowCoachMarks(false);
@@ -54,7 +53,7 @@ export const UIProvider = ({ children }) => {
 
   const completeCoachMarks = useCallback(async () => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.COACH_MARKS, 'true');
+      await storage.save(STORAGE_KEYS.COACH_MARKS, true);
       setShowCoachMarks(false);
       setCoachMarksSessionId(null);
     } catch (error) {

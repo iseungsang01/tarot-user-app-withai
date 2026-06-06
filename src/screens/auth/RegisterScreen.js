@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GradientBackground } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { formatPhoneNumber } from '../../utils/formatters';
-import { validatePhoneNumber } from '../../utils/validators';
+import { getPasswordValidationMessage, validatePassword, validatePhoneNumber } from '../../utils/validators';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { Gradients } from '../../constants/Colors';
 import { createValidationError } from '../../utils/errorHandler';
@@ -36,8 +36,8 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
-        if (!password.trim()) {
-            setMessage({ text: '비밀번호를 입력해주세요.', type: 'error' });
+        if (!validatePassword(password)) {
+            setMessage({ text: getPasswordValidationMessage(), type: 'error' });
             return;
         }
 

@@ -19,6 +19,10 @@ const normalizeCustomer = (payload) => payload?.customer || payload?.profile || 
 const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType = 'customer_rpc_session' }) => {
   if (!customer || !sessionToken) return null;
 
+  if (!customer.isGuest && customer.id) {
+    await storage.migrateLocalDataToMember?.(customer.id);
+  }
+
   await storage.save(CUSTOMER_SESSION_KEY, {
     token: sessionToken,
     customerId: customer.id,

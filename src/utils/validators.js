@@ -16,3 +16,11 @@
  * validatePhoneNumber('01012345678')   // false (하이픈 필수)
  */
 export const validatePhoneNumber = (phone) => /^010-\d{4}-\d{4}$/.test(phone);
+
+export const MIN_PASSWORD_LENGTH = 6;
+
+export const validatePassword = (password) => (
+  typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH
+);
+
+export const getPasswordValidationMessage = () => `비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다.`;

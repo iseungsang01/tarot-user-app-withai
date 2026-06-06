@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
     GradientBackground,
@@ -15,11 +14,11 @@ import { usePolishReview } from '../../hooks/useAI';
 import { visitService } from '../../services/visitService';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
+import { storage, STORAGE_KEYS } from '../../utils/storage';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { TextColors } from '../../constants/Colors';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../../utils/errorHandler';
 
-const LOCAL_STORAGE_KEY = 'offline_visit_history';
 
 const ACTION_VARIANT = {
     PRIMARY: 'primary',
@@ -57,8 +56,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         try {
             if (isOffMode) {
                 // --- [OFF 모드] 로컬 데이터 불러오기 ---
-                const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
-                const list = stored ? JSON.parse(stored) : [];
+                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
                 const item = list.find(v => v.id === visitId);
                 if (item) {
                     up({
@@ -71,6 +69,11 @@ const VisitDetailScreen = ({ route, navigation }) => {
                     setAiInsight(item.ai_insight || null);
                     setSelectedReviewVersion('original');
                     resetPolish();
+                } else {
+                    up({ loading: false });
+                    Alert.alert('Record not found', 'This local personal record is no longer available.', [
+                        { text: 'Back', onPress: () => navigation.goBack() },
+                    ]);
                 }
             } else {
                 // --- [ON 모드] 서버 데이터 불러오기 ---
@@ -106,7 +109,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         if (!res.canceled && res.assets[0]) {
             try {
                 const comp = await compressImage(res.assets[0].uri, { maxWidth: 800, quality: 0.6 });
-                up({ uri: comp.base64 });
+                up({ uri: comp.base64 || comp.uri });
             } catch { Alert.alert("오류", "이미지 처리에 실패했습니다."); }
         }
     };
@@ -138,8 +141,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         try {
             if (isOffMode) {
                 // --- [OFF 모드] 로컬 저장 로직 ---
-                const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
-                let list = stored ? JSON.parse(stored) : [];
+                let list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
 
                 const localPayload = { ...payload };
 
@@ -149,7 +151,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                     list = [{ ...localPayload, id: `local_${Date.now()}` }, ...list];
                 }
 
-                await AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+                await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, list);
             } else {
                 // --- [ON 모드] 서버 저장 로직 ---
                 // 서버 데이터는 이미 visit_history에 행(Row)이 있으므로 보통 updateVisit만 수행합니다.

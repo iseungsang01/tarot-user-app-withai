@@ -5,6 +5,7 @@ import { ArchiveTitleHeader, ScreenContainer, SettingPasswordForm } from '../../
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { createValidationError, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
+import { getPasswordValidationMessage, validatePassword } from '../../utils/validators';
 
 const PasswordResetScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -17,8 +18,8 @@ const PasswordResetScreen = ({ navigation }) => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      Alert.alert('오류', '비밀번호는 6자 이상이어야합니다');
+    if (!validatePassword(newPassword)) {
+      Alert.alert('오류', getPasswordValidationMessage());
       return;
     }
 

@@ -14,6 +14,7 @@ const LoginScreen = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState({ text: '', type: '' });
     const [loading, setLoading] = useState(false);
+    const [guestLoading, setGuestLoading] = useState(false);
     const { login, guestLogin } = useAuth();
 
     const resetMsg = () => message.text && setMessage({ text: '', type: '' });
@@ -60,6 +61,23 @@ const LoginScreen = ({ navigation }) => {
             setMessage({ text: '오류가 발생했습니다. 다시 시도해주세요.', type: 'error' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        if (loading || guestLoading) return;
+
+        setGuestLoading(true);
+        resetMsg();
+        try {
+            const { error } = await guestLogin();
+            if (error) {
+                setMessage({ text: error.message || '게스트 로그인 오류', type: 'error' });
+            }
+        } catch (e) {
+            setMessage({ text: '게스트 로그인 중 오류가 발생했습니다.', type: 'error' });
+        } finally {
+            setGuestLoading(false);
         }
     };
 
@@ -122,28 +140,19 @@ const LoginScreen = ({ navigation }) => {
                         <View style={styles.subButtonArea}>
                             <View style={styles.subButtonRow}>
                                 <TouchableOpacity
-                                    onPress={async () => {
-                                        try {
-                                            const { error } = await guestLogin();
-                                            if (error) {
-                                                setMessage({ text: error.message || '게스트 로그인 오류', type: 'error' });
-                                            }
-                                        } catch (e) {
-                                            setMessage({ text: '게스트 로그인 중 오류가 발생했습니다.', type: 'error' });
-                                        }
-                                    }}
-                                    disabled={loading}
+                                    onPress={handleGuestLogin}
+                                    disabled={loading || guestLoading}
                                     activeOpacity={0.7}
                                     style={styles.subButton}
                                 >
-                                    <Text style={styles.subButtonText}>게스트로 둘러보기</Text>
+                                    <Text style={styles.subButtonText}>{guestLoading ? '게스트 로그인 중...' : '게스트로 둘러보기'}</Text>
                                 </TouchableOpacity>
                             </View>
 
                             <View style={styles.subButtonRow}>
                                 <TouchableOpacity
                                     onPress={() => setMessage({ text: '비밀번호 재설정은 매장 문의를 통해 진행해주세요.', type: 'info' })}
-                                    disabled={loading}
+                                    disabled={loading || guestLoading}
                                     activeOpacity={0.7}
                                     style={styles.subButton}
                                 >
@@ -154,7 +163,7 @@ const LoginScreen = ({ navigation }) => {
 
                                 <TouchableOpacity
                                     onPress={() => navigation.navigate('Register')}
-                                    disabled={loading}
+                                    disabled={loading || guestLoading}
                                     activeOpacity={0.7}
                                     style={styles.subButton}
                                 >

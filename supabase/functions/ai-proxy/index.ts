@@ -14,7 +14,7 @@ const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'true').toLowerCa
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-id, x-customer-session-token',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 

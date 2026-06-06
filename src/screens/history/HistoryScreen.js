@@ -55,6 +55,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         toggleSelection,
         handleLongPress,
         handleDeleteVisit,
+        handleMultiDelete,
     } = actions;
 
     useFocusEffect(
@@ -85,6 +86,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 selectedIds={selectedIds}
                 setSelectionMode={setSelectionMode}
                 setSelectedIds={setSelectedIds}
+                onMultiDelete={handleMultiDelete}
                 onCaptureArchiveFrame={(frame) => onCaptureCoachFrame?.('home-archive-mode', frame)}
                 onCaptureTimeFilterFrame={(frame) => onCaptureCoachFrame?.('home-time-filter', frame)}
             />
