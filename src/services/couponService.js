@@ -1,4 +1,3 @@
-import { supabase } from './supabase';
 import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
 
@@ -123,73 +122,6 @@ export const couponService = {
         console.error('Use coupon error:', error);
       }
       return { error };
-    }
-  },
-
-  /**
-   * 쿠폰 발급 (관리자용)
-   * @param {object} couponData - 쿠폰 데이터
-   * @returns {object} { data, error }
-   */
-  async issueCoupon(couponData) {
-    try {
-      // coupon_code가 없으면 자동 생성
-      if (!couponData.coupon_code) {
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-        couponData.coupon_code = `STAMP-${timestamp}-${random}`;
-      }
-
-      const { data, error } = await supabase
-        .from('coupon_history')
-        .insert(couponData)
-        .select()
-        .single();
-
-      return { data, error };
-    } catch (error) {
-      console.error('Issue coupon error:', error);
-      return { data: null, error };
-    }
-  },
-
-  /**
-   * 만료된 쿠폰 삭제 (관리자용)
-   * @returns {object} { error }
-   */
-  async deleteExpiredCoupons() {
-    try {
-      const { error } = await supabase
-        .from('coupon_history')
-        .delete()
-        .lt('valid_until', new Date().toISOString())
-        .eq('is_used', false);
-
-      return { error };
-    } catch (error) {
-      console.error('Delete expired coupons error:', error);
-      return { error };
-    }
-  },
-
-  /**
-   * 유효한 쿠폰만 조회 (만료되지 않고 사용하지 않은 쿠폰)
-   * @param {string} customerId - 고객 ID (UUID)
-   * @returns {object} { data, error }
-   */
-  async getValidCoupons(customerId) {
-    if (customerId === 'guest') return { data: [], error: null };
-    try {
-      const token = await requireCustomerSessionToken();
-      const { data, error } = await supabaseClient.getMyCoupons({
-        p_session_token: token,
-        p_valid_only: true,
-      });
-
-      return { data, error };
-    } catch (error) {
-      console.error('Get valid coupons error:', error);
-      return { data: [], error };
     }
   },
 

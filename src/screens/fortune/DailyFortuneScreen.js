@@ -4,13 +4,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { MAJOR_ARCANA } from '../../constants/TarotCards';
+import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { normalizeDailyFortunePayload } from '../../services/aiService';
 import { storage } from '../../utils/storage';
 import {
   canDrawDailyFortune,
   getCardById,
-  getCardImageSource,
   getDrawButtonLabel,
   getLocalDateString,
   getRemainingDraws,
@@ -23,6 +22,13 @@ const isErrorFortune = (fortune) => {
 };
 
 const hasValidFortune = (fortune) => !!fortune?.fortune && !isErrorFortune(fortune);
+
+const getStoredFortuneCardImage = (fortune, localImage) => {
+  if (!fortune) return null;
+  if (localImage) return localImage;
+  if (typeof fortune.cardImage === 'string') return { uri: fortune.cardImage };
+  return null;
+};
 
 const formatDateTitle = (dateStr, todayStr) => {
   if (!dateStr) return '카드 기록';
@@ -75,12 +81,6 @@ const DailyFortuneScreen = ({ navigation }) => {
     }, [loadLocalData])
   );
 
-  useEffect(() => {
-    MAJOR_ARCANA.forEach((card) => {
-      if (typeof card?.image === 'string') Image.prefetch(card.image);
-    });
-  }, []);
-
   const handleDatePress = (dateStr) => {
     setSelectedDate(dateStr);
     setSelectedFortune(allFortunes[dateStr] || null);
@@ -131,7 +131,8 @@ const DailyFortuneScreen = ({ navigation }) => {
   }, [allFortunes, attendanceHistory, currentMonth, currentYear, selectedDate, todayStr]);
 
   const todayFortune = allFortunes[todayStr];
-  const selectedCardSource = selectedFortune ? getCardImageSource(selectedFortune) : null;
+  const selectedLocalCardSource = useTarotCardImage(selectedFortune?.cardId);
+  const selectedCardSource = getStoredFortuneCardImage(selectedFortune, selectedLocalCardSource);
   const selectedCard = selectedFortune ? getCardById(selectedFortune.cardId) : null;
   const selectedIsToday = selectedDate === todayStr;
   const drawCount = getStoredDrawCount(todayFortune);

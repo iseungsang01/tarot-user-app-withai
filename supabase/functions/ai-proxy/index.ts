@@ -22,6 +22,23 @@ const corsHeaders = {
 const rateLimitMap = new Map<string, { tokens: number; lastRefill: number }>();
 const MAX_TOKENS = 10;
 const REFILL_RATE_MS = 6000; // 6 seconds per token (10 tokens per minute)
+const ALLOWED_TASKS = new Set([
+  'summarizeReview',
+  'analyzeVisitHistory',
+  'polishReviewText',
+  'sendChatMessage',
+  'getDailyFortune',
+  'condenseVoiceMemo',
+]);
+const MAX_MESSAGE_COUNT = 20;
+const MAX_TOTAL_CONTENT_LENGTH = 60000;
+
+function jsonError(message: string, status = 400) {
+  return new Response(
+    JSON.stringify({ error: message }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  );
+}
 
 // Remove expired entries to prevent memory leak
 function cleanupRateLimitMap() {
@@ -275,43 +292,47 @@ Deno.serve(async (req) => {
     }
 
     const { messages, options, task } = body;
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'messages는 1개 이상 필요합니다.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    const taskName = typeof task === 'string' ? task : '';
+    if (!ALLOWED_TASKS.has(taskName)) {
+      return jsonError('???? ?? AI ?????.', 400);
     }
 
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return jsonError('messages? 1? ?? ?????.', 400);
+    }
+
+    if (messages.length > MAX_MESSAGE_COUNT) {
+      return jsonError(`???? ?? ${MAX_MESSAGE_COUNT}??? ?? ? ????.`, 400);
+    }
+
+    let totalContentLength = 0;
     for (const msg of messages) {
       if (!msg || typeof msg !== 'object') {
-        return new Response(
-          JSON.stringify({ error: '각 메시지는 객체여야 합니다.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+        return jsonError('? ???? ???? ???.', 400);
       }
       if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
-        return new Response(
-          JSON.stringify({ error: '유효하지 않은 role입니다 (user, assistant, system 중 하나).' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+        return jsonError('???? ?? role???. user, assistant, system ? ???? ???.', 400);
       }
       if (typeof msg.content !== 'string' || msg.content.trim() === '') {
-        return new Response(
-          JSON.stringify({ error: '메시지 content가 비어 있거나 문자열이 아닙니다.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+        return jsonError('??? content? ?? ??? ???? ????.', 400);
       }
       if (msg.content.length > 50000) {
-        return new Response(
-          JSON.stringify({ error: '메시지 길이가 너무 깁니다 (최대 50000자).' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
+        return jsonError('??? ??? ?? ???. ?? 50000????.', 400);
+      }
+      totalContentLength += msg.content.length;
+      if (totalContentLength > MAX_TOTAL_CONTENT_LENGTH) {
+        return jsonError(`?? ??? ??? ?? ${MAX_TOTAL_CONTENT_LENGTH}????.`, 400);
       }
     }
 
-    const temperature = Number(options?.temperature ?? 0.7);
-    const maxTokens = Number(options?.maxTokens ?? 1000);
-    const googleResult = await callGoogle(messages, temperature, maxTokens, task);
+    const requestedTemperature = Number(options?.temperature ?? 0.7);
+    const requestedMaxTokens = Number(options?.maxTokens ?? 1000);
+    if (!Number.isFinite(requestedTemperature) || !Number.isFinite(requestedMaxTokens)) {
+      return jsonError('temperature? maxTokens? ??? ???? ???.', 400);
+    }
+    const temperature = Math.min(1, Math.max(0, requestedTemperature));
+    const maxTokens = Math.min(1500, Math.max(100, Math.floor(requestedMaxTokens)));
+    const googleResult = await callGoogle(messages, temperature, maxTokens, taskName);
 
     return new Response(JSON.stringify(googleResult), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

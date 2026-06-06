@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useAuth } from '../../hooks/useAuth';
+import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
 import { storage } from '../../utils/storage';
 import {
@@ -101,15 +102,18 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
   };
 
   const canDraw = canDrawDailyFortune(todayFortune) && !isDrawing;
-  const canPreviewResultCard = Boolean(selectedCard);
+  const selectedCardImage = useTarotCardImage(selectedCard?.id);
+  const canPreviewResultCard = Boolean(selectedCard && selectedCardImage);
 
   const handleCardStagePress = () => {
-    if (canPreviewResultCard) {
-      setSelectedCardPreview({
-        source: selectedCard.image,
-        name: selectedCard.nameKr || resultFortune?.cardName || selectedCard.name,
-        subName: selectedCard.name || resultFortune?.cardEnglishName,
-      });
+    if (selectedCard) {
+      if (selectedCardImage) {
+        setSelectedCardPreview({
+          source: selectedCardImage,
+          name: selectedCard.nameKr || resultFortune?.cardName || selectedCard.name,
+          subName: selectedCard.name || resultFortune?.cardEnglishName,
+        });
+      }
       return;
     }
 
@@ -145,12 +149,16 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
               activeOpacity={0.86}
               style={[styles.cardStage, selectedCard && styles.cardStageRevealed]}
               onPress={handleCardStagePress}
-              disabled={loading || (!canDraw && !canPreviewResultCard)}
+              disabled={loading || (!selectedCard && !canDraw)}
               accessibilityRole="button"
               accessibilityLabel={canPreviewResultCard ? '카드 크게 보기' : '오늘의 카드 한 장 뽑기'}
             >
-              {selectedCard ? (
-                <Image source={selectedCard.image} style={styles.cardImage} resizeMode="contain" />
+              {selectedCardImage ? (
+                <Image source={selectedCardImage} style={styles.cardImage} resizeMode="contain" />
+              ) : selectedCard ? (
+                <View style={styles.cardImageLoading}>
+                  <ActivityIndicator size="small" color={DrawerTheme.antiqueGold} />
+                </View>
               ) : (
                 <LinearGradient colors={['#3B0B24', '#09000D']} style={styles.cardBackGradient}>
                   <View style={styles.cardPattern}>
@@ -289,6 +297,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   cardStageRevealed: { transform: [{ translateY: -6 }], borderColor: 'rgba(255,217,119,0.85)' },
+  cardImageLoading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7,0,9,0.35)' },
   cardBackGradient: { flex: 1, padding: 10 },
   cardPattern: { flex: 1, borderWidth: 1, borderColor: 'rgba(200,163,64,0.34)', borderRadius: 14, padding: 8 },
   innerPattern: { flex: 1, borderWidth: 1, borderColor: 'rgba(200,163,64,0.2)', borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7,0,9,0.28)' },

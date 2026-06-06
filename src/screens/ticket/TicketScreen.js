@@ -5,22 +5,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { ArchiveTitleHeader, CouponCard, DrawerMark, PremiumCard, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
+import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { couponService } from '../../services/couponService';
 import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
 
 const MAX_STAMPS = 10;
 
 const tarotCards = [
-  { name: 'The Fool', image: require('../../../assets/card/0. The Fool.png') },
-  { name: 'The Magician', image: require('../../../assets/card/1. The Magician.png') },
-  { name: 'The High Priestess', image: require('../../../assets/card/2. The High Priestess.png') },
-  { name: 'The Empress', image: require('../../../assets/card/3. The Empress.png') },
-  { name: 'The Emperor', image: require('../../../assets/card/4. The Emperor.png') },
-  { name: 'The Hierophant', image: require('../../../assets/card/5. The Hierophant.png') },
-  { name: 'The Lovers', image: require('../../../assets/card/6. The Lovers.png') },
-  { name: 'The Chariot', image: require('../../../assets/card/7. Chariot.png') },
-  { name: 'Strength', image: require('../../../assets/card/8. Strength.png') },
-  { name: 'The Hermit', image: require('../../../assets/card/9. The Hermit.png') },
+  { id: 'm00', name: 'The Fool' },
+  { id: 'm01', name: 'The Magician' },
+  { id: 'm02', name: 'The High Priestess' },
+  { id: 'm03', name: 'The Empress' },
+  { id: 'm04', name: 'The Emperor' },
+  { id: 'm05', name: 'The Hierophant' },
+  { id: 'm06', name: 'The Lovers' },
+  { id: 'm07', name: 'The Chariot' },
+  { id: 'm08', name: 'Strength' },
+  { id: 'm09', name: 'The Hermit' },
 ];
 
 const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
@@ -30,6 +31,49 @@ const COUPON_REDEEM_MESSAGES = {
   invalid_admin_password: '관리자 비밀번호가 일치하지 않습니다.',
   coupon_not_found: '쿠폰을 찾을 수 없습니다.',
   coupon_already_used: '이미 사용된 쿠폰입니다.',
+};
+
+const StampSlot = ({ card, filled, index, onPress }) => {
+  const cardSource = useTarotCardImage(card.id);
+  const slotContent = (
+    <>
+      {cardSource && (
+        <Image
+          source={cardSource}
+          style={[styles.stampCardImage, !filled && styles.stampCardImageLocked]}
+          resizeMode="cover"
+        />
+      )}
+      {!filled && <View style={styles.lockedOverlay} />}
+      <View style={[styles.stampNumberBadge, filled && styles.stampNumberBadgeFilled]}>
+        <Text style={[styles.stampNumber, filled && styles.stampNumberFilled]}>{String(index + 1).padStart(2, '0')}</Text>
+      </View>
+    </>
+  );
+
+  if (filled) {
+    return (
+      <TouchableOpacity
+        style={[styles.stampSlot, styles.stampSlotFilled]}
+        activeOpacity={0.82}
+        onPress={() => onPress({ ...card, source: cardSource })}
+        disabled={!cardSource}
+        accessibilityRole="button"
+        accessibilityLabel={`${card.name} 스탬프 카드 크게 보기`}
+      >
+        {slotContent}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View
+      style={styles.stampSlot}
+      accessibilityLabel={`${card.name} 미보유 스탬프 카드`}
+    >
+      {slotContent}
+    </View>
+  );
 };
 
 const TicketScreen = () => {
@@ -153,47 +197,15 @@ const TicketScreen = () => {
           <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `다음 보상까지 ${MAX_STAMPS - currentStamps}개 남았습니다` : '쿠폰을 받을 수 있습니다'}</Text>
         </View>
         <View style={styles.stampGrid}>
-          {tarotCards.map((card, index) => {
-            const filled = index < currentStamps;
-            const slotContent = (
-              <>
-                <Image
-                  source={card.image}
-                  style={[styles.stampCardImage, !filled && styles.stampCardImageLocked]}
-                  resizeMode="cover"
-                />
-                {!filled && <View style={styles.lockedOverlay} />}
-                <View style={[styles.stampNumberBadge, filled && styles.stampNumberBadgeFilled]}>
-                  <Text style={[styles.stampNumber, filled && styles.stampNumberFilled]}>{String(index + 1).padStart(2, '0')}</Text>
-                </View>
-              </>
-            );
-
-            if (filled) {
-              return (
-                <TouchableOpacity
-                  key={card.name}
-                  style={[styles.stampSlot, styles.stampSlotFilled]}
-                  activeOpacity={0.82}
-                  onPress={() => setSelectedStampCard(card)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${card.name} 스탬프 카드 크게 보기`}
-                >
-                  {slotContent}
-                </TouchableOpacity>
-              );
-            }
-
-            return (
-              <View
-                key={card.name}
-                style={styles.stampSlot}
-                accessibilityLabel={`${card.name} 미보유 스탬프 카드`}
-              >
-                {slotContent}
-              </View>
-            );
-          })}
+          {tarotCards.map((card, index) => (
+            <StampSlot
+              key={card.id}
+              card={card}
+              filled={index < currentStamps}
+              index={index}
+              onPress={setSelectedStampCard}
+            />
+          ))}
         </View>
       </PremiumCard>
 
@@ -281,10 +293,10 @@ const TicketScreen = () => {
         >
           <View style={styles.modalCardWrap}>
             <TouchableOpacity activeOpacity={1}>
-              {selectedStampCard && (
+              {selectedStampCard?.source && (
                 <>
                   <Image
-                    source={selectedStampCard.image}
+                    source={selectedStampCard.source}
                     style={styles.modalStampImage}
                     resizeMode="contain"
                   />

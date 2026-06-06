@@ -160,3 +160,22 @@ test('coupon schema: direct coupon mutations are denied to client roles', () => 
   assert.match(schema, /CREATE POLICY "Admin can manage coupon_history"/);
   assert.match(schema, /ON public\.coupon_history[\s\S]*?USING \(public\.is_admin\(\)\)[\s\S]*?WITH CHECK \(public\.is_admin\(\)\)/);
 });
+
+
+test('account schema: sensitive operations resolve customer from session token', () => {
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  const functionBodies = [
+    getFunctionBody('verify_my_password'),
+    getFunctionBody('update_my_password'),
+    schema.match(/CREATE OR REPLACE FUNCTION public\.delete_my_account\(p_session_token text, input_password text\)[\s\S]*?\n\$\$;/)[0],
+  ];
+
+  for (const functionBody of functionBodies) {
+    assert.match(functionBody, /p_session_token text/);
+    assert.match(functionBody, /public\.resolve_customer_session\(p_session_token\)/);
+    assert.doesNotMatch(functionBody, /customer_uuid uuid/);
+  }
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.verify_my_password\(text, text\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.update_my_password\(text, text, text, text\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.delete_my_account\(text, text\) TO anon, authenticated;/);
+});

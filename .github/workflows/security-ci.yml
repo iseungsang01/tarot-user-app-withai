@@ -29,6 +29,17 @@ jobs:
           deno-version: v2.x
       - run: npm run typecheck:edge
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
   security:
     runs-on: ubuntu-latest
     env:
@@ -44,6 +55,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: bash scripts/security-check.sh
+      - run: npm run security-check
       - run: bash scripts/verify-ai-proxy-config.sh
       - run: npm audit --audit-level=high

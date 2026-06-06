@@ -137,7 +137,7 @@ export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult
 });
 
 export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
-    const { result, loading, error, analyze, reset } = useAnalyzeHistory();
+    const { result, loading, error, remaining, analyze, reset } = useAnalyzeHistory();
     const [expanded, setExpanded] = useState(false);
 
     const validCount = visits?.filter(v => v.card_review?.trim()).length || 0;
@@ -173,7 +173,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                                 <Text style={styles.proBadgeMinText}>PRO</Text>
                             </View>
                         </View>
-                        <Text style={styles.historyTriggerSubtext}>{validCount}개의 봉인된 기록을 대조합니다</Text>
+                        <Text style={styles.historyTriggerSubtext}>{remaining == null ? `${validCount}\uAC1C\uC758 \uBD09\uC778\uB41C \uAE30\uB85D\uC744 \uB300\uC870\uD569\uB2C8\uB2E4` : `\uC774\uBC88 \uB2EC \uC804\uCCB4 \uC694\uC57D ${remaining}\uD68C \uB0A8\uC74C`}</Text>
                     </View>
                     <Text style={styles.historyTriggerArrow}>OPEN</Text>
                 </TouchableOpacity>

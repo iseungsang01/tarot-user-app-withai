@@ -101,3 +101,48 @@ test('visitService: customer stats use the stored RPC session token', async () =
   assert.deepEqual(result, { data: { current_stamps: 4, visit_count: 9 }, error: null });
 });
 
+
+
+test('visitService: updateVisit keeps local-only fields bound to storage object and off server payload', async () => {
+  const calls = [];
+  const mockedStorage = {
+    saveCardImage(id, value) { assert.equal(this, mockedStorage); calls.push(['saveCardImage', id, value]); },
+    deleteCardImage(id) { assert.equal(this, mockedStorage); calls.push(['deleteCardImage', id]); },
+    saveCardReview(id, value) { assert.equal(this, mockedStorage); calls.push(['saveCardReview', id, value]); },
+    deleteCardReview(id) { assert.equal(this, mockedStorage); calls.push(['deleteCardReview', id]); },
+    saveCardTitle(id, value) { assert.equal(this, mockedStorage); calls.push(['saveCardTitle', id, value]); },
+    deleteCardTitle(id) { assert.equal(this, mockedStorage); calls.push(['deleteCardTitle', id]); },
+    saveCardAIInsight(id, value) { assert.equal(this, mockedStorage); calls.push(['saveCardAIInsight', id, value]); },
+    deleteCardAIInsight(id) { assert.equal(this, mockedStorage); calls.push(['deleteCardAIInsight', id]); },
+  };
+  let serverPayload = null;
+  const supabaseClient = {
+    updateVisit: async (id, payload) => { serverPayload = [id, payload]; return { data: { id }, error: null }; },
+  };
+
+  const { visitService } = loadModule('src/services/visitService.js', {
+    './supabase': {
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'rpc-token' }, error: null }),
+      withAuthErrorHandling: (error) => error,
+      supabase: {},
+    },
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage: mockedStorage },
+  });
+
+  await visitService.updateVisit(44, {
+    card_image: 'image-data',
+    card_review: '',
+    title: 'title',
+    ai_insight: null,
+    visit_date: '2026-06-06',
+  });
+
+  assert.deepEqual(calls, [
+    ['saveCardImage', 44, 'image-data'],
+    ['deleteCardReview', 44],
+    ['saveCardTitle', 44, 'title'],
+    ['deleteCardAIInsight', 44],
+  ]);
+  assert.deepEqual(serverPayload, [44, { visit_date: '2026-06-06' }]);
+});

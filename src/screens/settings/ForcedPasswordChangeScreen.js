@@ -3,17 +3,17 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, PremiumCard, ScreenContainer, SettingPasswordForm } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { supabase } from '../../services/supabase';
+import { customerService } from '../../services/customerService';
 import { useAuth } from '../../hooks/useAuth';
 import { getPasswordValidationMessage, validatePassword } from '../../utils/validators';
 
 const ForcedPasswordChangeScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { customer, refreshCustomer, logout } = useAuth();
+  const { refreshCustomer, logout } = useAuth();
   const [processing, setProcessing] = useState(false);
 
-  const handlePasswordReset = async ({ newPassword, confirmPassword }) => {
-    if (!newPassword || !confirmPassword) {
+  const handlePasswordReset = async ({ currentPassword, newPassword, confirmPassword }) => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert('입력 필요', '새 비밀번호를 입력해주세요.');
       return;
     }
@@ -30,11 +30,11 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
 
     setProcessing(true);
     try {
-      const { data: changed, error } = await supabase.rpc('update_customer_password', {
-        customer_uuid: customer.id,
-        new_password: newPassword,
-        p_reason: 'forced_change',
-      });
+      const { success: changed, error } = await customerService.updateMyPassword(
+        currentPassword,
+        newPassword,
+        'forced_change',
+      );
 
       if (error || !changed) {
         Alert.alert('변경 실패', error?.message || '비밀번호 변경에 실패했습니다.');
@@ -69,7 +69,7 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
         </PremiumCard>
 
         <View style={styles.formWrap}>
-          <SettingPasswordForm onSubmit={handlePasswordReset} processing={processing} requireCurrentPassword={false} />
+          <SettingPasswordForm onSubmit={handlePasswordReset} processing={processing} requireCurrentPassword />
         </View>
         <TouchableOpacity
           accessibilityRole="button"

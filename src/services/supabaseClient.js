@@ -29,22 +29,16 @@ export const supabaseClient = {
     return supabase.rpc('update_my_nickname', payload);
   },
 
+  verifyMyPassword(payload) {
+    return supabase.rpc('verify_my_password', payload);
+  },
+
+  updateMyPassword(payload) {
+    return supabase.rpc('update_my_password', payload);
+  },
+
   deleteMyAccount(payload) {
     return supabase.rpc('delete_my_account', payload);
-  },
-
-  getCustomerById(customerId) {
-    return supabase.from('customers').select('*').eq('id', customerId).maybeSingle();
-  },
-
-  getVisits(customerId) {
-    return supabase
-      .from('visit_history')
-      .select('id, customer_id, visit_date')
-      .eq('customer_id', customerId)
-      .eq('is_deleted', false)
-      .eq('is_hidden_by_customer', false)
-      .order('visit_date', { ascending: false });
   },
 
   getMyVisits(payload) {
@@ -59,34 +53,12 @@ export const supabaseClient = {
     return supabase.from('visit_history').insert(payload).select().single();
   },
 
-  getVisit(visitId) {
-    return supabase
-      .from('visit_history')
-      .select('id, customer_id, visit_date')
-      .eq('id', visitId)
-      .eq('is_deleted', false)
-      .eq('is_hidden_by_customer', false)
-      .single();
-  },
-
   getMyVisit(payload) {
     return supabase.rpc('get_my_visit', payload).single();
   },
 
-  hideVisitFromCustomer(visitId, customerId) {
-    return supabase
-      .from('visit_history')
-      .update({ is_hidden_by_customer: true })
-      .eq('id', visitId)
-      .eq('customer_id', customerId);
-  },
-
   hideMyVisit(payload) {
     return supabase.rpc('hide_my_visit', payload);
-  },
-
-  softDeleteVisit(visitId) {
-    return supabase.from('visit_history').update({ is_deleted: true }).eq('id', visitId);
   },
 
   getCustomerStats(payload, options = {}) {
@@ -132,9 +104,5 @@ export const supabaseClient = {
 
   getMyBugReports(payload) {
     return supabase.rpc('get_my_bug_reports', payload);
-  },
-
-  invokeAIProxy(body) {
-    return supabase.functions.invoke('ai-proxy', { body });
   },
 };

@@ -486,6 +486,42 @@ const TAROT_SYSTEM_PROMPT = `당신은 'drawer'라는 타로 상담 앱의 AI �
 
 말투: 따뜻하고 신비로운 어조, 존댓말 사용`;
 
+export const condenseVoiceMemo = async (transcriptText, signal = null) => {
+    if (!transcriptText?.trim()) {
+        return { data: null, error: new Error('??? ?? ??? ????.') };
+    }
+
+    const messages = [
+        {
+            role: 'system',
+            content: `??? ?? ?? ?? ?? ?? ?? ??????.
+???? ?? ?? ?? ??? ??? ???? ?? ??? ??? ??? ?????.
+- ?? ?? 3~6??
+- ???? ??? ??? ??
+- ?? ??? ??? ? ?
+- ??? JSON? ??
+
+{
+  "condensed": "??? ?? ??"
+}`,
+        },
+        { role: 'user', content: `?? ?? ??? ??? ???:
+
+${transcriptText}` },
+    ];
+
+    const { data, error } = await callAIProxy(messages, { temperature: 0.35, maxTokens: 500, signal }, 'condenseVoiceMemo');
+    if (error) return { data: null, error };
+
+    try {
+        const parsed = parseFirstJSONObject(data);
+        if (!parsed) throw new Error('AI JSON parse failed.');
+        return { data: parsed.condensed || data || '', error: null };
+    } catch {
+        return { data: data || '', error: null };
+    }
+};
+
 export const sendChatMessage = async (conversationHistory, userMessage) => {
     const messages = [
         { role: 'system', content: TAROT_SYSTEM_PROMPT },
@@ -592,6 +628,7 @@ export default {
     analyzeVisitHistory,
     polishReviewText,
     sendChatMessage,
+    condenseVoiceMemo,
     getDailyFortune,
     normalizeDailyFortunePayload,
 };

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -10,7 +10,7 @@ import {
     AISummaryPanel
 } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
-import { usePolishReview } from '../../hooks/useAI';
+import { usePolishReview, useCondenseVoiceMemo } from '../../hooks/useAI';
 import { visitService } from '../../services/visitService';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
@@ -42,10 +42,14 @@ const VisitDetailScreen = ({ route, navigation }) => {
         isEdit: !!visitId
     });
 
+    const reviewInputRef = useRef(null);
     const up = (next) => setS(p => ({ ...p, ...next }));
+    const [voiceInputAvailable, setVoiceInputAvailable] = useState(true);
+    const [condensedVoiceMemo, setCondensedVoiceMemo] = useState('');
     const [aiInsight, setAiInsight] = useState(null);
     const [selectedReviewVersion, setSelectedReviewVersion] = useState('original');
     const { result: polishedReview, loading: polishing, error: polishError, polish, reset: resetPolish } = usePolishReview();
+    const { loading: condensingVoice, error: voiceCondenseError, remaining: voiceCondenseRemaining, condense: condenseVoice } = useCondenseVoiceMemo();
 
 
     useEffect(() => {
@@ -55,43 +59,49 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const loadData = async () => {
         try {
             if (isOffMode) {
-                // --- [OFF 모드] 로컬 데이터 불러오기 ---
                 const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
                 const item = list.find(v => v.id === visitId);
-                if (item) {
-                    up({
-                        uri: item.card_image,
-                        title: item.title || item.drawer_title || '',
-                        review: item.card_review,
-                        visit_date: item.visit_date, // 기존 날짜 유지
-                        loading: false
-                    });
-                    setAiInsight(item.ai_insight || null);
-                    setSelectedReviewVersion('original');
-                    resetPolish();
-                } else {
-                    up({ loading: false });
-                    Alert.alert('Record not found', 'This local personal record is no longer available.', [
-                        { text: 'Back', onPress: () => navigation.goBack() },
+                if (!item) {
+                    Alert.alert('\uAE30\uB85D \uC5C6\uC74C', '\uC774 \uB85C\uCEEC \uAC1C\uC778 \uAE30\uB85D\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.', [
+                        { text: '\uB3CC\uC544\uAC00\uAE30', onPress: () => navigation.goBack() },
                     ]);
+                    return;
                 }
-            } else {
-                // --- [ON 모드] 서버 데이터 불러오기 ---
-                const { data } = await handleApiCall('VisitDetail.load', () => visitService.getVisit(visitId));
-                if (data) {
-                    up({
-                        uri: data.card_image,
-                        title: data.title || data.drawer_title || '',
-                        review: data.card_review || '',
-                        visit_date: data.visit_date, // 서버에 기록된 실제 방문 날짜 유지
-                        loading: false
-                    });
-                    setAiInsight(data.ai_insight || null);
-                    setSelectedReviewVersion('original');
-                    resetPolish();
-                }
+
+                up({
+                    uri: item.card_image,
+                    title: item.title || item.drawer_title || '',
+                    review: item.card_review || '',
+                    visit_date: item.visit_date,
+                });
+                setAiInsight(item.ai_insight || null);
+                setSelectedReviewVersion('original');
+                resetPolish();
+                return;
             }
+
+            const { data, error } = await handleApiCall('VisitDetail.load', () => visitService.getVisit(visitId));
+            if (error || !data) {
+                Alert.alert('\uAE30\uB85D\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4', '\uC0C1\uB2F4 \uAE30\uB85D\uC744 \uCC3E\uC744 \uC218 \uC5C6\uAC70\uB098 \uB2E4\uC2DC \uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.', [
+                    { text: '\uB3CC\uC544\uAC00\uAE30', onPress: () => navigation.goBack() },
+                ]);
+                return;
+            }
+
+            up({
+                uri: data.card_image,
+                title: data.title || data.drawer_title || '',
+                review: data.card_review || '',
+                visit_date: data.visit_date,
+            });
+            setAiInsight(data.ai_insight || null);
+            setSelectedReviewVersion('original');
+            resetPolish();
         } catch (err) {
+            Alert.alert('\uAE30\uB85D\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4', '\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.', [
+                { text: '\uB3CC\uC544\uAC00\uAE30', onPress: () => navigation.goBack() },
+            ]);
+        } finally {
             up({ loading: false });
         }
     };
@@ -174,14 +184,41 @@ const VisitDetailScreen = ({ route, navigation }) => {
         }
     };
 
-    const insertVoiceMemoMarker = () => {
-        const now = new Date();
-        const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const marker = `\n [음성 메모 ${stamp}] `;
-        up({ review: `${s.review}${marker}` });
-        Alert.alert('안내', '실녹음/업로드 기능은 다음 버전에서 제공됩니다. 우선 음성 메모 표시를 빠르게 남길 수 있게 구성했어요.');
+    const startVoiceInput = () => {
+        if (Platform.OS === 'web') {
+            setVoiceInputAvailable(false);
+            Alert.alert('\uC74C\uC131 \uC785\uB825\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4', '\uC6F9 \uBBF8\uB9AC\uBCF4\uAE30\uC5D0\uC11C\uB294 \uD0A4\uBCF4\uB4DC \uC74C\uC131 \uC785\uB825\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. Android \uC571\uC5D0\uC11C \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.');
+            return;
+        }
+
+        setVoiceInputAvailable(true);
+        reviewInputRef.current?.focus();
+        Keyboard.dismiss();
+        setTimeout(() => reviewInputRef.current?.focus(), 100);
+        Alert.alert('\uC74C\uC131 \uC785\uB825 \uC548\uB0B4', '\uD0A4\uBCF4\uB4DC\uAC00 \uC5F4\uB9AC\uBA74 \uD0A4\uBCF4\uB4DC\uC758 \uB9C8\uC774\uD06C \uBC84\uD2BC\uC744 \uB20C\uB7EC \uB9D0\uD574 \uC8FC\uC138\uC694. \uC778\uC2DD\uB41C \uBB38\uC7A5\uC740 \uC774 \uAE30\uB85D \uCE78\uC5D0 \uBC14\uB85C \uC785\uB825\uB418\uBA70 \uC9C1\uC811 \uC218\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
     };
 
+    const runVoiceCondense = async () => {
+        if (!s.review.trim()) {
+            Alert.alert('\uC54C\uB9BC', '\uCD95\uC57D\uD560 \uC74C\uC131 \uAE30\uB85D\uC744 \uBA3C\uC800 \uC785\uB825\uD574 \uC8FC\uC138\uC694.');
+            return;
+        }
+
+        const { data, error } = await condenseVoice(s.review);
+        if (error || !data) return;
+        setCondensedVoiceMemo(data);
+    };
+
+    const applyCondensedVoiceMemo = (mode) => {
+        if (!condensedVoiceMemo) return;
+        if (mode === 'replace') {
+            up({ review: condensedVoiceMemo });
+        } else {
+            const separator = s.review.trim() ? '\n\n[\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D]\n' : '';
+            up({ review: `${s.review.trim()}${separator}${condensedVoiceMemo}` });
+        }
+        setCondensedVoiceMemo('');
+    };
 
     const handleAIResult = useCallback((result) => {
         setAiInsight(result || null);
@@ -265,6 +302,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         </View>
 
                         <TextInput
+                            ref={reviewInputRef}
                             style={[styles.input, { borderColor: theme.c + '40' }]}
                             multiline
                             value={s.review}
@@ -273,11 +311,11 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             placeholderTextColor={theme.placeholder}
                         />
 
-                        {/* 3차 액션: 부가 기능 */}
+                        {/* 3? ??: ?? ??/?? */}
                         <View style={[styles.buttonRow, styles.voiceRow]}>
                             <CustomButton
-                                title=" 녹음 메모 추가"
-                                onPress={insertVoiceMemoMarker}
+                                title={voiceInputAvailable ? "\uC74C\uC131 \uC785\uB825 \uC2DC\uC791" : "\uC74C\uC131 \uC785\uB825\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4"}
+                                onPress={startVoiceInput}
                                 variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
                                 numberOfLines={1}
@@ -285,8 +323,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 ellipsizeMode="tail"
                             />
                             <CustomButton
-                                title=" 녹음 업로드"
-                                onPress={insertVoiceMemoMarker}
+                                title={condensingVoice ? "\uCD95\uC57D \uC911..." : "\uC74C\uC131 \uAE30\uB85D \uCD95\uC57D"}
+                                onPress={runVoiceCondense}
+                                loading={condensingVoice}
                                 variant={ACTION_VARIANT.SECONDARY}
                                 style={styles.rowButton}
                                 numberOfLines={1}
@@ -294,6 +333,24 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 ellipsizeMode="tail"
                             />
                         </View>
+                        <Text style={styles.voiceUsageText}>
+                            {voiceCondenseRemaining == null ? '\uC774\uBC88 \uB2EC \uB179\uC74C \uCD95\uC57D 30\uD68C \uB0A8\uC74C' : `\uC774\uBC88 \uB2EC \uB179\uC74C \uCD95\uC57D ${voiceCondenseRemaining}\uD68C \uB0A8\uC74C`}
+                        </Text>
+                        {!!voiceCondenseError && <Text style={styles.polishError}>? {voiceCondenseError}</Text>}
+                        {!!condensedVoiceMemo && (
+                            <View style={styles.voiceCondensePanel}>
+                                <Text style={styles.voiceCondenseTitle}>\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D \uACB0\uACFC</Text>
+                                <Text style={styles.voiceCondenseText}>{condensedVoiceMemo}</Text>
+                                <View style={styles.compareWrap}>
+                                    <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('replace')}>
+                                        <Text style={styles.versionChipText}>\uD604\uC7AC \uAE30\uB85D \uAD50\uCCB4</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('append')}>
+                                        <Text style={styles.versionChipText}>\uC544\uB798\uC5D0 \uB367\uBD99\uC774\uAE30</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
 
 
                         {/* 2차 액션: 편집 보조 */}
@@ -348,6 +405,10 @@ const styles = StyleSheet.create({
     titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFF', fontSize: 14, borderWidth: 1, marginBottom: 12 },
     input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, color: '#FFF', minHeight: 150, textAlignVertical: 'top', fontSize: 14, borderWidth: 1 },
     voiceRow: { marginTop: 10 },
+    voiceUsageText: { color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 6, marginLeft: 2 },
+    voiceCondensePanel: { marginTop: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.35)', borderRadius: 12, padding: 10, backgroundColor: 'rgba(0,0,0,0.22)' },
+    voiceCondenseTitle: { color: DrawerTheme.goldBright, fontWeight: '700', fontSize: 13, marginBottom: 6 },
+    voiceCondenseText: { color: '#FFF', fontSize: 13, lineHeight: 19 },
     whiteText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
     saveBtn: { marginTop: 20, height: 50 },
     polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)' },

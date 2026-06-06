@@ -10,21 +10,19 @@ import { useNotifications } from '../hooks/useNotifications';
 import { CoachMarksOverlay } from '../components';
 import { useUI } from '../context/UIContext';
 
-import {
-  HistoryScreen,
-  SettingsScreen,
-  ForcedPasswordChangeScreen,
-  VisitDetailScreen,
-  DailyFortuneScreen,
-  DailyFortuneDrawScreen,
-  NoticeDetailScreen,
-  NewsScreen,
-  TicketScreen,
-  BugReportScreen,
-  BugReportDetailScreen,
-  PasswordResetScreen,
-  DeleteAccountScreen,
-} from '../screens';
+import DailyFortuneDrawScreen from '../screens/fortune/DailyFortuneDrawScreen';
+import DailyFortuneScreen from '../screens/fortune/DailyFortuneScreen';
+import HistoryScreen from '../screens/history/HistoryScreen';
+import VisitDetailScreen from '../screens/history/VisitDetailScreen';
+import NewsScreen from '../screens/news/NewsScreen';
+import NoticeDetailScreen from '../screens/notice/NoticeDetailScreen';
+import BugReportDetailScreen from '../screens/settings/BugReportDetailScreen';
+import BugReportScreen from '../screens/settings/BugReportScreen';
+import DeleteAccountScreen from '../screens/settings/DeleteAccountScreen';
+import ForcedPasswordChangeScreen from '../screens/settings/ForcedPasswordChangeScreen';
+import PasswordResetScreen from '../screens/settings/PasswordResetScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
+import TicketScreen from '../screens/ticket/TicketScreen';
 import { useAuth } from '../hooks/useAuth';
 
 const Stack = createStackNavigator();

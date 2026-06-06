@@ -11,19 +11,12 @@ const getSessionState = async () => ensureAuthenticatedSession();
 
 export const visitService = {
   syncLocalVisitFields: async (visitId, updates) => {
-    const localFieldHandlers = {
-      card_image: [storage.saveCardImage, storage.deleteCardImage],
-      card_review: [storage.saveCardReview, storage.deleteCardReview],
-      title: [storage.saveCardTitle, storage.deleteCardTitle],
-      ai_insight: [storage.saveCardAIInsight, storage.deleteCardAIInsight],
-    };
-
-    await Promise.all(
-      Object.entries(localFieldHandlers).map(async ([field, [saveFn, deleteFn]]) => {
-        if (updates[field] === undefined) return;
-        return updates[field] ? saveFn(visitId, updates[field]) : deleteFn(visitId);
-      }),
-    );
+    await Promise.all([
+      updates.card_image === undefined ? null : (updates.card_image ? storage.saveCardImage(visitId, updates.card_image) : storage.deleteCardImage(visitId)),
+      updates.card_review === undefined ? null : (updates.card_review ? storage.saveCardReview(visitId, updates.card_review) : storage.deleteCardReview(visitId)),
+      updates.title === undefined ? null : (updates.title ? storage.saveCardTitle(visitId, updates.title) : storage.deleteCardTitle(visitId)),
+      updates.ai_insight === undefined ? null : (updates.ai_insight ? storage.saveCardAIInsight(visitId, updates.ai_insight) : storage.deleteCardAIInsight(visitId)),
+    ].filter(Boolean));
   },
 
   async getVisits(customerId) {

@@ -3,8 +3,10 @@ import { imageStorage } from './images';
 import { cardsStorage } from './cards';
 import { historyStorage } from './history';
 import { userStorage } from './user';
+import * as drawerAIUsageStorage from './drawerAIUsage';
 
 export { STORAGE_KEYS };
+export * from './drawerAIUsage';
 
 export const storage = {
   ...coreStorage,
@@ -12,4 +14,5 @@ export const storage = {
   ...cardsStorage,
   ...historyStorage,
   ...userStorage,
+  ...drawerAIUsageStorage,
 };

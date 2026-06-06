@@ -32,13 +32,6 @@ export const pickRandomMajorArcana = () => MAJOR_ARCANA[Math.floor(Math.random()
 
 export const getCardById = (cardId) => MAJOR_ARCANA.find((card) => card.id === cardId) || null;
 
-export const getCardImageSource = (fortuneOrCard) => {
-  const localCard = getCardById(fortuneOrCard?.cardId || fortuneOrCard?.id);
-  const cardImage = localCard?.image || fortuneOrCard?.cardImage || fortuneOrCard?.image;
-  if (!cardImage) return null;
-  return typeof cardImage === 'string' ? { uri: cardImage } : cardImage;
-};
-
 export const buildCardContext = (card) => ({
   id: card.id,
   name: card.name,
@@ -58,7 +51,6 @@ export const buildCardContext = (card) => ({
 export const buildStoredDailyFortune = ({ card, fortunePayload, drawCount, drawnAt = new Date().toISOString() }) => ({
   cardId: card.id,
   cardName: card.nameKr,
-  cardImage: card.image,
   cardEnglishName: card.name,
   summary: fortunePayload?.summary || '',
   fortune: fortunePayload?.fortune || '',

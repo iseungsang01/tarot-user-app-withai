@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SettingPasswordForm } from '../../components';
-import { supabase } from '../../services/supabase';
-import { useAuth } from '../../hooks/useAuth';
+import { customerService } from '../../services/customerService';
 import { createValidationError, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
 import { getPasswordValidationMessage, validatePassword } from '../../utils/validators';
 
 const PasswordResetScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { customer } = useAuth();
   const [processing, setProcessing] = useState(false);
 
   const handlePasswordReset = async ({ currentPassword, newPassword, confirmPassword }) => {
@@ -30,31 +28,15 @@ const PasswordResetScreen = ({ navigation }) => {
 
     setProcessing(true);
     try {
-      const { data: isValid, error: verifyError } = await supabase.rpc('verify_password', {
-        customer_uuid: customer.id,
-        input_password: currentPassword,
-      });
+      const { success, error } = await customerService.updateMyPassword(
+        currentPassword,
+        newPassword,
+        'settings_change',
+      );
 
-      if (verifyError) {
-        console.error('Verify password error:', verifyError);
-        Alert.alert('오류', '비밀번호 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-        return;
-      }
-
-      if (!isValid) {
-        Alert.alert('오류', '현재 비밀번호가 일치하지 않습니다.');
-        return;
-      }
-
-      const { data: changed, error } = await supabase.rpc('update_customer_password', {
-        customer_uuid: customer.id,
-        new_password: newPassword,
-        p_reason: 'settings_change',
-      });
-
-      if (error || !changed) {
+      if (error || !success) {
         console.error('Update password error:', error);
-        Alert.alert('오류', '비밀번호 변경 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        Alert.alert('\uC624\uB958', error?.message || '\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.');
         return;
       }
 

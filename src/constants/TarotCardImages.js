@@ -1,0 +1,26 @@
+export const TAROT_CARD_IMAGES = {
+  m00: require('../../assets/card/0. The Fool.png'),
+  m01: require('../../assets/card/1. The Magician.png'),
+  m02: require('../../assets/card/2. The High Priestess.png'),
+  m03: require('../../assets/card/3. The Empress.png'),
+  m04: require('../../assets/card/4. The Emperor.png'),
+  m05: require('../../assets/card/5. The Hierophant.png'),
+  m06: require('../../assets/card/6. The Lovers.png'),
+  m07: require('../../assets/card/7. Chariot.png'),
+  m08: require('../../assets/card/8. Strength.png'),
+  m09: require('../../assets/card/9. The Hermit.png'),
+  m10: require('../../assets/card/10. Wheel of Fortune.png'),
+  m11: require('../../assets/card/11. Justice.png'),
+  m12: require('../../assets/card/12. The Hanged Man.png'),
+  m13: require('../../assets/card/13. Death.png'),
+  m14: require('../../assets/card/14. Temperance.png'),
+  m15: require('../../assets/card/15. The Devil.png'),
+  m16: require('../../assets/card/16. The Tower.png'),
+  m17: require('../../assets/card/17. The Star.png'),
+  m18: require('../../assets/card/18. The Moon.png'),
+  m19: require('../../assets/card/19. The Sun.png'),
+  m20: require('../../assets/card/20. Judgement.png'),
+  m21: require('../../assets/card/21. The World.png'),
+};
+
+export const getTarotCardImage = (cardId) => TAROT_CARD_IMAGES[cardId] || null;

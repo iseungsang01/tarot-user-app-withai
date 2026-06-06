@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   ATTENDANCE: 'attendance_history',
   OFFLINE_VISIT_HISTORY: 'offline_visit_history',
   COACH_MARKS: 'has_seen_main_coach_marks_v1',
+  DRAWER_AI_USAGE: 'drawer_ai_usage',
 };
 
 const LOCAL_SCOPE_PREFIX = 'tarot_local';
@@ -37,6 +38,7 @@ const SCOPED_STORAGE_KEYS = new Set([
   STORAGE_KEYS.ATTENDANCE,
   STORAGE_KEYS.OFFLINE_VISIT_HISTORY,
   STORAGE_KEYS.COACH_MARKS,
+  STORAGE_KEYS.DRAWER_AI_USAGE,
 ]);
 
 const safeParse = (raw, fallback = null) => {

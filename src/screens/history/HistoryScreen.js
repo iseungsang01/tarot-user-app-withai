@@ -179,7 +179,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                             key={`sealed-placeholder-${index}`}
                             visit={{
                                 id: `sealed-placeholder-${index}`,
-                                visit_date: '2026-01-26',
+                                visit_date: '',
                                 drawer_title: timeFilter !== 'ALL' ? '해당 기간 기록 없음' : '아직 기록이 없습니다',
                                 isPlaceholder: true,
                             }}
@@ -295,7 +295,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     const title = visit.title
         || visit.drawer_title
         || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 28)
-        || (isManualMode ? 'Private note' : 'Unread record');
+        || (isManualMode ? '?? ??' : '??? ??');
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';

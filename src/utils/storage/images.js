@@ -12,13 +12,54 @@ const ensureDirExists = async () => {
   }
 };
 
+
+const updateImageCacheMetadata = async (visitId, metadata) => {
+  try {
+    const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
+    cache[visitId] = metadata;
+    await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
+  } catch (error) {
+    console.error('??? ?? ????? ?? ??:', error);
+  }
+};
+
+const deleteImageCacheMetadata = async (visitId) => {
+  try {
+    const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
+    delete cache[visitId];
+    await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
+  } catch (error) {
+    console.error('??? ?? ????? ?? ??:', error);
+  }
+};
+
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+};
+
+const findOldestImage = (cache) => {
+  const entries = Object.entries(cache);
+  if (entries.length === 0) return null;
+  return entries.reduce((oldest, [id, meta]) => (!oldest || new Date(meta.timestamp) < new Date(oldest.timestamp)) ? { visitId: id, ...meta } : oldest, null);
+};
+
+const findNewestImage = (cache) => {
+  const entries = Object.entries(cache);
+  if (entries.length === 0) return null;
+  return entries.reduce((newest, [id, meta]) => (!newest || new Date(meta.timestamp) > new Date(newest.timestamp)) ? { visitId: id, ...meta } : newest, null);
+};
+
 export const imageStorage = {
   async saveCardImage(visitId, imageData) {
     console.log('💾 [Storage] 이미지 저장 시작:', visitId);
     try {
       if (!imageData) return;
       await ensureDirExists();
-      const prevFileUri = await this.getCardImage(visitId);
+      const prevFileUri = await imageStorage.getCardImage(visitId);
       const fileName = `visit_${visitId}_${Date.now()}.jpg`;
       const fileUri = IMAGE_DIR + fileName;
       let finalUri = fileUri;
@@ -38,7 +79,7 @@ export const imageStorage = {
       await coreStorage._updateMap(STORAGE_KEYS.CARD_IMAGES, visitId, finalUri);
       const fileInfo = isRemoteUri(finalUri) ? { size: 0 } : await FileSystem.getInfoAsync(finalUri);
       const metadata = { visitId, timestamp: new Date().toISOString(), size: fileInfo.size || 0 };
-      await this._updateImageCacheMetadata(visitId, metadata);
+      await updateImageCacheMetadata(visitId, metadata);
 
       if (prevFileUri && prevFileUri !== finalUri && prevFileUri.startsWith(IMAGE_DIR)) {
         await FileSystem.deleteAsync(prevFileUri, { idempotent: true });
@@ -80,30 +121,18 @@ export const imageStorage = {
         console.error('❌ [Storage] 파일 삭제 중 오류:', e);
       }
       await coreStorage._updateMap(STORAGE_KEYS.CARD_IMAGES, visitId, null, true);
-      await this._deleteImageCacheMetadata(visitId);
+      await deleteImageCacheMetadata(visitId);
       return true;
     }
     return false;
   },
 
   async _updateImageCacheMetadata(visitId, metadata) {
-    try {
-      const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
-      cache[visitId] = metadata;
-      await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
-    } catch (error) {
-      console.error('❌ [Storage] 이미지 캐시 메타데이터 저장 오류:', error);
-    }
+    return updateImageCacheMetadata(visitId, metadata);
   },
 
   async _deleteImageCacheMetadata(visitId) {
-    try {
-      const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
-      delete cache[visitId];
-      await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
-    } catch (error) {
-      console.error('❌ [Storage] 이미지 캐시 메타데이터 삭제 오류:', error);
-    }
+    return deleteImageCacheMetadata(visitId);
   },
 
   async getImageCacheMetadata() {
@@ -113,7 +142,7 @@ export const imageStorage = {
   async clearImageCache() {
     try {
       console.log('🧹 [Storage] 이미지 캐시 정리 시작');
-      const images = await this.getAllCardImages();
+      const images = await imageStorage.getAllCardImages();
       await Promise.allSettled(
         Object.values(images)
           .filter((uri) => typeof uri === 'string' && uri.startsWith(IMAGE_DIR))
@@ -129,12 +158,12 @@ export const imageStorage = {
 
   async clearOldImageCache(days = 30) {
     try {
-      const cache = await this.getImageCacheMetadata();
+      const cache = await imageStorage.getImageCacheMetadata();
       const thresholdTime = new Date().getTime() - (days * 24 * 60 * 60 * 1000);
       const deletePromises = [];
       for (const [visitId, metadata] of Object.entries(cache)) {
         if (new Date(metadata.timestamp).getTime() < thresholdTime) {
-          deletePromises.push(this.deleteCardImage(visitId));
+          deletePromises.push(imageStorage.deleteCardImage(visitId));
         }
       }
       await Promise.allSettled(deletePromises);
@@ -145,16 +174,16 @@ export const imageStorage = {
 
   async getImageCacheStats() {
     try {
-      const cache = await this.getImageCacheMetadata();
-      const images = await this.getAllCardImages();
+      const cache = await imageStorage.getImageCacheMetadata();
+      const images = await imageStorage.getAllCardImages();
       const totalImages = Object.keys(images).length;
       const totalSize = Object.values(cache).reduce((sum, meta) => sum + (meta.size || 0), 0);
       return {
         totalImages,
         totalSize,
-        totalSizeFormatted: this._formatBytes(totalSize),
-        oldestImage: this._findOldestImage(cache),
-        newestImage: this._findNewestImage(cache),
+        totalSizeFormatted: formatBytes(totalSize),
+        oldestImage: findOldestImage(cache),
+        newestImage: findNewestImage(cache),
       };
     } catch (error) {
       console.error('❌ [Storage] 이미지 캐시 통계 조회 오류:', error);
@@ -162,25 +191,11 @@ export const imageStorage = {
     }
   },
 
-  _formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  },
+  _formatBytes: formatBytes,
 
-  _findOldestImage(cache) {
-    const entries = Object.entries(cache);
-    if (entries.length === 0) return null;
-    return entries.reduce((oldest, [id, meta]) => (!oldest || new Date(meta.timestamp) < new Date(oldest.timestamp)) ? { visitId: id, ...meta } : oldest, null);
-  },
+  _findOldestImage: findOldestImage,
 
-  _findNewestImage(cache) {
-    const entries = Object.entries(cache);
-    if (entries.length === 0) return null;
-    return entries.reduce((newest, [id, meta]) => (!newest || new Date(meta.timestamp) > new Date(newest.timestamp)) ? { visitId: id, ...meta } : newest, null);
-  },
+  _findNewestImage: findNewestImage,
 
   async cleanupOrphanedImages(ids) {
     console.log('🧹 [Storage] cleanupOrphanedImages 시작');

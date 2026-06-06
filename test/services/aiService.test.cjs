@@ -310,3 +310,29 @@ test('aiService: chat responses collapse degenerate repeated English tokens befo
   assert.equal(result.error, null);
   assert.equal(result.data, '카드는 지금 자신의 속도를 own 믿어도 된다고 말합니다.');
 });
+
+
+test('aiService: voice memo condense uses the dedicated proxy task', async () => {
+  let invokedOptions = null;
+  const { condenseVoiceMemo } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async (_, options) => {
+            invokedOptions = options;
+            return { data: { data: '{"condensed":"short memo"}', usage: {}, provider: 'mock' }, error: null };
+          },
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'session-token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await condenseVoiceMemo('long voice transcript');
+
+  assert.equal(result.error, null);
+  assert.equal(result.data, 'short memo');
+  assert.equal(invokedOptions.body.task, 'condenseVoiceMemo');
+  assert.equal(invokedOptions.headers['x-customer-session-token'], 'session-token');
+});

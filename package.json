@@ -1,6 +1,6 @@
 {
   "name": "drawer",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.25.9",
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2"
   },

@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SettingDeleteAccount } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { customerService } from '../../services/customerService';
-import { supabase } from '../../services/supabase';
 import { createValidationError, handleApiCall, showErrorAlert } from '../../utils/errorHandler';
 
 const DeleteAccountScreen = ({ navigation }) => {
@@ -21,30 +20,14 @@ const DeleteAccountScreen = ({ navigation }) => {
     let keepProcessingForConfirmation = false;
     setProcessing(true);
     try {
-      const { data: isValid, error: verifyError } = await supabase.rpc('verify_password', {
-        customer_uuid: customer.id,
-        input_password: password,
-      });
-
-      if (verifyError) {
-        console.error('Verify password error:', verifyError);
-        Alert.alert('오류', '비밀번호 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-        return;
-      }
-
-      if (!isValid) {
-        Alert.alert('오류', '비밀번호가 일치하지 않습니다.');
-        return;
-      }
-
-      keepProcessingForConfirmation = true;
+            keepProcessingForConfirmation = true;
       Alert.alert('회원 탈퇴', '정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', [
         { text: '취소', style: 'cancel', onPress: () => setProcessing(false) },
         {
           text: '탈퇴',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await handleApiCall('DeleteAccountScreen.delete', () => customerService.deleteCustomer(customer.id));
+            const { error } = await handleApiCall('DeleteAccountScreen.delete', () => customerService.deleteCustomer(customer.id, password));
             if (error) {
               setProcessing(false);
               return;
