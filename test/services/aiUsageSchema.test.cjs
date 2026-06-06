@@ -90,12 +90,18 @@ test('visit schema: customer visit lookup RPCs use session token ownership', () 
 
 test('visit schema: customer deletion flag hides visits without removing admin records', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
+  const hideFunction = getFunctionBody('hide_my_visit');
 
   assert.match(schema, /is_hidden_by_customer boolean NOT NULL DEFAULT false/);
   assert.match(schema, /idx_visit_history_customer_visible/);
   assert.match(schema, /WHERE is_deleted = false AND is_hidden_by_customer = false/);
-  assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.hide_my_visit/);
-  assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.hide_my_visit/);
+  assert.match(hideFunction, /p_session_token text/);
+  assert.match(hideFunction, /p_visit_id integer/);
+  assert.match(hideFunction, /public\.resolve_customer_session\(p_session_token\)/);
+  assert.match(hideFunction, /SET is_hidden_by_customer = true/);
+  assert.match(hideFunction, /vh\.id = p_visit_id/);
+  assert.match(hideFunction, /vh\.customer_id = v_customer_id/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.hide_my_visit\(text, integer\) TO anon, authenticated;/);
 });
 
 test('session schema: resolve_customer_session is defined and login issues session tokens', () => {

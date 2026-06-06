@@ -9,7 +9,7 @@ const storage = {
 };
 
 test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
-  const calls = { update: null, deleteId: null, saveImage: null, hide: null };
+  const calls = { update: null, deleteId: null, saveImage: null, hide: null, getMyVisit: null };
   const mockedStorage = {
     ...storage,
     saveCardImage: async (...args) => { calls.saveImage = args; },
@@ -18,9 +18,12 @@ test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
 
   const supabaseClient = {
     createVisit: async () => ({ data: { id: 10, customer_id: 'c1', visit_date: '2026-03-01' }, error: null }),
-    getVisit: async () => ({ data: { id: 10, customer_id: 'c1', visit_date: '2026-03-01' }, error: null }),
+    getMyVisit: async (payload) => {
+      calls.getMyVisit = payload;
+      return { data: { id: 10, customer_id: 'c1', visit_date: '2026-03-01' }, error: null };
+    },
     updateVisit: async (id, payload) => { calls.update = [id, payload]; return { data: { id }, error: null }; },
-    hideVisitFromCustomer: async (...args) => { calls.hide = args; return { data: true, error: null }; },
+    hideMyVisit: async (payload) => { calls.hide = payload; return { data: true, error: null }; },
   };
 
   const { visitService } = loadModule('src/services/visitService.js', {
@@ -40,11 +43,37 @@ test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
 
   assert.equal(created.error, null);
   assert.deepEqual(calls.saveImage, [10, 'img']);
+  assert.deepEqual(calls.getMyVisit, { p_session_token: 'test-token', p_visit_id: 10 });
   assert.equal(fetched.data.card_review, 'review');
   assert.deepEqual(calls.update, [10, { visit_date: '2026-03-02' }]);
   assert.equal(deleted.error, null);
-  assert.deepEqual(calls.hide, [10, 'c1']);
+  assert.deepEqual(calls.hide, { p_session_token: 'test-token', p_visit_id: 10 });
   assert.equal(calls.deleteId, 10);
+});
+
+test('visitService: visit list uses the stored RPC session token', async () => {
+  const calls = [];
+  const supabaseClient = {
+    getMyVisits: async (payload) => {
+      calls.push(payload);
+      return { data: [{ id: 10, customer_id: 'c1', visit_date: '2026-03-01' }], error: null };
+    },
+  };
+
+  const { visitService } = loadModule('src/services/visitService.js', {
+    './supabase': {
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'rpc-token' }, error: null }),
+      withAuthErrorHandling: (error) => error,
+      supabase: {},
+    },
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await visitService.getVisits('customer-1');
+
+  assert.deepEqual(calls, [{ p_session_token: 'rpc-token' }]);
+  assert.deepEqual(result, { data: [{ id: 10, customer_id: 'c1', visit_date: '2026-03-01' }], error: null });
 });
 
 test('visitService: customer stats use the stored RPC session token', async () => {

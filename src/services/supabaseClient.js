@@ -81,6 +81,10 @@ export const supabaseClient = {
       .eq('customer_id', customerId);
   },
 
+  hideMyVisit(payload) {
+    return supabase.rpc('hide_my_visit', payload);
+  },
+
   softDeleteVisit(visitId) {
     return supabase.from('visit_history').update({ is_deleted: true }).eq('id', visitId);
   },

@@ -595,6 +595,7 @@ BEGIN
   FROM public.visit_history AS vh
   WHERE vh.customer_id = v_customer_id
     AND vh.is_deleted = false
+    AND vh.is_hidden_by_customer = false
   ORDER BY vh.visit_date DESC;
 END;
 $$;
@@ -623,7 +624,8 @@ BEGIN
   FROM public.visit_history AS vh
   WHERE vh.id = p_visit_id
     AND vh.customer_id = v_customer_id
-    AND vh.is_deleted = false;
+    AND vh.is_deleted = false
+    AND vh.is_hidden_by_customer = false;
 END;
 $$;
 
@@ -631,6 +633,35 @@ REVOKE ALL ON FUNCTION public.get_my_visits(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_my_visit(text, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_my_visits(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_visit(text, integer) TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.hide_my_visit(p_session_token text, p_visit_id integer)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_customer_id uuid;
+BEGIN
+  v_customer_id := public.resolve_customer_session(p_session_token);
+
+  IF v_customer_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid or expired customer session' USING ERRCODE = '28000';
+  END IF;
+
+  UPDATE public.visit_history AS vh
+  SET is_hidden_by_customer = true
+  WHERE vh.id = p_visit_id
+    AND vh.customer_id = v_customer_id
+    AND vh.is_deleted = false
+    AND vh.is_hidden_by_customer = false;
+
+  RETURN FOUND;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.hide_my_visit(text, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.hide_my_visit(text, integer) TO anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.update_my_nickname(p_id uuid, p_new_nickname text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$

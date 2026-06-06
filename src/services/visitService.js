@@ -33,7 +33,9 @@ export const visitService = {
       const sessionState = await getSessionState();
       if (!sessionState.ok) return { data: [], error: sessionState.error };
 
-      const { data, error } = await supabaseClient.getVisits(customerId);
+      const { data, error } = await supabaseClient.getMyVisits({
+        p_session_token: sessionState.session.token,
+      });
 
       if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
       return { data, error: null };
@@ -104,7 +106,10 @@ export const visitService = {
       const sessionState = await getSessionState();
       if (!sessionState.ok) return { data: null, error: sessionState.error };
 
-      const { data, error } = await supabaseClient.getVisit(visitId);
+      const { data, error } = await supabaseClient.getMyVisit({
+        p_session_token: sessionState.session.token,
+        p_visit_id: visitId,
+      });
 
       if (error) return { data: null, error: withAuthErrorHandling(error, sessionState.error?.message) };
 
@@ -127,11 +132,17 @@ export const visitService = {
 
   async deleteVisit(visitId, customerId) {
     try {
-      const authError = await requireSession();
-      if (authError) return { error: authError };
+      const sessionState = await getSessionState();
+      if (!sessionState.ok) return { error: sessionState.error };
 
-      const { error } = await supabaseClient.hideVisitFromCustomer(visitId, customerId);
-      if (error) throw withAuthErrorHandling(error, authError?.message);
+      const { data, error } = await supabaseClient.hideMyVisit({
+        p_session_token: sessionState.session.token,
+        p_visit_id: visitId,
+      });
+      if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
+      if (data !== true) {
+        throw new Error('Visit not found or already hidden.');
+      }
 
       await storage.deleteCardImage(visitId);
       await storage.deleteCardReview(visitId);
