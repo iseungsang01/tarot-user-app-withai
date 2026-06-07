@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -18,11 +18,10 @@ import * as ImagePicker from 'expo-image-picker';
 import {
     CustomButton,
     LoadingSpinner,
-    AISummaryPanel,
 } from '../../components';
 import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components/common/PremiumUI';
 import { useAuth } from '../../hooks/useAuth';
-import { usePolishReview, useCondenseVoiceMemo } from '../../hooks/useAI';
+import { usePolishReview } from '../../hooks/useAI';
 import { visitService } from '../../services/visitService';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
@@ -55,24 +54,18 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const reviewInputRef = useRef(null);
     const up = (next) => setS((p) => ({ ...p, ...next }));
     const [voiceInputAvailable, setVoiceInputAvailable] = useState(true);
-    const [condensedVoiceMemo, setCondensedVoiceMemo] = useState('');
     const [aiInsight, setAiInsight] = useState(null);
     const [selectedReviewVersion, setSelectedReviewVersion] = useState('original');
     const {
         result: polishedReview,
         loading: polishing,
         error: polishError,
+        remaining: polishRemaining,
         polish,
         reset: resetPolish,
     } = usePolishReview();
-    const {
-        loading: condensingVoice,
-        error: voiceCondenseError,
-        remaining: voiceCondenseRemaining,
-        condense: condenseVoice,
-    } = useCondenseVoiceMemo();
 
-    const isBusy = s.saving || polishing || condensingVoice;
+    const isBusy = s.saving || polishing;
     const hasReview = !!s.review.trim();
 
     useEffect(() => {
@@ -161,8 +154,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
             Alert.alert('메모가 필요합니다', '먼저 메모를 입력해 주세요.');
             return;
         }
-        await polish(s.review);
-        setSelectedReviewVersion('polished');
+        const { data } = await polish(s.review);
+        if (data) setSelectedReviewVersion('polished');
     };
 
     const onSave = async () => {
@@ -229,50 +222,6 @@ const VisitDetailScreen = ({ route, navigation }) => {
         Alert.alert('음성 입력 안내', '키보드가 열리면 키보드의 마이크 버튼을 눌러 말해 주세요. 인식된 문장은 메모 칸에 바로 입력됩니다.');
     };
 
-    const runVoiceCondense = async () => {
-        if (condensingVoice) return;
-        if (!hasReview) {
-            Alert.alert('메모가 필요합니다', '먼저 메모를 입력해 주세요.');
-            return;
-        }
-
-        const { data, error } = await condenseVoice(s.review);
-        if (error || !data) return;
-        setCondensedVoiceMemo(data);
-    };
-
-    const applyCondensedVoiceMemo = (mode) => {
-        if (!condensedVoiceMemo) return;
-        if (mode === 'replace') {
-            Alert.alert('현재 메모를 교체할까요?', '기존 내용은 사라집니다.', [
-                { text: '취소', style: 'cancel' },
-                {
-                    text: '교체',
-                    style: 'destructive',
-                    onPress: () => {
-                        up({ review: condensedVoiceMemo });
-                        setSelectedReviewVersion('original');
-                        setCondensedVoiceMemo('');
-                    },
-                },
-            ]);
-            return;
-        }
-
-        const separator = s.review.trim() ? '\n\n[현재 메모 축약]\n' : '';
-        up({ review: `${s.review.trim()}${separator}${condensedVoiceMemo}` });
-        setSelectedReviewVersion('original');
-        setCondensedVoiceMemo('');
-    };
-
-    const handleAIResult = useCallback((result) => {
-        setAiInsight(result || null);
-    }, []);
-
-    const clearAIInsight = useCallback(() => {
-        setAiInsight(null);
-    }, []);
-
     if (s.loading) return <ScreenContainer><LoadingSpinner /></ScreenContainer>;
 
     const theme = isOffMode
@@ -285,18 +234,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
                     <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 50 }]}>
                         <PremiumCard variant="walnut" style={styles.headerCard}>
-                            <TouchableOpacity
-                                onPress={() => navigation.goBack()}
-                                accessibilityRole="button"
-                                accessibilityLabel="뒤로가기"
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                style={styles.backButton}
-                            >
-                                <Text style={styles.backText}>← 뒤로</Text>
-                            </TouchableOpacity>
                             <ArchiveTitleHeader
                                 eyebrow={isOffMode ? 'PRIVATE DRAWER' : 'DRAWER NOTE'}
-                                title={isOffMode ? '개인 서랍 작성' : '기록 수정'}
+                                title={isOffMode ? '개인 서랍 작성' : '서랍 기록 정리'}
                                 subtitle={isOffMode ? '나만의 메모를 서랍에 보관합니다' : '타로 상담 기록을 정리합니다'}
                                 style={styles.archiveTitle}
                             />
@@ -333,69 +273,36 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
                             <View style={[styles.buttonRow, styles.voiceRow]}>
                                 <CustomButton
-                                    title={voiceInputAvailable ? '음성 입력 시작' : '음성 입력 불가'}
+                                    title={voiceInputAvailable ? '음성 입력 하기' : '음성 입력 불가'}
                                     onPress={startVoiceInput}
                                     variant={ACTION_VARIANT.SECONDARY}
                                     style={styles.rowButton}
+                                    textStyle={styles.compactButtonText}
                                     numberOfLines={1}
                                     allowFontScaling={false}
                                     disabled={isBusy}
-                                    accessibilityLabel="음성 입력 시작"
+                                    accessibilityLabel="음성 입력 하기"
                                 />
                                 <CustomButton
-                                    title={condensingVoice ? '축약 중...' : '현재 메모 축약'}
-                                    onPress={runVoiceCondense}
-                                    loading={condensingVoice}
-                                    disabled={!hasReview || s.saving || polishing || condensingVoice}
+                                    title={polishing ? '다듬는 중...' : 'AI로 다듬기'}
+                                    onPress={runPolish}
+                                    loading={polishing}
+                                    disabled={!hasReview || s.saving || polishing}
                                     variant={ACTION_VARIANT.SECONDARY}
                                     style={styles.rowButton}
+                                    textStyle={styles.compactButtonText}
                                     numberOfLines={1}
                                     allowFontScaling={false}
-                                    accessibilityLabel="현재 메모 축약"
+                                    accessibilityLabel="AI로 문장 다듬기"
                                 />
                             </View>
-                            <Text style={styles.helperText}>키보드 마이크로 입력한 내용과 직접 작성한 내용을 포함해 현재 메모 칸 전체를 정리합니다.</Text>
+                            <Text style={styles.helperText}>AI로 다듬기는 메모 의미를 유지하고 문장만 자연스럽게 정리합니다.</Text>
                             <Text style={styles.voiceUsageText}>
-                                {voiceCondenseRemaining == null ? '이번 달 메모 축약 30회 남음' : `이번 달 메모 축약 ${voiceCondenseRemaining}회 남음`}
+                                {polishRemaining == null ? '이번 달 AI 문장 다듬기 30회 남음' : `이번 달 AI 문장 다듬기 ${polishRemaining}회 남음`}
                             </Text>
-                            {!!voiceCondenseError && <Text style={styles.errorText}>※ {voiceCondenseError}</Text>}
-                            {!!condensedVoiceMemo && (
-                                <View style={styles.voiceCondensePanel}>
-                                    <Text style={styles.voiceCondenseTitle}>현재 메모 축약 결과</Text>
-                                    <Text style={styles.voiceCondenseDesc}>원하는 방식으로 기록에 반영하세요.</Text>
-                                    <Text style={styles.voiceCondenseText}>{condensedVoiceMemo}</Text>
-                                    <View style={styles.panelButtonRow}>
-                                        <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('replace')} accessibilityRole="button" accessibilityLabel="축약 결과로 기록 교체">
-                                            <Text style={styles.versionChipText}>기록으로 교체</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('append')} accessibilityRole="button" accessibilityLabel="축약 결과를 아래에 추가">
-                                            <Text style={styles.versionChipText}>아래에 추가</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.versionChip} onPress={() => setCondensedVoiceMemo('')} accessibilityRole="button" accessibilityLabel="축약 결과 닫기">
-                                            <Text style={styles.versionChipText}>닫기</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            )}
 
                             <View style={[styles.polishPanel, { borderColor: `${theme.c}55` }]}>
-                                <View style={styles.polishHeaderRow}>
-                                    <View style={styles.polishCopy}>
-                                        <Text style={[styles.polishTitle, { color: theme.c }]}>AI 문장 다듬기</Text>
-                                        <Text style={styles.helperText}>메모의 의미는 유지하고 문장만 자연스럽게 정리합니다.</Text>
-                                    </View>
-                                    <CustomButton
-                                        title={polishing ? '다듬는 중...' : 'AI로 다듬기'}
-                                        onPress={runPolish}
-                                        loading={polishing}
-                                        disabled={!hasReview || s.saving || condensingVoice || polishing}
-                                        variant={ACTION_VARIANT.SECONDARY}
-                                        style={styles.polishBtn}
-                                        numberOfLines={1}
-                                        allowFontScaling={false}
-                                        accessibilityLabel="AI로 문장 다듬기"
-                                    />
-                                </View>
+                                <Text style={[styles.polishTitle, { color: theme.c }]}>AI 문장 다듬기</Text>
                                 {!!polishError && <Text style={styles.errorText}>※ {polishError}</Text>}
                                 {!!polishedReview && (
                                     <View style={styles.compareWrap}>
@@ -458,21 +365,22 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             </View>
                         </PremiumCard>
 
-                        <AISummaryPanel
-                            reviewText={effectiveReview}
-                            visitDate={s.visit_date}
-                            initialResult={aiInsight}
-                            onResult={handleAIResult}
-                            onClear={clearAIInsight}
-                        />
-
                         <GoldActionButton
                             title={s.saving ? '저장 중...' : (isOffMode ? '개인 서랍에 저장' : '기록 저장')}
                             onPress={onSave}
-                            disabled={s.saving || polishing || condensingVoice}
+                            disabled={s.saving || polishing}
                             style={styles.saveBtn}
                             accessibilityLabel="서랍 기록 저장"
                         />
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            onPress={() => navigation.goBack()}
+                            disabled={s.saving || polishing}
+                            activeOpacity={0.75}
+                            style={[styles.bottomBackButton, (s.saving || polishing) && styles.disabled]}
+                        >
+                            <Text style={styles.bottomBackText}>서랍 기록으로 돌아가기</Text>
+                        </TouchableOpacity>
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
@@ -485,8 +393,6 @@ const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     scrollContent: { padding: 18, gap: 14 },
     headerCard: { paddingTop: 12, paddingBottom: 4, backgroundColor: DrawerTheme.walnutDark },
-    backButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 4, marginBottom: 2 },
-    backText: { color: DrawerTheme.mutedIvory, fontWeight: '800', fontSize: 13 },
     archiveTitle: { paddingBottom: 0 },
     formCard: { borderColor: 'rgba(224,184,90,0.24)' },
     sectionLabel: { color: DrawerTheme.brightGold, fontSize: 13, fontWeight: '900', marginBottom: 8, marginLeft: 2, letterSpacing: 0.8 },
@@ -500,27 +406,24 @@ const styles = StyleSheet.create({
     buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', minHeight: 50 },
     btnRow: { marginBottom: 0 },
     rowButton: { flex: 1, minWidth: 130, minHeight: 50, alignSelf: 'stretch' },
+    compactButtonText: { fontSize: 13, fontWeight: '700' },
     titleInput: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, color: DrawerTheme.ivory, fontSize: 14, borderWidth: 1, marginBottom: 16 },
     input: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 14, padding: 14, color: DrawerTheme.ivory, minHeight: 150, fontSize: 14, lineHeight: 21, borderWidth: 1 },
     voiceRow: { marginTop: 10, marginBottom: 8 },
     voiceUsageText: { color: DrawerTheme.mutedIvory, fontSize: 12, marginTop: 2, marginLeft: 2, opacity: 0.82 },
-    voiceCondensePanel: { marginTop: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.35)', borderRadius: 12, padding: 12, backgroundColor: 'rgba(9,0,13,0.34)' },
-    voiceCondenseTitle: { color: DrawerTheme.goldBright, fontWeight: '800', fontSize: 14, marginBottom: 4 },
-    voiceCondenseDesc: { color: DrawerTheme.mutedIvory, fontSize: 12, marginBottom: 8 },
-    voiceCondenseText: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 20, marginBottom: 8 },
     whiteText: { color: DrawerTheme.ivory, fontWeight: 'bold', fontSize: 18, lineHeight: 20 },
     saveBtn: { marginTop: 4, minHeight: 54 },
     polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 14, padding: 12, backgroundColor: 'rgba(9,0,13,0.32)' },
-    polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-    polishCopy: { flex: 1, minWidth: 180 },
     polishTitle: { fontWeight: '900', fontSize: 14, marginBottom: 4 },
-    polishBtn: { minWidth: 120, minHeight: 44 },
     errorText: { color: '#ffb4b4', marginTop: 8, fontSize: 12, lineHeight: 17 },
     compareWrap: { marginTop: 10, flexDirection: 'row', gap: 8 },
     panelButtonRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     versionChip: { flex: 1, minWidth: 92, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(244,232,208,0.05)' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
     versionChipText: { color: DrawerTheme.ivory, fontSize: 12, fontWeight: '700' },
+    bottomBackButton: { alignSelf: 'center', marginTop: 4, paddingHorizontal: 14, paddingVertical: 10 },
+    bottomBackText: { color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
+    disabled: { opacity: 0.45 },
 });
 
 export default VisitDetailScreen;

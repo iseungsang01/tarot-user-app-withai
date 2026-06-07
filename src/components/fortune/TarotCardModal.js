@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,11 +15,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { ArchiveTitleHeader, GoldActionButton } from '../common/PremiumUI';
 import { toDisplayImageUri } from '../../utils/imageUri';
+import { useCondenseVoiceMemo } from '../../hooks/useAI';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) => {
+export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete, onApplyCondensedMemo }) => {
+  const [condensedMemo, setCondensedMemo] = useState('');
+  const {
+    loading: condensing,
+    error: condenseError,
+    remaining: condenseRemaining,
+    condense,
+  } = useCondenseVoiceMemo();
+
+  useEffect(() => {
+    if (isVisible) setCondensedMemo('');
+  }, [isVisible, visit?.id]);
+
   if (!visit) return null;
 
   const isManual = visit.is_manual;
@@ -28,6 +41,42 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
     : '';
   const imageUri = toDisplayImageUri(visit.card_image);
   const title = visit.title?.trim() ? visit.title : `${displayDate}의 기록`;
+  const hasReview = !!visit.card_review?.trim();
+
+  const handleCondense = async () => {
+    if (condensing) return;
+    if (!hasReview) {
+      Alert.alert('메모가 필요합니다', '축약할 기록 내용이 없습니다.');
+      return;
+    }
+
+    const { data, error } = await condense(visit.card_review);
+    if (error || !data) return;
+    setCondensedMemo(data);
+  };
+
+  const applyCondensed = (mode) => {
+    if (!condensedMemo) return;
+
+    const apply = async () => {
+      const current = visit.card_review?.trim() || '';
+      const nextReview = mode === 'replace'
+        ? condensedMemo
+        : `${current}${current ? '\n\n[메모 축약]\n' : ''}${condensedMemo}`;
+      await onApplyCondensedMemo?.(visit, nextReview);
+      setCondensedMemo('');
+    };
+
+    if (mode === 'replace') {
+      Alert.alert('현재 기록을 축약본으로 교체할까요?', '기존 메모 내용은 축약본으로 바뀝니다.', [
+        { text: '취소', style: 'cancel' },
+        { text: '교체', style: 'destructive', onPress: apply },
+      ]);
+      return;
+    }
+
+    apply();
+  };
 
   const handleDeletePress = () => {
     Alert.alert(
@@ -132,6 +181,39 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete }) 
                 onPress={() => onEdit(visit.id)}
                 style={styles.primaryButton}
               />
+
+              <TouchableOpacity
+                style={[styles.condenseButton, (!hasReview || condensing) && styles.disabled]}
+                onPress={handleCondense}
+                disabled={!hasReview || condensing}
+                hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="메모 축약"
+              >
+                <Text style={styles.condenseButtonText}>{condensing ? '메모 축약 중...' : '메모 축약'}</Text>
+                <Text style={styles.condenseUsageText}>
+                  {condenseRemaining == null ? '이번 달 30회 남음' : `이번 달 ${condenseRemaining}회 남음`}
+                </Text>
+              </TouchableOpacity>
+
+              {!!condenseError && <Text style={styles.errorText}>※ {condenseError}</Text>}
+              {!!condensedMemo && (
+                <View style={styles.condensePanel}>
+                  <Text style={styles.condensePanelTitle}>메모 축약 결과</Text>
+                  <Text style={styles.condensePanelText}>{condensedMemo}</Text>
+                  <View style={styles.condenseActions}>
+                    <TouchableOpacity style={styles.condenseChip} onPress={() => applyCondensed('replace')} accessibilityRole="button" accessibilityLabel="축약 결과로 기록 교체">
+                      <Text style={styles.condenseChipText}>기록으로 교체</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.condenseChip} onPress={() => applyCondensed('append')} accessibilityRole="button" accessibilityLabel="축약 결과를 기록 아래에 추가">
+                      <Text style={styles.condenseChipText}>아래에 추가</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.condenseChip} onPress={() => setCondensedMemo('')} accessibilityRole="button" accessibilityLabel="축약 결과 닫기">
+                      <Text style={styles.condenseChipText}>닫기</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
 
               <TouchableOpacity
                 style={styles.secondaryButton}
@@ -269,6 +351,40 @@ const styles = StyleSheet.create({
   reviewText: { fontSize: 15, color: DrawerTheme.ivory, lineHeight: 25 },
   actionArea: { gap: 14 },
   primaryButton: { minHeight: 54 },
+  condenseButton: {
+    paddingVertical: 13,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.38)',
+    backgroundColor: 'rgba(184,135,53,0.16)',
+  },
+  condenseButtonText: { color: DrawerTheme.brightGold, fontSize: 14, fontWeight: '900' },
+  condenseUsageText: { color: DrawerTheme.mutedIvory, fontSize: 11, fontWeight: '700', marginTop: 3, opacity: 0.82 },
+  condensePanel: {
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.35)',
+    borderRadius: 14,
+    padding: 13,
+    backgroundColor: 'rgba(9,0,13,0.36)',
+  },
+  condensePanelTitle: { color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '900', marginBottom: 8 },
+  condensePanelText: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 22 },
+  condenseActions: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  condenseChip: {
+    flex: 1,
+    minWidth: 88,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(244,232,208,0.18)',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    backgroundColor: 'rgba(244,232,208,0.05)',
+  },
+  condenseChipText: { color: DrawerTheme.ivory, fontSize: 12, fontWeight: '800' },
+  errorText: { color: '#ffb4b4', fontSize: 12, lineHeight: 17 },
+  disabled: { opacity: 0.5 },
   secondaryButton: {
     paddingVertical: 13,
     alignItems: 'center',

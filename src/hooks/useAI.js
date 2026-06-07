@@ -264,10 +264,18 @@ export const usePolishReview = () => {
     const [result, setResult] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [remaining, setRemaining] = useState(null);
     const abortControllerRef = useRef(null);
 
+    const refreshRemaining = useCallback(async () => {
+        const next = await getRemainingDrawerAIUsage('polishReview');
+        setRemaining(next);
+        return next;
+    }, []);
+
     const polish = useCallback(async (reviewText) => {
-        if (!reviewText?.trim()) return;
+        if (loading) return { data: null, error: null };
+        if (!reviewText?.trim()) return { data: null, error: new Error('다듬을 메모가 없습니다.') };
 
         // Cancel previous request if any is pending
         if (abortControllerRef.current) {
@@ -281,6 +289,14 @@ export const usePolishReview = () => {
         setError(null);
 
         try {
+            const canUse = await canUseDrawerAI('polishReview');
+            if (!canUse) {
+                const limitError = new Error('이번 달 AI 문장 다듬기 사용 횟수를 모두 사용했습니다.');
+                setError(limitError.message);
+                await refreshRemaining();
+                return { data: null, error: limitError };
+            }
+
             const { data, error: apiError } = await polishReviewText(reviewText, controller.signal);
 
             if (abortControllerRef.current === controller) {
@@ -288,20 +304,27 @@ export const usePolishReview = () => {
                     if (!isAbortError(apiError)) {
                         setError(apiError.message || 'AI 문장 다듬기 중 오류가 발생했습니다.');
                     }
+                    return { data: null, error: apiError };
                 } else {
-                    setResult(data || '');
+                    const polished = data || '';
+                    await incrementDrawerAIUsage('polishReview');
+                    await refreshRemaining();
+                    setResult(polished);
+                    return { data: polished, error: null };
                 }
             }
         } catch (err) {
             if (abortControllerRef.current === controller && !isAbortError(err)) {
                 setError(err.message || 'AI 문장 다듬기 중 오류가 발생했습니다.');
             }
+            return { data: null, error: err };
         } finally {
             if (abortControllerRef.current === controller) {
                 setLoading(false);
             }
         }
-    }, []);
+        return { data: null, error: null };
+    }, [loading, refreshRemaining]);
 
     const reset = useCallback(() => {
         if (abortControllerRef.current) {
@@ -315,12 +338,13 @@ export const usePolishReview = () => {
 
     // Cleanup on unmount
     useEffect(() => {
+        refreshRemaining();
         return () => {
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
             }
         };
-    }, []);
+    }, [refreshRemaining]);
 
-    return { result, loading, error, polish, reset };
+    return { result, loading, error, remaining, refreshRemaining, polish, reset };
 };

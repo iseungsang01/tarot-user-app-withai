@@ -55,6 +55,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         toggleSelection,
         handleLongPress,
         handleDeleteVisit,
+        handleUpdateVisitReview,
         handleMultiDelete,
     } = actions;
 
@@ -256,6 +257,7 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                     });
                 }}
                 onDelete={handleDeleteVisit}
+                onApplyCondensedMemo={handleUpdateVisitReview}
             />
         </CellarBackground>
     );

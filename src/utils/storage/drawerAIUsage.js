@@ -2,6 +2,7 @@ import { coreStorage, STORAGE_KEYS } from './core';
 
 export const DRAWER_AI_USAGE_LIMITS = {
   voiceCondense: 30,
+  polishReview: 30,
   historySummary: 30,
 };
 
@@ -20,6 +21,7 @@ const normalizeFeatureCount = (value) => {
 
 const normalizeMonthUsage = (usage = {}) => ({
   voiceCondense: normalizeFeatureCount(usage.voiceCondense),
+  polishReview: normalizeFeatureCount(usage.polishReview),
   historySummary: normalizeFeatureCount(usage.historySummary),
 });
 

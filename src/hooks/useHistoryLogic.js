@@ -198,6 +198,37 @@ export const useHistoryLogic = (navigation) => {
         }
     }, [selectedItem, displayDataById, loadLocalData, deleteVisit, refreshCustomer]);
 
+    const handleUpdateVisitReview = useCallback(async (visit, nextReview) => {
+        if (!visit?.id) {
+            Alert.alert('오류', '수정할 항목을 찾을 수 없습니다.');
+            return;
+        }
+
+        try {
+            if (visit.is_manual) {
+                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
+                const nextList = list.map((item) => (
+                    item.id === visit.id ? { ...item, card_review: nextReview } : item
+                ));
+                await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, nextList);
+                await loadLocalData();
+            } else {
+                const { error } = await handleApiCall(
+                    'HistoryScreen.updateReview',
+                    () => visitService.updateVisit(visit.id, { card_review: nextReview }),
+                );
+                if (error) throw error;
+                await refetch();
+            }
+
+            setSelectedItem((prev) => (prev?.id === visit.id ? { ...prev, card_review: nextReview } : prev));
+            showSuccessAlert('UPDATE', Alert, '메모 축약 결과가 기록에 반영되었습니다.');
+        } catch (error) {
+            console.error('메모 축약 저장 오류:', error);
+            Alert.alert('오류', '메모 축약 결과를 저장하는 중 문제가 발생했습니다.');
+        }
+    }, [loadLocalData, refetch]);
+
     const handleMultiDelete = useCallback(async () => {
         if (selectedIds.size === 0) {
             Alert.alert('선택 없음', '삭제할 항목을 선택해주세요.');
@@ -284,6 +315,7 @@ export const useHistoryLogic = (navigation) => {
             toggleSelection,
             handleLongPress,
             handleDeleteVisit,
+            handleUpdateVisitReview,
             handleMultiDelete
         }
     };
