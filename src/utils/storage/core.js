@@ -203,8 +203,9 @@ export const coreStorage = {
     const data = await this.get(key) || {};
     const beforeCount = Object.keys(data).length;
 
+    const validIdSet = new Set((validIds || []).map((id) => String(id)));
     const filtered = Object.fromEntries(
-      Object.entries(data).filter(([id]) => validIds.includes(parseInt(id)))
+      Object.entries(data).filter(([id]) => validIdSet.has(String(id)))
     );
 
     const afterCount = Object.keys(filtered).length;

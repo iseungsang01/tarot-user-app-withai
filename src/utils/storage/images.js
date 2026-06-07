@@ -19,7 +19,7 @@ const updateImageCacheMetadata = async (visitId, metadata) => {
     cache[visitId] = metadata;
     await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
   } catch (error) {
-    console.error('??? ?? ????? ?? ??:', error);
+    console.error('Image cache metadata save error:', error);
   }
 };
 
@@ -29,7 +29,7 @@ const deleteImageCacheMetadata = async (visitId) => {
     delete cache[visitId];
     await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
   } catch (error) {
-    console.error('??? ?? ????? ?? ??:', error);
+    console.error('Image cache metadata delete error:', error);
   }
 };
 
@@ -202,7 +202,8 @@ export const imageStorage = {
     const imageCount = await coreStorage._cleanup(STORAGE_KEYS.CARD_IMAGES, ids);
     const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
     const beforeMetaCount = Object.keys(cache).length;
-    const filtered = Object.fromEntries(Object.entries(cache).filter(([id]) => ids.includes(parseInt(id))));
+    const validIdSet = new Set((ids || []).map((id) => String(id)));
+    const filtered = Object.fromEntries(Object.entries(cache).filter(([id]) => validIdSet.has(String(id))));
     const removedMetaCount = beforeMetaCount - Object.keys(filtered).length;
     if (removedMetaCount > 0) {
       await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, filtered);

@@ -45,11 +45,20 @@ AI_PROXY_REQUIRE_AUTH=true
 
 `assets/card` is intentionally local and ignored by Git because it can contain large/static card image assets. Supply the card image files locally before running production Android builds. Do not remove static asset usage solely because the files are not tracked.
 
+Before a local production Android build/upload, run:
+
+```bash
+npm run check:assets
+```
+
+If the project uses EAS cloud builds, `assets/card` must be supplied in the cloud build environment as well, for example through Git LFS, a private package, a prebuild download step, or another reproducible asset delivery process.
+
 ## Validation
 
 ```bash
 npm test
 npm run security-check
+npm run check:assets # only when production card images are supplied locally
 npm run typecheck:app
 npm run typecheck:edge # requires Deno
 ```

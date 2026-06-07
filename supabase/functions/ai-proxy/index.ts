@@ -33,6 +33,49 @@ const ALLOWED_TASKS = new Set([
 const MAX_MESSAGE_COUNT = 20;
 const MAX_TOTAL_CONTENT_LENGTH = 60000;
 
+const QUOTA_FEATURE_BY_TASK: Record<string, string> = {
+  condenseVoiceMemo: 'voiceCondense',
+  analyzeVisitHistory: 'historySummary',
+};
+
+async function checkAndIncrementQuota(adminClient: any, token: string, taskName: string) {
+  const featureKey = QUOTA_FEATURE_BY_TASK[taskName];
+  if (!featureKey) return null;
+
+  const { data, error } = await adminClient.rpc('increment_my_ai_monthly_usage', {
+    p_session_token: token,
+    p_feature_key: featureKey,
+  });
+
+  if (error) {
+    console.error('AI quota RPC failed:', error);
+    throw new Error('사용량 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+
+  if (!data?.success || data.allowed === false) {
+    return {
+      success: Boolean(data?.success),
+      allowed: false,
+      feature_key: data?.feature_key || featureKey,
+      limit: Number(data?.limit || 0),
+      used: Number(data?.used || 0),
+      remaining: Number(data?.remaining || 0),
+      reset_month: data?.reset_month || null,
+      message: data?.message || '이번 달 AI 사용 횟수를 모두 사용했습니다.',
+    };
+  }
+
+  return {
+    success: true,
+    allowed: true,
+    feature_key: data.feature_key || featureKey,
+    limit: Number(data.limit || 0),
+    used: Number(data.used || 0),
+    remaining: Number(data.remaining || 0),
+    reset_month: data.reset_month || null,
+  };
+}
+
 function jsonError(message: string, status = 400) {
   return new Response(
     JSON.stringify({ error: message }),
@@ -294,47 +337,55 @@ Deno.serve(async (req) => {
     const { messages, options, task } = body;
     const taskName = typeof task === 'string' ? task : '';
     if (!ALLOWED_TASKS.has(taskName)) {
-      return jsonError('???? ?? AI ?????.', 400);
+      return jsonError('지원하지 않는 AI 작업입니다.', 400);
     }
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return jsonError('messages? 1? ?? ?????.', 400);
+      return jsonError('messages는 1개 이상이어야 합니다.', 400);
     }
 
     if (messages.length > MAX_MESSAGE_COUNT) {
-      return jsonError(`???? ?? ${MAX_MESSAGE_COUNT}??? ?? ? ????.`, 400);
+      return jsonError(`messages는 최대 ${MAX_MESSAGE_COUNT}개까지 보낼 수 있습니다.`, 400);
     }
 
     let totalContentLength = 0;
     for (const msg of messages) {
       if (!msg || typeof msg !== 'object') {
-        return jsonError('? ???? ???? ???.', 400);
+        return jsonError('각 message는 객체여야 합니다.', 400);
       }
       if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
-        return jsonError('???? ?? role???. user, assistant, system ? ???? ???.', 400);
+        return jsonError('message role이 올바르지 않습니다. user, assistant, system 중 하나여야 합니다.', 400);
       }
       if (typeof msg.content !== 'string' || msg.content.trim() === '') {
-        return jsonError('??? content? ?? ??? ???? ????.', 400);
+        return jsonError('message content는 비어 있지 않은 문자열이어야 합니다.', 400);
       }
       if (msg.content.length > 50000) {
-        return jsonError('??? ??? ?? ???. ?? 50000????.', 400);
+        return jsonError('message content가 너무 깁니다. 최대 50000자입니다.', 400);
       }
       totalContentLength += msg.content.length;
       if (totalContentLength > MAX_TOTAL_CONTENT_LENGTH) {
-        return jsonError(`?? ??? ??? ?? ${MAX_TOTAL_CONTENT_LENGTH}????.`, 400);
+        return jsonError(`전체 message content가 너무 깁니다. 최대 ${MAX_TOTAL_CONTENT_LENGTH}자입니다.`, 400);
       }
     }
 
     const requestedTemperature = Number(options?.temperature ?? 0.7);
     const requestedMaxTokens = Number(options?.maxTokens ?? 1000);
     if (!Number.isFinite(requestedTemperature) || !Number.isFinite(requestedMaxTokens)) {
-      return jsonError('temperature? maxTokens? ??? ???? ???.', 400);
+      return jsonError('temperature와 maxTokens는 숫자여야 합니다.', 400);
     }
     const temperature = Math.min(1, Math.max(0, requestedTemperature));
     const maxTokens = Math.min(1500, Math.max(100, Math.floor(requestedMaxTokens)));
+    const quota = await checkAndIncrementQuota(adminClient, token, taskName);
+    if (quota?.allowed === false) {
+      return new Response(
+        JSON.stringify({ error: quota.message, quota }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const googleResult = await callGoogle(messages, temperature, maxTokens, taskName);
 
-    return new Response(JSON.stringify(googleResult), {
+    return new Response(JSON.stringify({ ...googleResult, quota }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

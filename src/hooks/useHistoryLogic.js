@@ -52,11 +52,27 @@ export const useHistoryLogic = (navigation) => {
     const loadLocalData = useCallback(async () => {
         try {
             const localData = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
-            const formattedNotes = localData.map(v => ({ ...v, is_manual: true }));
+            const formattedNotes = await Promise.all(localData.map(async (v) => ({
+                ...v,
+                is_manual: true,
+                card_image: await storage.getCardImage(v.id) || v.card_image || null,
+                card_review: await storage.getCardReview(v.id) || v.card_review || '',
+                title: await storage.getCardTitle(v.id) || v.title || v.drawer_title || '',
+                ai_insight: await storage.getCardAIInsight(v.id) || v.ai_insight || null,
+            })));
             setPersonalNotes(formattedNotes);
         } catch (e) {
             console.error('Failed to load local data', e);
         }
+    }, []);
+
+    const cleanupLocalVisitArtifacts = useCallback(async (visitId) => {
+        await Promise.allSettled([
+            storage.deleteCardImage(visitId),
+            storage.deleteCardReview(visitId),
+            storage.deleteCardTitle(visitId),
+            storage.deleteCardAIInsight(visitId),
+        ]);
     }, []);
 
     const loadStats = useCallback(async (signal) => {
@@ -184,6 +200,7 @@ export const useHistoryLogic = (navigation) => {
                 const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
                 const filtered = list.filter(v => v.id !== visitId);
                 await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, filtered);
+                await cleanupLocalVisitArtifacts(visitId);
                 await loadLocalData();
             } else {
                 await deleteVisit(visitId);
@@ -196,7 +213,7 @@ export const useHistoryLogic = (navigation) => {
             Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
             console.error(error);
         }
-    }, [selectedItem, displayDataById, loadLocalData, deleteVisit, refreshCustomer]);
+    }, [selectedItem, displayDataById, cleanupLocalVisitArtifacts, loadLocalData, deleteVisit, refreshCustomer]);
 
     const handleMultiDelete = useCallback(async () => {
         if (selectedIds.size === 0) {
@@ -232,6 +249,7 @@ export const useHistoryLogic = (navigation) => {
                                 const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
                                 const filtered = list.filter(v => !localIds.includes(v.id));
                                 await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, filtered);
+                                await Promise.allSettled(localIds.map((id) => cleanupLocalVisitArtifacts(id)));
                                 await loadLocalData();
                             }
 
@@ -248,7 +266,7 @@ export const useHistoryLogic = (navigation) => {
                 }
             ]
         );
-    }, [selectedIds, displayDataById, deleteMultipleVisits, loadLocalData, refreshCustomer]);
+    }, [selectedIds, displayDataById, deleteMultipleVisits, cleanupLocalVisitArtifacts, loadLocalData, refreshCustomer]);
 
     return {
         state: {

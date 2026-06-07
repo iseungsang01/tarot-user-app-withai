@@ -69,12 +69,12 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 }
 
                 up({
-                    uri: item.card_image,
-                    title: item.title || item.drawer_title || '',
-                    review: item.card_review || '',
+                    uri: await storage.getCardImage(visitId) || item.card_image || null,
+                    title: await storage.getCardTitle(visitId) || item.title || item.drawer_title || '',
+                    review: await storage.getCardReview(visitId) || item.card_review || '',
                     visit_date: item.visit_date,
                 });
-                setAiInsight(item.ai_insight || null);
+                setAiInsight(await storage.getCardAIInsight(visitId) || item.ai_insight || null);
                 setSelectedReviewVersion('original');
                 resetPolish();
                 return;
@@ -153,15 +153,29 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 // --- [OFF 모드] 로컬 저장 로직 ---
                 let list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
 
-                const localPayload = { ...payload };
+                const localId = s.isEdit ? visitId : `local_${Date.now()}`;
+                const localPayload = {
+                    id: localId,
+                    visit_date: payload.visit_date,
+                    customer_id: payload.customer_id,
+                    is_manual: true,
+                };
 
                 if (s.isEdit) {
-                    list = list.map(v => v.id === visitId ? { ...v, ...localPayload } : v);
+                    list = list.map(v => v.id === localId ? { ...v, ...localPayload } : v);
                 } else {
-                    list = [{ ...localPayload, id: `local_${Date.now()}` }, ...list];
+                    list = [localPayload, ...list];
                 }
 
                 await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, list);
+                if (payload.card_image) await storage.saveCardImage(localId, payload.card_image);
+                else await storage.deleteCardImage(localId);
+                if (payload.card_review) await storage.saveCardReview(localId, payload.card_review);
+                else await storage.deleteCardReview(localId);
+                if (payload.title) await storage.saveCardTitle(localId, payload.title);
+                else await storage.deleteCardTitle(localId);
+                if (payload.ai_insight) await storage.saveCardAIInsight(localId, payload.ai_insight);
+                else await storage.deleteCardAIInsight(localId);
             } else {
                 // --- [ON 모드] 서버 저장 로직 ---
                 // 서버 데이터는 이미 visit_history에 행(Row)이 있으므로 보통 updateVisit만 수행합니다.

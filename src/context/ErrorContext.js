@@ -1,26 +1,32 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+﻿import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
 import { errorEmitter } from '../utils/errorEmitter';
 
 const ErrorContext = createContext();
 
 export const ErrorProvider = ({ children }) => {
   const [error, setError] = useState(null);
+  const hideTimeoutRef = useRef(null);
 
   const hideError = useCallback(() => {
-    console.log('✅ [ErrorContext] 에러 숨김');
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
     setError(null);
   }, []);
 
   const showError = useCallback((errorInfo) => {
-    console.log('🔴 [ErrorContext] 에러 표시:', errorInfo);
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     setError(errorInfo);
-    setTimeout(hideError, 3000);
+    hideTimeoutRef.current = setTimeout(hideError, 3000);
   }, [hideError]);
 
-  // errorEmitter 구독: 서비스/유틸 레이어에서 발행한 에러를 Context로 연결
   useEffect(() => {
     const unsubscribe = errorEmitter.subscribe(showError);
-    return unsubscribe;
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+      unsubscribe();
+    };
   }, [showError]);
 
   return (

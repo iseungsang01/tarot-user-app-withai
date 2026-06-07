@@ -16,7 +16,7 @@ const resetLoginGuard = async () => storage.remove(LOGIN_GUARD_KEY);
 
 const normalizeCustomer = (payload) => payload?.customer || payload?.profile || payload;
 
-const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType = 'customer_rpc_session' }) => {
+const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType = 'customer_rpc_session', expiresAt = null }) => {
   if (!customer || !sessionToken) return null;
 
   if (!customer.isGuest && customer.id) {
@@ -27,6 +27,7 @@ const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType =
     token: sessionToken,
     customerId: customer.id,
     type: sessionType,
+    expiresAt,
     savedAt: new Date().toISOString(),
   });
   await storage.save(CUSTOMER_KEY, customer);
@@ -177,10 +178,15 @@ export const authService = {
       }
 
       if (session.type === 'ai_guest_session' || session.customerId === 'guest') {
+        if (session.expiresAt && new Date(session.expiresAt).getTime() <= Date.now()) {
+          await this.logout();
+          return null;
+        }
+
         const storedGuest = await storage.get(CUSTOMER_KEY);
         if (storedGuest?.isGuest) return storedGuest;
 
-        const guestUser = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
+        const guestUser = { id: 'guest', nickname: '\uAC8C\uC2A4\uD2B8', isGuest: true, current_stamps: 0, visit_count: 0 };
         await storage.save(CUSTOMER_KEY, guestUser);
         return guestUser;
       }
@@ -227,18 +233,7 @@ export const authService = {
   },
 
   async updateNickname(customerId, newNickname) {
-    try {
-      const { data, error } = await supabaseClient.updateMyNickname({
-        p_id: customerId,
-        p_new_nickname: newNickname,
-      });
-
-      if (error) throw error;
-      return { success: data };
-    } catch (error) {
-      console.error('Update Nickname Error:', error);
-      return { success: false, message: error.message };
-    }
+    return { success: false, message: '닉네임 변경은 session-token 기반 RPC가 준비된 뒤 다시 연결해야 합니다.' };
   },
 
   async register(phoneNumber, password, nickname = '') {
@@ -289,6 +284,7 @@ export const authService = {
         customer: guestUser,
         sessionToken: resultData.session_token,
         sessionType: 'ai_guest_session',
+        expiresAt: resultData.expires_at || null,
       });
 
       return { data: savedGuest, error: null };
@@ -299,15 +295,6 @@ export const authService = {
   },
 
   async deleteAccount(customerId) {
-    try {
-      const { data, error } = await supabaseClient.deleteMyAccount({ p_id: customerId });
-      if (error) throw error;
-
-      if (data) await this.logout();
-      return { success: data };
-    } catch (error) {
-      console.error('Delete Account Error:', error);
-      return { success: false, message: error.message };
-    }
+    return { success: false, message: '계정 삭제는 customerService.deleteCustomer의 session-token RPC를 사용해야 합니다.' };
   },
 };

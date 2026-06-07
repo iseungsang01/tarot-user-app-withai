@@ -79,7 +79,7 @@ web-build/
 
 # Miscellaneous
 *.log
-*.lock
+/.yarn/*.lock
 .yarn/
 
 # SQL & Database Docs

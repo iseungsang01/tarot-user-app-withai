@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
     initializing: true,
     loggingIn: false,
     loggingOut: false,
+    registering: false,
   });
 
   const handleAuthFailure = useCallback(async (authError = {}) => {
@@ -110,6 +111,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (phoneNumber, password, nickname) => {
+    setLoadingState(prev => ({ ...prev, registering: true }));
     try {
       const { data, error } = await authService.register(phoneNumber, password, nickname);
       if (data) setCustomer(data); // 가입 즉시 로그인 상태로 전환
@@ -117,10 +119,12 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       logError('AuthContext.register', error, { phoneNumber });
       return { data: null, error: { message: '회원가입 중 오류가 발생했습니다.' } };
+    } finally {
+      setLoadingState(prev => ({ ...prev, registering: false }));
     }
   };
 
-  const loading = loadingState.initializing || loadingState.loggingIn || loadingState.loggingOut;
+  const loading = loadingState.initializing || loadingState.loggingIn || loadingState.loggingOut || loadingState.registering;
 
   return (
     <AuthContext.Provider value={{ customer, loading, loadingState, login, logout, refreshCustomer, guestLogin, register }}>

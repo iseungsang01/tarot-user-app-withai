@@ -295,7 +295,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     const title = visit.title
         || visit.drawer_title
         || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 28)
-        || (isManualMode ? '?? ??' : '??? ??');
+        || (isManualMode ? '개인 메모' : '상담 기록');
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';
