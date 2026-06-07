@@ -25,6 +25,8 @@ export const CustomButton = ({
   numberOfLines,
   allowFontScaling,
   ellipsizeMode,
+  accessibilityLabel,
+  accessibilityRole = 'button',
 }) => {
   const VARIANT_TOKENS = {
     primary: {
@@ -55,6 +57,9 @@ export const CustomButton = ({
       disabled={disabled || loading}
       activeOpacity={0.8}
       style={style}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
     >
       <LinearGradient
         colors={tokens.gradient}

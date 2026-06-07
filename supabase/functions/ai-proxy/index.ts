@@ -102,6 +102,17 @@ type GoogleGenerationConfig = {
 };
 
 const responseSchemasByTask: Record<string, Record<string, unknown>> = {
+  condenseVoiceMemo: {
+    type: 'object',
+    properties: {
+      condensed: {
+        type: 'string',
+        description: '3 to 6 word short Korean condensed memo',
+      },
+    },
+    required: ['condensed'],
+    additionalProperties: false,
+  },
   getDailyFortune: {
     type: 'object',
     properties: {
@@ -148,11 +159,7 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000, 
     }));
 
   if (contents.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: '대화를 시작합니다.' }] });
-  }
-
-  if (system && contents[0]?.role === 'user') {
-    contents[0].parts[0].text = `[시스템 지침]\n${system}\n\n---\n\n${contents[0].parts[0].text}`;
+    contents.push({ role: 'user', parts: [{ text: 'Please enter memo content.' }] });
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent?key=${GOOGLE_API_KEY}`;
@@ -161,9 +168,33 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000, 
     temperature,
     maxOutputTokens: maxTokens,
   };
+  const systemInstruction = system ? { role: 'system', parts: [{ text: system }] } : undefined;
   const requestBody = {
     contents,
     generationConfig,
+    ...(systemInstruction ? { systemInstruction } : {}),
+  };
+
+  const buildInlineSystemFallbackBody = () => {
+    const fallbackContents = contents.map((content, index) => {
+      if (index !== 0 || content.role !== 'user' || !system) return content;
+      const separator = task === 'condenseVoiceMemo'
+        ? '[The following is a system instruction and is not memo text to condense]'
+        : '[System instruction]';
+      return {
+        ...content,
+        parts: [{ text: `${separator}\n${system}\n\n[User input]\n${content.parts[0].text}` }],
+      };
+    });
+
+    return {
+      contents: fallbackContents,
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+        responseMimeType: 'application/json',
+      },
+    };
   };
 
   const response = await fetch(url, {
@@ -177,18 +208,21 @@ async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000, 
     const message = payload?.error?.message || `Google AI request failed with status ${response.status}`;
     const schemaRejected = generationConfig.responseJsonSchema &&
       /response(Json)?Schema|schema|generationConfig/i.test(message);
+    const systemInstructionRejected = systemInstruction &&
+      /systemInstruction|system instruction/i.test(message);
 
-    if (schemaRejected) {
+    if (schemaRejected || systemInstructionRejected) {
       const fallbackResponse = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(systemInstructionRejected ? buildInlineSystemFallbackBody() : {
           contents,
           generationConfig: {
             temperature,
             maxOutputTokens: maxTokens,
             responseMimeType: 'application/json',
           },
+          ...(systemInstruction ? { systemInstruction } : {}),
         }),
       });
 
@@ -242,11 +276,10 @@ Deno.serve(async (req) => {
     requireEnv('SUPABASE_URL', SUPABASE_URL);
     requireEnv('SUPABASE_ANON_KEY', SUPABASE_ANON_KEY);
     requireEnv('SUPABASE_SERVICE_ROLE_KEY', SUPABASE_SERVICE_ROLE_KEY);
-
     const token = getCustomerSessionToken(req);
     if (REQUIRE_AUTH && !token) {
       return new Response(
-        JSON.stringify({ error: '인증 정보가 필요합니다.' }),
+        JSON.stringify({ error: 'Authentication information is required.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -286,7 +319,7 @@ Deno.serve(async (req) => {
       body = await req.json();
     } catch {
       return new Response(
-        JSON.stringify({ error: '잘못된 요청 형식입니다. JSON 데이터가 필요합니다.' }),
+        JSON.stringify({ error: 'Invalid request format. JSON data is required.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -294,41 +327,41 @@ Deno.serve(async (req) => {
     const { messages, options, task } = body;
     const taskName = typeof task === 'string' ? task : '';
     if (!ALLOWED_TASKS.has(taskName)) {
-      return jsonError('???? ?? AI ?????.', 400);
+      return jsonError('Unsupported AI task.', 400);
     }
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return jsonError('messages? 1? ?? ?????.', 400);
+      return jsonError('messages must contain at least one item.', 400);
     }
 
     if (messages.length > MAX_MESSAGE_COUNT) {
-      return jsonError(`???? ?? ${MAX_MESSAGE_COUNT}??? ?? ? ????.`, 400);
+      return jsonError(`messages can contain at most ${MAX_MESSAGE_COUNT} items.`, 400);
     }
 
     let totalContentLength = 0;
     for (const msg of messages) {
       if (!msg || typeof msg !== 'object') {
-        return jsonError('? ???? ???? ???.', 400);
+        return jsonError('Each message must be an object.', 400);
       }
       if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
-        return jsonError('???? ?? role???. user, assistant, system ? ???? ???.', 400);
+        return jsonError('Invalid message role. Use one of: user, assistant, system.', 400);
       }
       if (typeof msg.content !== 'string' || msg.content.trim() === '') {
-        return jsonError('??? content? ?? ??? ???? ????.', 400);
+        return jsonError('Message content cannot be empty.', 400);
       }
       if (msg.content.length > 50000) {
-        return jsonError('??? ??? ?? ???. ?? 50000????.', 400);
+        return jsonError('Message content is too long. Maximum length is 50000 characters.', 400);
       }
       totalContentLength += msg.content.length;
       if (totalContentLength > MAX_TOTAL_CONTENT_LENGTH) {
-        return jsonError(`?? ??? ??? ?? ${MAX_TOTAL_CONTENT_LENGTH}????.`, 400);
+        return jsonError(`Total message length cannot exceed ${MAX_TOTAL_CONTENT_LENGTH} characters.`, 400);
       }
     }
 
     const requestedTemperature = Number(options?.temperature ?? 0.7);
     const requestedMaxTokens = Number(options?.maxTokens ?? 1000);
     if (!Number.isFinite(requestedTemperature) || !Number.isFinite(requestedMaxTokens)) {
-      return jsonError('temperature? maxTokens? ??? ???? ???.', 400);
+      return jsonError('temperature and maxTokens must be numbers.', 400);
     }
     const temperature = Math.min(1, Math.max(0, requestedTemperature));
     const maxTokens = Math.min(1500, Math.max(100, Math.floor(requestedMaxTokens)));

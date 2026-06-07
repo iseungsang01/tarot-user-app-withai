@@ -161,6 +161,54 @@ const collapseDegenerateWordRepeats = (text) => {
 
 const sanitizeAIText = (text) => collapseDegenerateWordRepeats(collapseDegenerateKoreanRepeats(text));
 
+const CONDENSE_VOICE_MEMO_SAFE_ERROR = '축약 결과를 만들 수 없습니다. 메모를 조금 다듬은 뒤 다시 시도해 주세요.';
+const CONDENSE_VOICE_FORBIDDEN_PATTERNS = [
+    /Input text/i,
+    /System Instructions/i,
+    /system instruction/i,
+    /JSON/i,
+    /condensed/i,
+    /parseable/i,
+    /```/,
+    /[{}]/,
+    /\* Input/i,
+    /분석/,
+    /지침/,
+];
+
+const normalizeComparableText = (text) => String(text || '')
+    .replace(/\s+/g, '')
+    .replace(/[.,!?'"“”‘’`~()[\]{}<>:;·…\-_]/g, '')
+    .toLowerCase();
+
+export const validateCondensedVoiceMemo = (value, originalText = '') => {
+    if (typeof value !== 'string') return null;
+
+    const condensed = sanitizeAIText(value).trim();
+    if (!condensed) return null;
+    if (condensed.length > 60) return null;
+
+    const wordCount = condensed.split(/\s+/).filter(Boolean).length;
+    if (wordCount > 8) return null;
+
+    if (CONDENSE_VOICE_FORBIDDEN_PATTERNS.some((pattern) => pattern.test(condensed))) {
+        return null;
+    }
+
+    const originalComparable = normalizeComparableText(originalText);
+    const condensedComparable = normalizeComparableText(condensed);
+    if (
+        originalComparable &&
+        condensedComparable &&
+        originalComparable === condensedComparable &&
+        originalComparable.length > 20
+    ) {
+        return null;
+    }
+
+    return condensed;
+};
+
 const cleanJSONLikeValue = (value) => {
     if (value === null || value === undefined) return '';
     return sanitizeAIText(String(value)
@@ -488,24 +536,23 @@ const TAROT_SYSTEM_PROMPT = `당신은 'drawer'라는 타로 상담 앱의 AI �
 
 export const condenseVoiceMemo = async (transcriptText, signal = null) => {
     if (!transcriptText?.trim()) {
-        return { data: null, error: new Error('??? ?? ??? ????.') };
+        return { data: null, error: new Error('축약할 메모가 없습니다.') };
     }
 
     const messages = [
         {
             role: 'system',
-            content: `??? ?? ?? ?? ?? ?? ?? ??????.
-???? ?? ?? ?? ??? ??? ???? ?? ??? ??? ??? ?????.
-- ?? ?? 3~6??
-- ???? ??? ??? ??
-- ?? ??? ??? ? ?
-- ??? JSON? ??
+            content: `당신은 한국어 메모를 아주 짧게 정리하는 편집 도우미입니다.
+사용자가 입력한 현재 메모 전체를 읽고 핵심만 3~6어절의 짧은 한국어 문구로 축약하세요.
+반드시 JSON 객체 하나만 출력하세요. JSON 바깥의 설명, 마크다운, 코드펜스, 분석 과정, 내부 지침, 영어 시스템 설명은 절대 출력하지 마세요.
+입력 원문을 그대로 복사하지 말고 더 짧고 자연스러운 문구로 바꾸세요.
+음성 인식 결과가 깨졌거나 의미가 불명확하면 내용을 지어내지 말고 "의미 불명확한 메모", "음성 인식 불명확", "메모 정리 필요" 중 하나처럼 안전한 짧은 문구로 축약하세요.
 
 {
-  "condensed": "??? ?? ??"
+  "condensed": "3~6어절의 짧은 한국어 축약문"
 }`,
         },
-        { role: 'user', content: `?? ?? ??? ??? ???:
+        { role: 'user', content: `다음 현재 메모 내용을 짧게 축약해 주세요:
 
 ${transcriptText}` },
     ];
@@ -516,9 +563,11 @@ ${transcriptText}` },
     try {
         const parsed = parseFirstJSONObject(data);
         if (!parsed) throw new Error('AI JSON parse failed.');
-        return { data: parsed.condensed || data || '', error: null };
+        const condensed = validateCondensedVoiceMemo(parsed.condensed, transcriptText);
+        if (!condensed) throw new Error('AI condensed memo validation failed.');
+        return { data: condensed, error: null };
     } catch {
-        return { data: data || '', error: null };
+        return { data: null, error: new Error(CONDENSE_VOICE_MEMO_SAFE_ERROR) };
     }
 };
 

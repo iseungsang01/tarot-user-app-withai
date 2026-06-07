@@ -11,6 +11,8 @@ import {
     getRemainingDrawerAIUsage,
 } from '../utils/storage/drawerAIUsage';
 
+const isAbortError = (error) => error?.name === 'AbortError' || /aborted/i.test(error?.message || '');
+
 // ─────────────────────────────────────────────────────────────
 // 1. Consultation Review Analysis Hooks
 // ─────────────────────────────────────────────────────────────
@@ -187,7 +189,8 @@ export const useCondenseVoiceMemo = () => {
     }, []);
 
     const condense = useCallback(async (transcriptText) => {
-        if (!transcriptText?.trim()) return { data: null, error: new Error('\uCD95\uC57D\uD560 \uC74C\uC131 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.') };
+        if (loading) return { data: null, error: null };
+        if (!transcriptText?.trim()) return { data: null, error: new Error('축약할 메모가 없습니다.') };
 
         if (abortControllerRef.current) abortControllerRef.current.abort();
         const controller = new AbortController();
@@ -200,7 +203,7 @@ export const useCondenseVoiceMemo = () => {
         try {
             const canUse = await canUseDrawerAI('voiceCondense');
             if (!canUse) {
-                const limitError = new Error('\uC774\uBC88 \uB2EC \uB179\uC74C \uCD95\uC57D \uC0AC\uC6A9 \uD69F\uC218\uB97C \uBAA8\uB450 \uC0AC\uC6A9\uD588\uC2B5\uB2C8\uB2E4.');
+                const limitError = new Error('이번 달 메모 축약 사용 횟수를 모두 사용했습니다.');
                 setError(limitError.message);
                 await refreshRemaining();
                 return { data: null, error: limitError };
@@ -210,23 +213,29 @@ export const useCondenseVoiceMemo = () => {
             if (abortControllerRef.current !== controller) return { data: null, error: null };
 
             if (apiError) {
-                if (apiError.name !== 'AbortError') setError(apiError.message || '\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.');
+                if (!isAbortError(apiError)) setError(apiError.message || '메모 축약 중 오류가 발생했습니다.');
                 return { data: null, error: apiError };
+            }
+
+            if (!data) {
+                const emptyError = new Error('축약 결과를 만들 수 없습니다. 메모를 조금 다듬은 뒤 다시 시도해 주세요.');
+                setError(emptyError.message);
+                return { data: null, error: emptyError };
             }
 
             await incrementDrawerAIUsage('voiceCondense');
             await refreshRemaining();
-            setResult(data || '');
-            return { data: data || '', error: null };
+            setResult(data);
+            return { data, error: null };
         } catch (err) {
-            if (abortControllerRef.current === controller && err.name !== 'AbortError') {
-                setError(err.message || '\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.');
+            if (abortControllerRef.current === controller && !isAbortError(err)) {
+                setError(err.message || '메모 축약 중 오류가 발생했습니다.');
             }
             return { data: null, error: err };
         } finally {
             if (abortControllerRef.current === controller) setLoading(false);
         }
-    }, [refreshRemaining]);
+    }, [loading, refreshRemaining]);
 
     const reset = useCallback(() => {
         if (abortControllerRef.current) {
@@ -276,16 +285,16 @@ export const usePolishReview = () => {
 
             if (abortControllerRef.current === controller) {
                 if (apiError) {
-                    if (apiError.name !== 'AbortError') {
-                if (apiError.name !== 'AbortError') setError(apiError.message || '\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.');
+                    if (!isAbortError(apiError)) {
+                        setError(apiError.message || 'AI 문장 다듬기 중 오류가 발생했습니다.');
                     }
                 } else {
                     setResult(data || '');
                 }
             }
         } catch (err) {
-            if (abortControllerRef.current === controller && err.name !== 'AbortError') {
-                setError(err.message || '\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.');
+            if (abortControllerRef.current === controller && !isAbortError(err)) {
+                setError(err.message || 'AI 문장 다듬기 중 오류가 발생했습니다.');
             }
         } finally {
             if (abortControllerRef.current === controller) {

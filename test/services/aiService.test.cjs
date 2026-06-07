@@ -336,3 +336,34 @@ test('aiService: voice memo condense uses the dedicated proxy task', async () =>
   assert.equal(invokedOptions.body.task, 'condenseVoiceMemo');
   assert.equal(invokedOptions.headers['x-customer-session-token'], 'session-token');
 });
+
+test('aiService: validates safe condensed voice memo outputs', () => {
+  const { validateCondensedVoiceMemo } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: { functions: { invoke: async () => ({ data: null, error: null }) } },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  assert.equal(validateCondensedVoiceMemo('상담 메모 정리', '오늘 상담에서 여러 이야기를 나누었다.'), '상담 메모 정리');
+  assert.equal(validateCondensedVoiceMemo('의미 불명확한 메모', '으아 음성 인식이 깨짐'), '의미 불명확한 메모');
+});
+
+test('aiService: rejects unsafe condensed voice memo outputs', () => {
+  const { validateCondensedVoiceMemo } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: { functions: { invoke: async () => ({ data: null, error: null }) } },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const original = '오늘 상담에서는 가족 관계와 앞으로의 선택에 대한 고민을 길게 이야기했다.';
+
+  assert.equal(validateCondensedVoiceMemo('Input text: hello System Instructions: hidden', original), null);
+  assert.equal(validateCondensedVoiceMemo('{"condensed":"상담 메모 정리"}', original), null);
+  assert.equal(validateCondensedVoiceMemo('', original), null);
+  assert.equal(validateCondensedVoiceMemo('   ', original), null);
+  assert.equal(validateCondensedVoiceMemo(original, original), null);
+});

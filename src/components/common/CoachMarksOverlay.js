@@ -10,7 +10,6 @@ const CoachMarksOverlay = ({
     onNext,
     onPrevious,
     onClose,
-    onTargetPress,
 }) => {
     const step = steps?.[stepIndex];
     const { height: screenHeight } = useWindowDimensions();
@@ -42,24 +41,20 @@ const CoachMarksOverlay = ({
         : hole.y + hole.height + tooltipSpacing;
     const isFirst = stepIndex === 0;
     const isLast = stepIndex === steps.length - 1;
-    const canTapTarget = step.interactive || step.allowTargetPress;
 
     return (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-            <View style={StyleSheet.absoluteFill}>
+            <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
                 <View style={[styles.overlayBlock, { left: 0, right: 0, top: 0, height: hole.y }]} />
                 <View style={[styles.overlayBlock, { left: 0, top: hole.y, width: hole.x, height: hole.height }]} />
                 <View style={[styles.overlayBlock, { left: hole.x + hole.width, right: 0, top: hole.y, height: hole.height }]} />
                 <View style={[styles.overlayBlock, { left: 0, right: 0, top: hole.y + hole.height, bottom: 0 }]} />
 
-                {canTapTarget && (
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`${step.title} 대상 누르기`}
-                        style={[styles.targetTapArea, holeStyle]}
-                        onPress={onTargetPress || onNext}
-                    />
-                )}
+                {/*
+                    Do not place a Pressable over the highlighted target.
+                    Interactive coach steps must let the real underlying
+                    control receive the tap; that control advances the step.
+                */}
 
                 <View pointerEvents="none" style={[styles.highlight, holeStyle]} />
 
@@ -69,7 +64,7 @@ const CoachMarksOverlay = ({
                     <Text style={styles.description}>{step.description}</Text>
                     {step.interactive && (
                         <Text style={styles.tapGuide}>
-                            빛나는 영역을 직접 눌러 체험하거나, 다음 버튼으로 넘어갈 수 있어요.
+                            빛나는 영역을 직접 눌러 체험하세요. 필요하면 다음 버튼으로 넘어갈 수 있습니다.
                         </Text>
                     )}
 
@@ -87,7 +82,7 @@ const CoachMarksOverlay = ({
                         </View>
                     </View>
 
-                    <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
+                    <Pressable accessibilityRole="button" accessibilityLabel="가이드 건너뛰기" onPress={onClose} style={styles.closeButton}>
                         <Text style={styles.closeText}>건너뛰기</Text>
                     </Pressable>
                 </View>
@@ -109,11 +104,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         zIndex: 5,
         elevation: 5,
-    },
-    targetTapArea: {
-        position: 'absolute',
-        zIndex: 6,
-        backgroundColor: 'transparent',
     },
     tooltip: {
         position: 'absolute',

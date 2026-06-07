@@ -1,14 +1,26 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
+import {
+    View,
+    Text,
+    TextInput,
+    StyleSheet,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Image,
+    TouchableOpacity,
+    ScrollView,
+    Keyboard,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
-    GradientBackground,
     CustomButton,
     LoadingSpinner,
-    AISummaryPanel
+    AISummaryPanel,
 } from '../../components';
+import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components/common/PremiumUI';
 import { useAuth } from '../../hooks/useAuth';
 import { usePolishReview, useCondenseVoiceMemo } from '../../hooks/useAI';
 import { visitService } from '../../services/visitService';
@@ -19,51 +31,63 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 import { TextColors } from '../../constants/Colors';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../../utils/errorHandler';
 
-
 const ACTION_VARIANT = {
     PRIMARY: 'primary',
-    SECONDARY: 'secondary'
+    SECONDARY: 'secondary',
 };
 
 const VisitDetailScreen = ({ route, navigation }) => {
     const insets = useSafeAreaInsets();
-    // HistoryScreen에서 넘겨준 is_manual과 visitId를 받습니다.
     const { visitId, is_manual } = route.params || {};
-    const isOffMode = is_manual === true; // 명확하게 boolean으로 판별
+    const isOffMode = is_manual === true;
     const { customer } = useAuth();
 
     const [s, setS] = useState({
         uri: null,
         title: '',
         review: '',
-        visit_date: new Date().toISOString(), // 기본값은 현재시간
-        loading: !!visitId, // 수정 모드일 때만 로딩 활성화
+        visit_date: new Date().toISOString(),
+        loading: !!visitId,
         saving: false,
-        isEdit: !!visitId
+        isEdit: !!visitId,
     });
 
     const reviewInputRef = useRef(null);
-    const up = (next) => setS(p => ({ ...p, ...next }));
+    const up = (next) => setS((p) => ({ ...p, ...next }));
     const [voiceInputAvailable, setVoiceInputAvailable] = useState(true);
     const [condensedVoiceMemo, setCondensedVoiceMemo] = useState('');
     const [aiInsight, setAiInsight] = useState(null);
     const [selectedReviewVersion, setSelectedReviewVersion] = useState('original');
-    const { result: polishedReview, loading: polishing, error: polishError, polish, reset: resetPolish } = usePolishReview();
-    const { loading: condensingVoice, error: voiceCondenseError, remaining: voiceCondenseRemaining, condense: condenseVoice } = useCondenseVoiceMemo();
+    const {
+        result: polishedReview,
+        loading: polishing,
+        error: polishError,
+        polish,
+        reset: resetPolish,
+    } = usePolishReview();
+    const {
+        loading: condensingVoice,
+        error: voiceCondenseError,
+        remaining: voiceCondenseRemaining,
+        condense: condenseVoice,
+    } = useCondenseVoiceMemo();
 
+    const isBusy = s.saving || polishing || condensingVoice;
+    const hasReview = !!s.review.trim();
 
     useEffect(() => {
         if (visitId) loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visitId]);
 
     const loadData = async () => {
         try {
             if (isOffMode) {
-                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
-                const item = list.find(v => v.id === visitId);
+                const list = (await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY)) || [];
+                const item = list.find((v) => v.id === visitId);
                 if (!item) {
-                    Alert.alert('\uAE30\uB85D \uC5C6\uC74C', '\uC774 \uB85C\uCEEC \uAC1C\uC778 \uAE30\uB85D\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.', [
-                        { text: '\uB3CC\uC544\uAC00\uAE30', onPress: () => navigation.goBack() },
+                    Alert.alert('기록 없음', '로컬 개인 기록을 찾을 수 없습니다.', [
+                        { text: '돌아가기', onPress: () => navigation.goBack() },
                     ]);
                     return;
                 }
@@ -82,8 +106,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
             const { data, error } = await handleApiCall('VisitDetail.load', () => visitService.getVisit(visitId));
             if (error || !data) {
-                Alert.alert('\uAE30\uB85D\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4', '\uC0C1\uB2F4 \uAE30\uB85D\uC744 \uCC3E\uC744 \uC218 \uC5C6\uAC70\uB098 \uB2E4\uC2DC \uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.', [
-                    { text: '\uB3CC\uC544\uAC00\uAE30', onPress: () => navigation.goBack() },
+                Alert.alert('기록을 불러올 수 없습니다', '상담 기록을 찾을 수 없거나 다시 로그인이 필요합니다.', [
+                    { text: '돌아가기', onPress: () => navigation.goBack() },
                 ]);
                 return;
             }
@@ -97,9 +121,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
             setAiInsight(data.ai_insight || null);
             setSelectedReviewVersion('original');
             resetPolish();
-        } catch (err) {
-            Alert.alert('\uAE30\uB85D\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4', '\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.', [
-                { text: '\uB3CC\uC544\uAC00\uAE30', onPress: () => navigation.goBack() },
+        } catch {
+            Alert.alert('기록을 불러올 수 없습니다', '잠시 후 다시 시도해 주세요.', [
+                { text: '돌아가기', onPress: () => navigation.goBack() },
             ]);
         } finally {
             up({ loading: false });
@@ -107,79 +131,87 @@ const VisitDetailScreen = ({ route, navigation }) => {
     };
 
     const onPick = async (type) => {
-        const perm = type === 'cam' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const perm = type === 'cam'
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()), Alert);
 
         const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
             allowsEditing: true,
             aspect: [3, 4],
-            quality: 0.7
+            quality: 0.7,
         });
 
         if (!res.canceled && res.assets[0]) {
             try {
                 const comp = await compressImage(res.assets[0].uri, { maxWidth: 800, quality: 0.6 });
                 up({ uri: comp.base64 || comp.uri });
-            } catch { Alert.alert("오류", "이미지 처리에 실패했습니다."); }
+            } catch {
+                Alert.alert('오류', '이미지 처리에 실패했습니다.');
+            }
         }
     };
-
 
     const effectiveReview = useMemo(() => (
         selectedReviewVersion === 'polished' && polishedReview ? polishedReview : s.review
     ), [selectedReviewVersion, polishedReview, s.review]);
 
     const runPolish = async () => {
+        if (polishing) return;
+        if (!hasReview) {
+            Alert.alert('메모가 필요합니다', '먼저 메모를 입력해 주세요.');
+            return;
+        }
         await polish(s.review);
         setSelectedReviewVersion('polished');
     };
 
     const onSave = async () => {
-        if (!s.uri && !s.review.trim() && !s.title.trim()) return Alert.alert("알림", "제목 또는 기록할 내용을 입력해주세요.");
+        if (s.saving) return;
+        if (!s.uri && !s.review.trim() && !s.title.trim()) {
+            Alert.alert('알림', '제목 또는 기록 내용을 입력해 주세요.');
+            return;
+        }
         up({ saving: true });
 
         const payload = {
             card_review: effectiveReview.trim(),
             card_image: s.uri,
-            visit_date: s.visit_date, // 새로 생성 시는 Now, 수정 시는 기존 날짜
+            visit_date: s.visit_date,
             customer_id: customer?.id,
             is_manual: isOffMode,
             title: s.title.trim(),
-            ai_insight: aiInsight
+            ai_insight: aiInsight,
         };
 
         try {
             if (isOffMode) {
-                // --- [OFF 모드] 로컬 저장 로직 ---
-                let list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
-
+                let list = (await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY)) || [];
                 const localPayload = { ...payload };
 
                 if (s.isEdit) {
-                    list = list.map(v => v.id === visitId ? { ...v, ...localPayload } : v);
+                    list = list.map((v) => (v.id === visitId ? { ...v, ...localPayload } : v));
                 } else {
                     list = [{ ...localPayload, id: `local_${Date.now()}` }, ...list];
                 }
 
                 await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, list);
             } else {
-                // --- [ON 모드] 서버 저장 로직 ---
-                // 서버 데이터는 이미 visit_history에 행(Row)이 있으므로 보통 updateVisit만 수행합니다.
                 const localOnlyPayload = {
                     card_review: payload.card_review,
                     card_image: payload.card_image,
                     title: payload.title,
-                    ai_insight: payload.ai_insight
+                    ai_insight: payload.ai_insight,
                 };
                 const { error } = await handleApiCall('Visit.save', () =>
-                    visitService.updateVisit(visitId, localOnlyPayload)
+                    visitService.updateVisit(visitId, localOnlyPayload),
                 );
                 if (error) throw error;
             }
 
             showSuccessAlert(s.isEdit ? 'UPDATE' : 'SAVE', Alert);
             setTimeout(() => navigation.goBack(), 1000);
-        } catch (err) {
+        } catch {
             up({ saving: false });
         }
     };
@@ -187,7 +219,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const startVoiceInput = () => {
         if (Platform.OS === 'web') {
             setVoiceInputAvailable(false);
-            Alert.alert('\uC74C\uC131 \uC785\uB825\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4', '\uC6F9 \uBBF8\uB9AC\uBCF4\uAE30\uC5D0\uC11C\uB294 \uD0A4\uBCF4\uB4DC \uC74C\uC131 \uC785\uB825\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. Android \uC571\uC5D0\uC11C \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.');
+            Alert.alert('음성 입력을 사용할 수 없습니다', '미리보기에서는 음성 입력을 사용할 수 없습니다. Android 앱에서 이용해 주세요.');
             return;
         }
 
@@ -195,12 +227,13 @@ const VisitDetailScreen = ({ route, navigation }) => {
         reviewInputRef.current?.focus();
         Keyboard.dismiss();
         setTimeout(() => reviewInputRef.current?.focus(), 100);
-        Alert.alert('\uC74C\uC131 \uC785\uB825 \uC548\uB0B4', '\uD0A4\uBCF4\uB4DC\uAC00 \uC5F4\uB9AC\uBA74 \uD0A4\uBCF4\uB4DC\uC758 \uB9C8\uC774\uD06C \uBC84\uD2BC\uC744 \uB20C\uB7EC \uB9D0\uD574 \uC8FC\uC138\uC694. \uC778\uC2DD\uB41C \uBB38\uC7A5\uC740 \uC774 \uAE30\uB85D \uCE78\uC5D0 \uBC14\uB85C \uC785\uB825\uB418\uBA70 \uC9C1\uC811 \uC218\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
+        Alert.alert('음성 입력 안내', '키보드가 열리면 키보드의 마이크 버튼을 눌러 말해 주세요. 인식된 문장은 메모 칸에 바로 입력됩니다.');
     };
 
     const runVoiceCondense = async () => {
-        if (!s.review.trim()) {
-            Alert.alert('\uC54C\uB9BC', '\uCD95\uC57D\uD560 \uC74C\uC131 \uAE30\uB85D\uC744 \uBA3C\uC800 \uC785\uB825\uD574 \uC8FC\uC138\uC694.');
+        if (condensingVoice) return;
+        if (!hasReview) {
+            Alert.alert('메모가 필요합니다', '먼저 메모를 입력해 주세요.');
             return;
         }
 
@@ -212,11 +245,24 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const applyCondensedVoiceMemo = (mode) => {
         if (!condensedVoiceMemo) return;
         if (mode === 'replace') {
-            up({ review: condensedVoiceMemo });
-        } else {
-            const separator = s.review.trim() ? '\n\n[\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D]\n' : '';
-            up({ review: `${s.review.trim()}${separator}${condensedVoiceMemo}` });
+            Alert.alert('현재 메모를 교체할까요?', '기존 내용은 사라집니다.', [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '교체',
+                    style: 'destructive',
+                    onPress: () => {
+                        up({ review: condensedVoiceMemo });
+                        setSelectedReviewVersion('original');
+                        setCondensedVoiceMemo('');
+                    },
+                },
+            ]);
+            return;
         }
+
+        const separator = s.review.trim() ? '\n\n[현재 메모 축약]\n' : '';
+        up({ review: `${s.review.trim()}${separator}${condensedVoiceMemo}` });
+        setSelectedReviewVersion('original');
         setCondensedVoiceMemo('');
     };
 
@@ -228,198 +274,251 @@ const VisitDetailScreen = ({ route, navigation }) => {
         setAiInsight(null);
     }, []);
 
-    if (s.loading) return <GradientBackground><LoadingSpinner /></GradientBackground>;
+    if (s.loading) return <ScreenContainer><LoadingSpinner /></ScreenContainer>;
 
-    // UI 테마: OFF 모드는 네이비, ON 모드는 황동/나무 색상 적용
     const theme = isOffMode
-        ? { c: DrawerTheme.navyLight, bg: '#10171E', btn: DrawerTheme.navyMid, placeholder: TextColors.inputPlaceholderOff }
-        : { c: DrawerTheme.goldBrass, bg: DrawerTheme.woodMid, btn: DrawerTheme.woodDark, placeholder: TextColors.inputPlaceholderOn };
+        ? { c: DrawerTheme.mutedPurple, bg: DrawerTheme.velvetPurple, placeholder: TextColors.inputPlaceholderOff }
+        : { c: DrawerTheme.brightGold, bg: DrawerTheme.walnut, placeholder: TextColors.inputPlaceholderOn };
 
     return (
-        <GradientBackground>
-            <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : null} style={{ flex: 1 }}>
-                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 50 }}>
-
-                        <View style={[styles.header, { backgroundColor: theme.bg, borderColor: theme.c }]}>
-                            <TouchableOpacity onPress={() => navigation.goBack()}>
-                                <Text style={styles.whiteText}>← 뒤로</Text>
+        <ScreenContainer>
+            <SafeAreaView style={styles.safeArea} edges={['top']}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+                    <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 50 }]}>
+                        <PremiumCard variant="walnut" style={styles.headerCard}>
+                            <TouchableOpacity
+                                onPress={() => navigation.goBack()}
+                                accessibilityRole="button"
+                                accessibilityLabel="뒤로가기"
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={styles.backButton}
+                            >
+                                <Text style={styles.backText}>← 뒤로</Text>
                             </TouchableOpacity>
-                            <Text style={[styles.title, { color: theme.c }]}>
-                                {isOffMode ? '✒ 개인 메모 작성' : ' 상담 기록 수정'}
+                            <ArchiveTitleHeader
+                                eyebrow={isOffMode ? 'PRIVATE DRAWER' : 'DRAWER NOTE'}
+                                title={isOffMode ? '개인 서랍 작성' : '기록 수정'}
+                                subtitle={isOffMode ? '나만의 메모를 서랍에 보관합니다' : '타로 상담 기록을 정리합니다'}
+                                style={styles.archiveTitle}
+                            />
+                        </PremiumCard>
+
+                        <PremiumCard style={styles.formCard}>
+                            <Text style={styles.sectionLabel}>서랍 명패</Text>
+                            <TextInput
+                                style={[styles.titleInput, { borderColor: `${theme.c}66` }]}
+                                value={s.title}
+                                onChangeText={(v) => up({ title: v })}
+                                placeholder="서랍 제목을 입력하세요"
+                                placeholderTextColor={theme.placeholder}
+                                maxLength={40}
+                                accessibilityLabel="서랍 제목 입력"
+                            />
+
+                            <Text style={styles.sectionLabel}>카드 슬롯</Text>
+                            <View style={[styles.imgBox, { borderColor: theme.c }]}>
+                                {s.uri ? (
+                                    <>
+                                        <Image source={{ uri: toDisplayImageUri(s.uri) }} style={styles.fullImg} />
+                                        <TouchableOpacity
+                                            onPress={() => up({ uri: null })}
+                                            style={styles.delBtn}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="카드 이미지 삭제"
+                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        >
+                                            <Text style={styles.whiteText}>×</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <View style={styles.placeholderContainer}>
+                                        <Text style={[styles.placeholderText, { color: theme.c }]}>✦</Text>
+                                        <Text style={styles.placeholderSubText}>카드를 촬영하거나 선택하세요</Text>
+                                    </View>
+                                )}
+                            </View>
+
+                            <View style={[styles.buttonRow, styles.btnRow]}>
+                                <CustomButton
+                                    title="촬영"
+                                    onPress={() => onPick('cam')}
+                                    variant={ACTION_VARIANT.SECONDARY}
+                                    style={styles.rowButton}
+                                    numberOfLines={1}
+                                    allowFontScaling={false}
+                                    disabled={isBusy}
+                                    accessibilityLabel="카드 이미지 촬영"
+                                />
+                                <CustomButton
+                                    title="앨범 선택"
+                                    onPress={() => onPick('lib')}
+                                    variant={ACTION_VARIANT.SECONDARY}
+                                    style={styles.rowButton}
+                                    numberOfLines={1}
+                                    allowFontScaling={false}
+                                    disabled={isBusy}
+                                    accessibilityLabel="앨범에서 카드 이미지 선택"
+                                />
+                            </View>
+                        </PremiumCard>
+
+                        <PremiumCard style={styles.formCard}>
+                            <Text style={styles.sectionLabel}>상담/개인 메모</Text>
+                            <Text style={styles.helperText}>음성 입력이나 직접 입력으로 기억하고 싶은 내용을 남겨두세요.</Text>
+                            <TextInput
+                                ref={reviewInputRef}
+                                style={[styles.input, { borderColor: `${theme.c}66` }]}
+                                multiline
+                                value={s.review}
+                                onChangeText={(v) => up({ review: v })}
+                                placeholder={isOffMode ? '비밀 서랍에 둘 메모를 적어보세요.' : '상담 내용을 기록해 두면 나중에 확인하기 좋습니다.'}
+                                placeholderTextColor={theme.placeholder}
+                                accessibilityLabel="상담 또는 개인 메모 입력"
+                                textAlignVertical="top"
+                            />
+
+                            <View style={[styles.buttonRow, styles.voiceRow]}>
+                                <CustomButton
+                                    title={voiceInputAvailable ? '음성 입력 시작' : '음성 입력 불가'}
+                                    onPress={startVoiceInput}
+                                    variant={ACTION_VARIANT.SECONDARY}
+                                    style={styles.rowButton}
+                                    numberOfLines={1}
+                                    allowFontScaling={false}
+                                    disabled={isBusy}
+                                    accessibilityLabel="음성 입력 시작"
+                                />
+                                <CustomButton
+                                    title={condensingVoice ? '축약 중...' : '현재 메모 축약'}
+                                    onPress={runVoiceCondense}
+                                    loading={condensingVoice}
+                                    disabled={!hasReview || s.saving || polishing || condensingVoice}
+                                    variant={ACTION_VARIANT.SECONDARY}
+                                    style={styles.rowButton}
+                                    numberOfLines={1}
+                                    allowFontScaling={false}
+                                    accessibilityLabel="현재 메모 축약"
+                                />
+                            </View>
+                            <Text style={styles.helperText}>키보드 마이크로 입력한 내용과 직접 작성한 내용을 포함해 현재 메모 칸 전체를 정리합니다.</Text>
+                            <Text style={styles.voiceUsageText}>
+                                {voiceCondenseRemaining == null ? '이번 달 메모 축약 30회 남음' : `이번 달 메모 축약 ${voiceCondenseRemaining}회 남음`}
                             </Text>
-                        </View>
+                            {!!voiceCondenseError && <Text style={styles.errorText}>※ {voiceCondenseError}</Text>}
+                            {!!condensedVoiceMemo && (
+                                <View style={styles.voiceCondensePanel}>
+                                    <Text style={styles.voiceCondenseTitle}>현재 메모 축약 결과</Text>
+                                    <Text style={styles.voiceCondenseDesc}>원하는 방식으로 기록에 반영하세요.</Text>
+                                    <Text style={styles.voiceCondenseText}>{condensedVoiceMemo}</Text>
+                                    <View style={styles.panelButtonRow}>
+                                        <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('replace')} accessibilityRole="button" accessibilityLabel="축약 결과로 기록 교체">
+                                            <Text style={styles.versionChipText}>기록으로 교체</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('append')} accessibilityRole="button" accessibilityLabel="축약 결과를 아래에 추가">
+                                            <Text style={styles.versionChipText}>아래에 추가</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.versionChip} onPress={() => setCondensedVoiceMemo('')} accessibilityRole="button" accessibilityLabel="축약 결과 닫기">
+                                            <Text style={styles.versionChipText}>닫기</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
 
-
-                        <TextInput
-                            style={[styles.titleInput, { borderColor: theme.c + '40' }]}
-                            value={s.title}
-                            onChangeText={v => up({ title: v })}
-                            placeholder="서랍 제목을 입력하세요"
-                            placeholderTextColor={theme.placeholder}
-                            maxLength={40}
-                        />
-
-                        <View style={[styles.imgBox, { borderColor: theme.c }]}>
-                            {s.uri ? (
-                                <>
-                                    <Image
-                                        source={{ uri: toDisplayImageUri(s.uri) }}
-                                        style={styles.fullImg}
+                            <View style={[styles.polishPanel, { borderColor: `${theme.c}55` }]}>
+                                <View style={styles.polishHeaderRow}>
+                                    <View style={styles.polishCopy}>
+                                        <Text style={[styles.polishTitle, { color: theme.c }]}>AI 문장 다듬기</Text>
+                                        <Text style={styles.helperText}>메모의 의미는 유지하고 문장만 자연스럽게 정리합니다.</Text>
+                                    </View>
+                                    <CustomButton
+                                        title={polishing ? '다듬는 중...' : 'AI로 다듬기'}
+                                        onPress={runPolish}
+                                        loading={polishing}
+                                        disabled={!hasReview || s.saving || condensingVoice || polishing}
+                                        variant={ACTION_VARIANT.SECONDARY}
+                                        style={styles.polishBtn}
+                                        numberOfLines={1}
+                                        allowFontScaling={false}
+                                        accessibilityLabel="AI로 문장 다듬기"
                                     />
-                                    <TouchableOpacity onPress={() => up({ uri: null })} style={styles.delBtn}>
-                                        <Text style={styles.whiteText}>✕</Text>
-                                    </TouchableOpacity>
-                                </>
-                            ) : (
-                                <View style={styles.placeholderContainer}>
-                                    <Text style={[styles.placeholderText, { color: theme.c }]}></Text>
-                                    <Text style={styles.placeholderSubText}>카드를 촬영하거나 선택하세요</Text>
                                 </View>
-                            )}
-                        </View>
+                                {!!polishError && <Text style={styles.errorText}>※ {polishError}</Text>}
+                                {!!polishedReview && (
+                                    <View style={styles.compareWrap}>
+                                        <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'original' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('original')} accessibilityRole="button" accessibilityLabel="직접 작성본 보기">
+                                            <Text style={styles.versionChipText}>직접 작성본</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'polished' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('polished')} accessibilityRole="button" accessibilityLabel="AI 다듬은 본 보기">
+                                            <Text style={styles.versionChipText}>AI 다듬은 본</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+                        </PremiumCard>
 
-                        {/* 3차 액션: 부가 기능 */}
-                        <View style={[styles.buttonRow, styles.btnRow]}>
-                            <CustomButton
-                                title=" 촬영하기"
-                                onPress={() => onPick('cam')}
-                                variant={ACTION_VARIANT.SECONDARY}
-                                style={styles.rowButton}
-                                numberOfLines={1}
-                                allowFontScaling={false}
-                                ellipsizeMode="tail"
-                            />
-                            <CustomButton
-                                title=" 앨범에서 선택"
-                                onPress={() => onPick('lib')}
-                                variant={ACTION_VARIANT.SECONDARY}
-                                style={styles.rowButton}
-                                numberOfLines={1}
-                                allowFontScaling={false}
-                                ellipsizeMode="tail"
-                            />
-                        </View>
-
-                        <TextInput
-                            ref={reviewInputRef}
-                            style={[styles.input, { borderColor: theme.c + '40' }]}
-                            multiline
-                            value={s.review}
-                            onChangeText={v => up({ review: v })}
-                            placeholder={isOffMode ? "비밀스러운 메모를 남겨보세요..." : "상담 내용을 기록해두면 나중에 확인하기 좋아요."}
-                            placeholderTextColor={theme.placeholder}
+                        <AISummaryPanel
+                            reviewText={effectiveReview}
+                            visitDate={s.visit_date}
+                            initialResult={aiInsight}
+                            onResult={handleAIResult}
+                            onClear={clearAIInsight}
                         />
 
-                        {/* 3? ??: ?? ??/?? */}
-                        <View style={[styles.buttonRow, styles.voiceRow]}>
-                            <CustomButton
-                                title={voiceInputAvailable ? "\uC74C\uC131 \uC785\uB825 \uC2DC\uC791" : "\uC74C\uC131 \uC785\uB825\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4"}
-                                onPress={startVoiceInput}
-                                variant={ACTION_VARIANT.SECONDARY}
-                                style={styles.rowButton}
-                                numberOfLines={1}
-                                allowFontScaling={false}
-                                ellipsizeMode="tail"
-                            />
-                            <CustomButton
-                                title={condensingVoice ? "\uCD95\uC57D \uC911..." : "\uC74C\uC131 \uAE30\uB85D \uCD95\uC57D"}
-                                onPress={runVoiceCondense}
-                                loading={condensingVoice}
-                                variant={ACTION_VARIANT.SECONDARY}
-                                style={styles.rowButton}
-                                numberOfLines={1}
-                                allowFontScaling={false}
-                                ellipsizeMode="tail"
-                            />
-                        </View>
-                        <Text style={styles.voiceUsageText}>
-                            {voiceCondenseRemaining == null ? '\uC774\uBC88 \uB2EC \uB179\uC74C \uCD95\uC57D 30\uD68C \uB0A8\uC74C' : `\uC774\uBC88 \uB2EC \uB179\uC74C \uCD95\uC57D ${voiceCondenseRemaining}\uD68C \uB0A8\uC74C`}
-                        </Text>
-                        {!!voiceCondenseError && <Text style={styles.polishError}>? {voiceCondenseError}</Text>}
-                        {!!condensedVoiceMemo && (
-                            <View style={styles.voiceCondensePanel}>
-                                <Text style={styles.voiceCondenseTitle}>\uB179\uC74C \uB0B4\uC6A9 \uCD95\uC57D \uACB0\uACFC</Text>
-                                <Text style={styles.voiceCondenseText}>{condensedVoiceMemo}</Text>
-                                <View style={styles.compareWrap}>
-                                    <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('replace')}>
-                                        <Text style={styles.versionChipText}>\uD604\uC7AC \uAE30\uB85D \uAD50\uCCB4</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.versionChip} onPress={() => applyCondensedVoiceMemo('append')}>
-                                        <Text style={styles.versionChipText}>\uC544\uB798\uC5D0 \uB367\uBD99\uC774\uAE30</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
-
-
-                        {/* 2차 액션: 편집 보조 */}
-                        <View style={[styles.polishPanel, { borderColor: theme.c + '50' }]}> 
-                            <View style={styles.polishHeaderRow}>
-                                <Text style={[styles.polishTitle, { color: theme.c }]}> AI 문장 다듬기</Text>
-                                <CustomButton title={polishing ? '다듬는 중...' : 'AI로 다듬기'} onPress={runPolish} loading={polishing} variant={ACTION_VARIANT.SECONDARY} style={styles.polishBtn} />
-                            </View>
-                            {!!polishError && <Text style={styles.polishError}>⚠ {polishError}</Text>}
-                            {!!polishedReview && (
-                                <View style={styles.compareWrap}>
-                                    <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'original' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('original')}>
-                                        <Text style={styles.versionChipText}>직접 작성본</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'polished' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('polished')}>
-                                        <Text style={styles.versionChipText}>AI 다듬은본</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </View>
-
-                        <AISummaryPanel reviewText={effectiveReview} visitDate={s.visit_date} initialResult={aiInsight} onResult={handleAIResult} onClear={clearAIInsight} />
-
-                        {/* 1차 액션: 저장 */}
-                        <CustomButton
-                            title={s.saving ? "저장 중..." : (isOffMode ? "비밀 서랍에 보관" : "기록 서랍에 저장")}
+                        <GoldActionButton
+                            title={s.saving ? '저장 중...' : (isOffMode ? '개인 서랍에 저장' : '기록 저장')}
                             onPress={onSave}
-                            loading={s.saving}
-                            variant={ACTION_VARIANT.PRIMARY}
+                            disabled={s.saving || polishing || condensingVoice}
                             style={styles.saveBtn}
+                            accessibilityLabel="서랍 기록 저장"
                         />
-
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </GradientBackground>
+        </ScreenContainer>
     );
 };
 
 const styles = StyleSheet.create({
-    header: { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    title: { fontSize: 16, fontWeight: 'bold' },
-    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 320, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 12, overflow: 'hidden', alignSelf: 'center' },
+    flex: { flex: 1 },
+    safeArea: { flex: 1 },
+    scrollContent: { padding: 18, gap: 14 },
+    headerCard: { paddingTop: 12, paddingBottom: 4, backgroundColor: DrawerTheme.walnutDark },
+    backButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 4, marginBottom: 2 },
+    backText: { color: DrawerTheme.mutedIvory, fontWeight: '800', fontSize: 13 },
+    archiveTitle: { paddingBottom: 0 },
+    formCard: { borderColor: 'rgba(224,184,90,0.24)' },
+    sectionLabel: { color: DrawerTheme.brightGold, fontSize: 13, fontWeight: '900', marginBottom: 8, marginLeft: 2, letterSpacing: 0.8 },
+    helperText: { color: DrawerTheme.mutedIvory, fontSize: 12, lineHeight: 17, marginBottom: 8, opacity: 0.82 },
+    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 320, backgroundColor: 'rgba(9,0,13,0.62)', borderRadius: 16, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', marginBottom: 12, overflow: 'hidden', alignSelf: 'center' },
     fullImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-    placeholderContainer: { alignItems: 'center' },
+    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(74,15,43,0.86)', width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(224,184,90,0.4)' },
+    placeholderContainer: { alignItems: 'center', padding: 18 },
     placeholderText: { fontSize: 34, marginBottom: 8 },
-    placeholderSubText: { color: '#888', fontSize: 13 },
-    buttonRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch', minHeight: 50 },
-    btnRow: { marginBottom: 14 },
-    rowButton: { flex: 1, minHeight: 50, alignSelf: 'stretch' },
-    titleInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, color: '#FFF', fontSize: 14, borderWidth: 1, marginBottom: 12 },
-    input: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, color: '#FFF', minHeight: 150, textAlignVertical: 'top', fontSize: 14, borderWidth: 1 },
-    voiceRow: { marginTop: 10 },
-    voiceUsageText: { color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 6, marginLeft: 2 },
-    voiceCondensePanel: { marginTop: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.35)', borderRadius: 12, padding: 10, backgroundColor: 'rgba(0,0,0,0.22)' },
-    voiceCondenseTitle: { color: DrawerTheme.goldBright, fontWeight: '700', fontSize: 13, marginBottom: 6 },
-    voiceCondenseText: { color: '#FFF', fontSize: 13, lineHeight: 19 },
-    whiteText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-    saveBtn: { marginTop: 20, height: 50 },
-    polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 12, padding: 10, backgroundColor: 'rgba(255,255,255,0.04)' },
-    polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    polishTitle: { fontWeight: '700', fontSize: 13 },
-    polishBtn: { minWidth: 108, height: 36 },
-    polishError: { color: '#ff9e9e', marginTop: 8, fontSize: 12 },
-    compareWrap: { marginTop: 8, flexDirection: 'row', gap: 8 },
-    versionChip: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', paddingVertical: 7, alignItems: 'center' },
+    placeholderSubText: { color: DrawerTheme.mutedIvory, fontSize: 13, textAlign: 'center' },
+    buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', minHeight: 50 },
+    btnRow: { marginBottom: 0 },
+    rowButton: { flex: 1, minWidth: 130, minHeight: 50, alignSelf: 'stretch' },
+    titleInput: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, color: DrawerTheme.ivory, fontSize: 14, borderWidth: 1, marginBottom: 16 },
+    input: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 14, padding: 14, color: DrawerTheme.ivory, minHeight: 150, fontSize: 14, lineHeight: 21, borderWidth: 1 },
+    voiceRow: { marginTop: 10, marginBottom: 8 },
+    voiceUsageText: { color: DrawerTheme.mutedIvory, fontSize: 12, marginTop: 2, marginLeft: 2, opacity: 0.82 },
+    voiceCondensePanel: { marginTop: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.35)', borderRadius: 12, padding: 12, backgroundColor: 'rgba(9,0,13,0.34)' },
+    voiceCondenseTitle: { color: DrawerTheme.goldBright, fontWeight: '800', fontSize: 14, marginBottom: 4 },
+    voiceCondenseDesc: { color: DrawerTheme.mutedIvory, fontSize: 12, marginBottom: 8 },
+    voiceCondenseText: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 20, marginBottom: 8 },
+    whiteText: { color: DrawerTheme.ivory, fontWeight: 'bold', fontSize: 18, lineHeight: 20 },
+    saveBtn: { marginTop: 4, minHeight: 54 },
+    polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 14, padding: 12, backgroundColor: 'rgba(9,0,13,0.32)' },
+    polishHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+    polishCopy: { flex: 1, minWidth: 180 },
+    polishTitle: { fontWeight: '900', fontSize: 14, marginBottom: 4 },
+    polishBtn: { minWidth: 120, minHeight: 44 },
+    errorText: { color: '#ffb4b4', marginTop: 8, fontSize: 12, lineHeight: 17 },
+    compareWrap: { marginTop: 10, flexDirection: 'row', gap: 8 },
+    panelButtonRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    versionChip: { flex: 1, minWidth: 92, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(244,232,208,0.05)' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
-    versionChipText: { color: '#FFF', fontSize: 11, fontWeight: '600' }
+    versionChipText: { color: DrawerTheme.ivory, fontSize: 12, fontWeight: '700' },
 });
 
 export default VisitDetailScreen;

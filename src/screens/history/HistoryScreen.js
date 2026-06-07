@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ImageBackground, Platform } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -288,6 +288,7 @@ const CellarBackground = ({ children }) => (
 );
 
 const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode, isSelected }) => {
+    const suppressNextPressRef = useRef(false);
     const isPlaceholder = visit.isPlaceholder === true;
     const isManualMode = visit.is_manual === true;
     const isOnMode = !isManualMode;
@@ -295,7 +296,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     const title = visit.title
         || visit.drawer_title
         || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 28)
-        || (isManualMode ? '?? ??' : '??? ??');
+        || (isManualMode ? '개인 기록' : '타로 기록');
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';
@@ -304,9 +305,22 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     return (
         <View style={styles.drawerWrapper}>
             <TouchableOpacity
+                testID={`history-drawer-${visit.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={selectionMode ? `${title} 선택 토글` : `${title} 상세 보기`}
+                accessibilityState={{ selected: !!isSelected }}
                 activeOpacity={0.9}
-                onPress={() => onSelectCard(visit)}
-                onLongPress={onLongPress}
+                onPress={() => {
+                    if (suppressNextPressRef.current) {
+                        suppressNextPressRef.current = false;
+                        return;
+                    }
+                    onSelectCard(visit);
+                }}
+                onLongPress={() => {
+                    suppressNextPressRef.current = true;
+                    onLongPress?.();
+                }}
                 delayLongPress={500}
                 style={[
                     styles.drawer,

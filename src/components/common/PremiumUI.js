@@ -67,8 +67,16 @@ export const PremiumCard = ({ children, variant = 'card', style, contentStyle })
   </LinearGradient>
 );
 
-export const GoldActionButton = ({ title, children, onPress, disabled, style, textStyle, dark = false }) => (
-  <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.86} style={[styles.buttonWrap, style]}>
+export const GoldActionButton = ({ title, children, onPress, disabled, style, textStyle, dark = false, ...touchableProps }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.86}
+    style={[styles.buttonWrap, style]}
+    accessibilityRole={touchableProps.accessibilityRole || 'button'}
+    accessibilityState={{ disabled: !!disabled, ...touchableProps.accessibilityState }}
+    {...touchableProps}
+  >
     <LinearGradient
       colors={dark ? PremiumGradients.wine : PremiumGradients.gold}
       start={{ x: 0, y: 0 }}
