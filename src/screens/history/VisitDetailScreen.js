@@ -138,7 +138,6 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
         const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
             allowsEditing: true,
-            aspect: [3, 4],
             quality: 0.7,
         });
 
@@ -315,51 +314,6 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 accessibilityLabel="서랍 제목 입력"
                             />
 
-                            <Text style={styles.sectionLabel}>카드 슬롯</Text>
-                            <View style={[styles.imgBox, { borderColor: theme.c }]}>
-                                {s.uri ? (
-                                    <>
-                                        <Image source={{ uri: toDisplayImageUri(s.uri) }} style={styles.fullImg} />
-                                        <TouchableOpacity
-                                            onPress={() => up({ uri: null })}
-                                            style={styles.delBtn}
-                                            accessibilityRole="button"
-                                            accessibilityLabel="카드 이미지 삭제"
-                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                        >
-                                            <Text style={styles.whiteText}>×</Text>
-                                        </TouchableOpacity>
-                                    </>
-                                ) : (
-                                    <View style={styles.placeholderContainer}>
-                                        <Text style={[styles.placeholderText, { color: theme.c }]}>✦</Text>
-                                        <Text style={styles.placeholderSubText}>카드를 촬영하거나 선택하세요</Text>
-                                    </View>
-                                )}
-                            </View>
-
-                            <View style={[styles.buttonRow, styles.btnRow]}>
-                                <CustomButton
-                                    title="촬영"
-                                    onPress={() => onPick('cam')}
-                                    variant={ACTION_VARIANT.SECONDARY}
-                                    style={styles.rowButton}
-                                    numberOfLines={1}
-                                    allowFontScaling={false}
-                                    disabled={isBusy}
-                                    accessibilityLabel="카드 이미지 촬영"
-                                />
-                                <CustomButton
-                                    title="앨범 선택"
-                                    onPress={() => onPick('lib')}
-                                    variant={ACTION_VARIANT.SECONDARY}
-                                    style={styles.rowButton}
-                                    numberOfLines={1}
-                                    allowFontScaling={false}
-                                    disabled={isBusy}
-                                    accessibilityLabel="앨범에서 카드 이미지 선택"
-                                />
-                            </View>
                         </PremiumCard>
 
                         <PremiumCard style={styles.formCard}>
@@ -453,6 +407,54 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                         </TouchableOpacity>
                                     </View>
                                 )}
+                            </View>
+                        </PremiumCard>
+
+                        <PremiumCard style={styles.formCard}>
+                            <Text style={styles.sectionLabel}>카드 슬롯</Text>
+                            <View style={[styles.imgBox, { borderColor: theme.c }]}>
+                                {s.uri ? (
+                                    <>
+                                        <Image source={{ uri: toDisplayImageUri(s.uri) }} style={styles.fullImg} />
+                                        <TouchableOpacity
+                                            onPress={() => up({ uri: null })}
+                                            style={styles.delBtn}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="카드 이미지 삭제"
+                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        >
+                                            <Text style={styles.whiteText}>×</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <View style={styles.placeholderContainer}>
+                                        <Text style={[styles.placeholderText, { color: theme.c }]}>✦</Text>
+                                        <Text style={styles.placeholderSubText}>카드를 촬영하거나 선택하세요</Text>
+                                    </View>
+                                )}
+                            </View>
+
+                            <View style={[styles.buttonRow, styles.btnRow]}>
+                                <CustomButton
+                                    title="촬영"
+                                    onPress={() => onPick('cam')}
+                                    variant={ACTION_VARIANT.SECONDARY}
+                                    style={styles.rowButton}
+                                    numberOfLines={1}
+                                    allowFontScaling={false}
+                                    disabled={isBusy}
+                                    accessibilityLabel="카드 이미지 촬영"
+                                />
+                                <CustomButton
+                                    title="앨범 선택"
+                                    onPress={() => onPick('lib')}
+                                    variant={ACTION_VARIANT.SECONDARY}
+                                    style={styles.rowButton}
+                                    numberOfLines={1}
+                                    allowFontScaling={false}
+                                    disabled={isBusy}
+                                    accessibilityLabel="앨범에서 카드 이미지 선택"
+                                />
                             </View>
                         </PremiumCard>
 
