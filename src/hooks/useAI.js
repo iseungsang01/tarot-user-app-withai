@@ -1,7 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import {
-    summarizeReview,
-    analyzeVisitHistory,
+import {    analyzeVisitHistory,
     polishReviewText,
     condenseVoiceMemo,
 } from '../services/aiService';
@@ -16,76 +14,6 @@ const isAbortError = (error) => error?.name === 'AbortError' || /aborted/i.test(
 // ─────────────────────────────────────────────────────────────
 // 1. Consultation Review Analysis Hooks
 // ─────────────────────────────────────────────────────────────
-
-/**
- * Hook for summarizing a single review text
- */
-export const useSummarizeReview = () => {
-    const [result, setResult] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const abortControllerRef = useRef(null);
-
-    const summarize = useCallback(async (reviewText, visitDate) => {
-        if (!reviewText?.trim()) return;
-
-        // Cancel previous request if any is pending
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-
-        setLoading(true);
-        setError(null);
-        setResult(null);
-
-        try {
-            const { data, error: apiError } = await summarizeReview(reviewText, visitDate, controller.signal);
-
-            // Verify if this request is still the latest one
-            if (abortControllerRef.current === controller) {
-                if (apiError) {
-                    if (apiError.name !== 'AbortError') {
-                        setError(apiError.message || 'AI 분석 중 오류가 발생했습니다.');
-                    }
-                } else {
-                    setResult(data);
-                }
-            }
-        } catch (err) {
-            if (abortControllerRef.current === controller && err.name !== 'AbortError') {
-                setError(err.message || 'AI 분석 중 오류가 발생했습니다.');
-            }
-        } finally {
-            if (abortControllerRef.current === controller) {
-                setLoading(false);
-            }
-        }
-    }, []);
-
-    const reset = useCallback(() => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            abortControllerRef.current = null;
-        }
-        setResult(null);
-        setError(null);
-        setLoading(false);
-    }, []);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
-        };
-    }, []);
-
-    return { result, loading, error, summarize, reset };
-};
 
 /**
  * Hook for comprehensive history analysis

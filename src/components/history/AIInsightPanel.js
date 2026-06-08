@@ -4,7 +4,7 @@
  * VisitDetailScreen 또는 HistoryScreen에서 사용
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -16,125 +16,8 @@ import {
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TextColors } from '../../constants/Colors';
-import { useSummarizeReview, useAnalyzeHistory } from '../../hooks/useAI';
+import { useAnalyzeHistory } from '../../hooks/useAI';
 
-export const AISummaryPanel = React.memo(({ reviewText, visitDate, initialResult = null, onResult, onClear }) => {
-    const { result, loading, error, summarize, reset } = useSummarizeReview();
-    const [expanded, setExpanded] = useState(!!initialResult);
-
-    useEffect(() => {
-        if (initialResult) {
-            setExpanded(true);
-        }
-    }, [initialResult]);
-
-    const handleAnalyze = async () => {
-        setExpanded(true);
-        await summarize(reviewText, visitDate);
-    };
-
-    const handleReset = () => {
-        reset();
-        setExpanded(false);
-        onClear?.();
-    };
-
-    useEffect(() => {
-        if (result) {
-            onResult?.(result);
-        }
-    }, [result, onResult]);
-
-    const moodColorMap = {
-        '긍정적': '#4CAF50',
-        '중립': DrawerTheme.goldBright,
-        '복잡': '#FF9800',
-        '어려움': '#F44336',
-    };
-
-    if (!reviewText?.trim()) return null;
-
-    return (
-        <View style={styles.container}>
-            {!expanded ? (
-                <TouchableOpacity style={styles.triggerButton} onPress={handleAnalyze} activeOpacity={0.8}>
-                    <Text style={styles.triggerIcon}>✨</Text>
-                    <Text style={styles.triggerText}>AI로 이 기록 분석하기</Text>
-                    <Text style={styles.triggerArrow}>›</Text>
-                </TouchableOpacity>
-            ) : (
-                <View style={styles.panel}>
-                    <View style={styles.panelHeader}>
-                        <Text style={styles.panelTitle}>✨ AI 인사이트</Text>
-                        <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <Text style={styles.closeText}>✕</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {loading && (
-                        <View style={styles.loadingArea}>
-                            <ActivityIndicator size="small" color={DrawerTheme.goldBright} />
-                            <Text style={styles.loadingText}>AI가 기록을 분석하고 있습니다...</Text>
-                        </View>
-                    )}
-
-                    {error && !loading && (
-                        <View style={styles.errorArea}>
-                            <Text style={styles.errorText}>⚠ {error}</Text>
-                            <TouchableOpacity style={styles.retryButton} onPress={handleAnalyze}>
-                                <Text style={styles.retryText}>다시 시도</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {(result || initialResult) && !loading && (
-                        <View style={styles.resultArea}>
-                            <View style={styles.moodRow}>
-                                <Text style={styles.moodEmoji}>{(result || initialResult).moodEmoji}</Text>
-                                <View style={[
-                                    styles.moodBadge,
-                                    { backgroundColor: (moodColorMap[(result || initialResult).mood] || DrawerTheme.goldBright) + '22' }
-                                ]}>
-                                    <Text style={[
-                                        styles.moodText,
-                                        { color: moodColorMap[(result || initialResult).mood] || DrawerTheme.goldBright }
-                                    ]}>
-                                        {(result || initialResult).mood}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.section}>
-                                <Text style={styles.sectionLabel}> 요약</Text>
-                                <Text style={styles.sectionContent}>{(result || initialResult).summary}</Text>
-                            </View>
-
-                            {(result || initialResult).keywords?.length > 0 && (
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}> 키워드</Text>
-                                    <View style={styles.keywordsRow}>
-                                        {(result || initialResult).keywords.map((kw, i) => (
-                                            <View key={i} style={styles.keywordChip}>
-                                                <Text style={styles.keywordText}>#{kw}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
-
-                            {(result || initialResult).advice && (
-                                <View style={[styles.section, styles.adviceSection]}>
-                                    <Text style={styles.sectionLabel}> 다음 상담 제안</Text>
-                                    <Text style={styles.adviceText}>{(result || initialResult).advice}</Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
-                </View>
-            )}
-        </View>
-    );
-});
 
 export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
     const { result, loading, error, remaining, analyze, reset } = useAnalyzeHistory();
@@ -255,21 +138,6 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontWeight: '900',
     },
-    triggerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(18,0,8,0.82)',
-        borderWidth: 1,
-        borderColor: 'rgba(184,135,53,0.52)',
-        borderRadius: 14,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        gap: 10,
-    },
-    triggerIcon: { fontSize: 18 },
-    triggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 14, fontWeight: '600' },
-    triggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
-    triggerArrow: { color: DrawerTheme.goldBright, fontSize: 20, opacity: 0.6 },
     historyTriggerButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -311,13 +179,6 @@ const styles = StyleSheet.create({
     historyTriggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
     historyTriggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
     historyTriggerArrow: { color: DrawerTheme.mutedIvory, fontSize: 10, fontWeight: '900', letterSpacing: 0.8, opacity: 0.8 },
-    panel: {
-        backgroundColor: 'rgba(18,0,8,0.92)',
-        borderWidth: 1,
-        borderColor: 'rgba(184,135,53,0.46)',
-        borderRadius: 14,
-        overflow: 'hidden',
-    },
     historyPanel: {
         backgroundColor: 'rgba(18,0,8,0.92)',
         borderWidth: 1,
@@ -343,7 +204,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     },
-    closeText: { color: TextColors.subTextMuted, fontSize: 16 },
     historyCloseText: { color: TextColors.subTextMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
     loadingArea: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
     loadingText: { color: TextColors.subTextStrong, fontSize: 13 },
@@ -358,10 +218,6 @@ const styles = StyleSheet.create({
     },
     retryText: { color: DrawerTheme.goldBright, fontSize: 12 },
     resultArea: { padding: 14, gap: 12 },
-    moodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    moodEmoji: { fontSize: 20 },
-    moodBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    moodText: { fontSize: 12, fontWeight: '700' },
     section: { gap: 6 },
     sectionLabel: {
         fontSize: 12,
@@ -371,16 +227,6 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     sectionContent: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 21 },
-    keywordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    keywordChip: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        backgroundColor: 'rgba(31,18,12,0.72)',
-        borderWidth: 1,
-        borderColor: 'rgba(200,163,64,0.22)',
-    },
-    keywordText: { color: TextColors.subTextStrong, fontSize: 12 },
     patternItem: { flexDirection: 'row', gap: 6 },
     patternDot: { color: DrawerTheme.goldBright, fontSize: 14 },
     patternText: { flex: 1, color: TextColors.subTextHigh, fontSize: 14, lineHeight: 20 },

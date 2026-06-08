@@ -19,6 +19,6 @@ export { SettingReportManager } from './settings/SettingReportManager';
 export { SettingDeleteAccount } from './settings/SettingDeleteAccount';
 export { VoteList } from './vote/VoteList';
 export { VoteDetail } from './vote/VoteDetail';
-export { AISummaryPanel, AIHistoryAnalysisPanel } from './history/AIInsightPanel';
+export { AIHistoryAnalysisPanel } from './history/AIInsightPanel';
 export { HistoryHeader } from './history/HistoryHeader';
 export { HistoryFilterBar } from './history/HistoryFilterBar';
