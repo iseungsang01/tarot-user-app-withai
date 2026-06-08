@@ -1,79 +1,18 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { storage, STORAGE_KEYS } from '../utils/storage';
-import { AuthContext } from './AuthContext';
+import React, { createContext, useCallback, useContext } from 'react';
 
 const UIContext = createContext();
 
 export const UIProvider = ({ children }) => {
-  const { customer } = useContext(AuthContext);
-  const [showCoachMarks, setShowCoachMarks] = useState(false);
-  const [coachMarksSessionId, setCoachMarksSessionId] = useState(null);
-  const [uiLoading, setUiLoading] = useState(true);
-
-  const startCoachMarks = useCallback((sessionId) => {
-    const nextSessionId = sessionId ?? `${Date.now()}`;
-    setCoachMarksSessionId(nextSessionId);
-    setShowCoachMarks(true);
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const hydrateUIState = async () => {
-      setUiLoading(true);
-      try {
-        if (!customer) {
-          if (isMounted) {
-            setShowCoachMarks(false);
-            setCoachMarksSessionId(null);
-          }
-          return;
-        }
-
-        const hasSeenCoachMarks = await storage.get(STORAGE_KEYS.COACH_MARKS);
-        if (isMounted && hasSeenCoachMarks !== true) {
-          startCoachMarks(`first-run-${customer.id ?? Date.now()}`);
-        } else if (isMounted) {
-          setShowCoachMarks(false);
-          setCoachMarksSessionId(null);
-        }
-      } catch (error) {
-        console.error('UIContext.hydrateUIState error:', error);
-      } finally {
-        if (isMounted) setUiLoading(false);
-      }
-    };
-
-    hydrateUIState();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [customer?.id, startCoachMarks]);
-
-  const completeCoachMarks = useCallback(async () => {
-    try {
-      await storage.save(STORAGE_KEYS.COACH_MARKS, true);
-      setShowCoachMarks(false);
-      setCoachMarksSessionId(null);
-    } catch (error) {
-      console.error('UIContext.completeCoachMarks error:', error);
-    }
-  }, []);
-
-  const triggerCoachMarks = useCallback(
-    (sessionId) => {
-      startCoachMarks(sessionId ?? `replay-${Date.now()}`);
-    },
-    [startCoachMarks]
-  );
+  const startCoachMarks = useCallback(() => {}, []);
+  const completeCoachMarks = useCallback(async () => {}, []);
+  const triggerCoachMarks = useCallback(() => {}, []);
 
   return (
     <UIContext.Provider
       value={{
-        showCoachMarks,
-        coachMarksSessionId,
-        uiLoading,
+        showCoachMarks: false,
+        coachMarksSessionId: null,
+        uiLoading: false,
         completeCoachMarks,
         startCoachMarks,
         triggerCoachMarks,

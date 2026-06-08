@@ -170,6 +170,21 @@ const VisitDetailScreen = ({ route, navigation }) => {
         if (data) setSelectedReviewVersion('polished');
     };
 
+    const handleReviewChange = (value) => {
+        up({ review: value });
+        if (polishedReview) {
+            setSelectedReviewVersion('original');
+            resetPolish();
+        }
+    };
+
+    const applyPolishedToMemo = () => {
+        if (!polishedReview) return;
+        up({ review: polishedReview });
+        setSelectedReviewVersion('original');
+        resetPolish();
+    };
+
     const onSave = async () => {
         if (s.saving) return;
         if (!s.uri && !s.review.trim() && !s.title.trim()) {
@@ -272,7 +287,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 style={[styles.input, { borderColor: `${theme.c}66` }]}
                                 multiline
                                 value={s.review}
-                                onChangeText={(v) => up({ review: v })}
+                                onChangeText={handleReviewChange}
                                 placeholder={isOffMode ? '비밀 서랍에 둘 메모를 적어보세요.' : '상담 내용을 기록해 두면 나중에 확인하기 좋습니다.'}
                                 placeholderTextColor={theme.placeholder}
                                 accessibilityLabel="상담 또는 개인 메모 입력"
@@ -321,6 +336,44 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                             <Text style={styles.versionChipText}>AI 다듬은 본</Text>
                                         </TouchableOpacity>
                                     </View>
+                                )}
+                                {!!polishedReview && (
+                                    <>
+                                        <View style={styles.polishPreviewBox}>
+                                            <Text style={styles.polishPreviewLabel}>
+                                                {selectedReviewVersion === 'polished' ? 'AI 다듬은 본 미리보기' : '직접 작성본 미리보기'}
+                                            </Text>
+                                            <Text style={styles.polishPreviewText}>
+                                                {selectedReviewVersion === 'polished' ? polishedReview : s.review}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.polishSaveHint}>
+                                            {selectedReviewVersion === 'polished'
+                                                ? '이 상태로 저장하면 AI 다듬은 본이 기록에 저장됩니다.'
+                                                : '기존 메모를 유지하려면 직접 작성본을 선택한 채 저장하세요.'}
+                                        </Text>
+                                        <View style={styles.polishActionRow}>
+                                            <TouchableOpacity
+                                                style={[styles.polishActionButton, styles.polishApplyButton]}
+                                                onPress={applyPolishedToMemo}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="AI 다듬은 본을 메모 칸에 적용"
+                                            >
+                                                <Text style={styles.polishActionText}>메모 칸에 적용</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.polishActionButton}
+                                                onPress={() => {
+                                                    setSelectedReviewVersion('original');
+                                                    resetPolish();
+                                                }}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="AI 다듬은 본 닫기"
+                                            >
+                                                <Text style={styles.polishActionText}>닫기</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
                                 )}
                             </View>
                         </PremiumCard>
@@ -408,6 +461,14 @@ const styles = StyleSheet.create({
     versionChip: { flex: 1, minWidth: 92, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(244,232,208,0.05)' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
     versionChipText: { color: DrawerTheme.ivory, fontSize: 12, fontWeight: '700' },
+    polishPreviewBox: { marginTop: 12, borderRadius: 12, padding: 12, backgroundColor: 'rgba(244,232,208,0.07)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.14)' },
+    polishPreviewLabel: { color: DrawerTheme.brightGold, fontSize: 12, fontWeight: '900', marginBottom: 6 },
+    polishPreviewText: { color: DrawerTheme.ivory, fontSize: 14, lineHeight: 22 },
+    polishSaveHint: { color: DrawerTheme.mutedIvory, fontSize: 12, lineHeight: 17, marginTop: 8, opacity: 0.86 },
+    polishActionRow: { marginTop: 10, flexDirection: 'row', gap: 8 },
+    polishActionButton: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', paddingVertical: 9, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(244,232,208,0.05)' },
+    polishApplyButton: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
+    polishActionText: { color: DrawerTheme.ivory, fontSize: 12, fontWeight: '800' },
     bottomBackButton: { alignSelf: 'center', marginTop: 4, paddingHorizontal: 14, paddingVertical: 10 },
     bottomBackText: { color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
     disabled: { opacity: 0.45 },

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -20,8 +20,6 @@ export const HistoryFilterBar = ({
     onSetArchiveMode,
     timeFilter,
     setTimeFilter,
-    currentCoachStepKey,
-    advanceCoachStep,
     selectedYear,
     setSelectedYear,
     selectedMonth,
@@ -31,18 +29,7 @@ export const HistoryFilterBar = ({
     setSelectionMode,
     setSelectedIds,
     onMultiDelete,
-    onCaptureArchiveFrame,
-    onCaptureTimeFilterFrame,
 }) => {
-    const archiveRef = useRef(null);
-    const timeFilterRef = useRef(null);
-
-    const captureRefFrame = (ref, capture) => {
-        if (!ref?.current || !capture) return;
-        ref.current.measureInWindow((x, y, width, height) => {
-            if (width > 0 && height > 0) capture({ x, y, width, height });
-        });
-    };
 
     const getYearOptions = () => {
         const currentYear = new Date().getFullYear();
@@ -51,26 +38,10 @@ export const HistoryFilterBar = ({
 
     const pressArchiveMode = (mode) => {
         onSetArchiveMode(mode);
-        if (currentCoachStepKey === 'home-archive-mode') {
-            advanceCoachStep?.('home-archive-mode');
-        }
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => captureRefFrame(archiveRef, onCaptureArchiveFrame));
-        } else {
-            captureRefFrame(archiveRef, onCaptureArchiveFrame);
-        }
     };
 
     const pressTimeFilter = (filter) => {
         setTimeFilter(filter);
-        if (currentCoachStepKey === 'home-time-filter') {
-            advanceCoachStep?.('home-time-filter');
-        }
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame));
-        } else {
-            captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame);
-        }
     };
 
     return (
@@ -86,9 +57,7 @@ export const HistoryFilterBar = ({
                 <View style={styles.labelRivetRight} />
                 <Text style={styles.railLabel}>서랍 분류 명패</Text>
                 <View
-                    ref={archiveRef}
                     style={styles.archiveRow}
-                    onLayout={() => captureRefFrame(archiveRef, onCaptureArchiveFrame)}
                     pointerEvents="box-none"
                 >
                     {archiveTabs.map((tab) => {
@@ -123,9 +92,7 @@ export const HistoryFilterBar = ({
             </LinearGradient>
 
             <View
-                ref={timeFilterRef}
                 style={styles.filterRow}
-                onLayout={() => captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame)}
                 pointerEvents="box-none"
             >
                 {timeTabs.map((tab) => {
@@ -255,14 +222,14 @@ export const HistoryFilterBar = ({
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const styles = StyleSheet.create({
-    wrap: { width: '100%', alignItems: 'center', gap: 7, marginTop: 0, marginBottom: 8 },
+    wrap: { width: '100%', alignItems: 'center', gap: 5, marginTop: 0, marginBottom: 6 },
     controlShell: {
         width: '100%',
-        minHeight: 72,
+        minHeight: 64,
         borderRadius: 10,
-        paddingHorizontal: 9,
-        paddingTop: 18,
-        paddingBottom: 8,
+        paddingHorizontal: 8,
+        paddingTop: 16,
+        paddingBottom: 7,
         borderWidth: 1,
         borderTopWidth: 2,
         borderColor: DrawerTheme.archiveBorderStrong,
@@ -275,30 +242,30 @@ const styles = StyleSheet.create({
     },
     labelRivetLeft: { position: 'absolute', top: 8, left: 10, width: 5, height: 5, borderRadius: 3, backgroundColor: DrawerTheme.brassHighlight, opacity: 0.74 },
     labelRivetRight: { position: 'absolute', top: 8, right: 10, width: 5, height: 5, borderRadius: 3, backgroundColor: DrawerTheme.brassHighlight, opacity: 0.74 },
-    railLabel: { position: 'absolute', top: 5, alignSelf: 'center', color: DrawerTheme.mutedIvory, fontSize: 9, fontWeight: '800', letterSpacing: 1.6, opacity: 0.78 },
-    archiveRow: { width: '100%', flexDirection: 'row', gap: 7, overflow: 'visible' },
-    archiveButton: { flex: 1, minHeight: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: DrawerTheme.archiveBorder, backgroundColor: 'rgba(9,0,13,0.42)' },
+    railLabel: { position: 'absolute', top: 5, alignSelf: 'center', color: DrawerTheme.mutedIvory, fontSize: 8, fontWeight: '800', letterSpacing: 1.4, opacity: 0.78 },
+    archiveRow: { width: '100%', flexDirection: 'row', gap: 5, overflow: 'visible' },
+    archiveButton: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: DrawerTheme.archiveBorder, backgroundColor: 'rgba(9,0,13,0.42)' },
     archiveButtonActive: { borderColor: 'rgba(244,232,208,0.82)', transform: [{ translateY: -1 }] },
-    archiveLabel: { fontSize: 13, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.6 },
+    archiveLabel: { fontSize: 12, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.5 },
     archiveLabelActive: { color: DrawerTheme.bgBlackCherry, textShadowColor: 'rgba(244,232,208,0.24)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4 },
-    archiveCaption: { marginTop: 2, fontSize: 9, color: DrawerTheme.mutedIvory, fontWeight: '700', letterSpacing: 0.2, opacity: 0.76 },
+    archiveCaption: { marginTop: 1, fontSize: 8, color: DrawerTheme.mutedIvory, fontWeight: '700', letterSpacing: 0.2, opacity: 0.76 },
     archiveCaptionActive: { color: 'rgba(18,0,8,0.78)', opacity: 0.9 },
-    filterRow: { width: '100%', minHeight: 52, flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: DrawerTheme.archiveBorder, borderRadius: 10, backgroundColor: DrawerTheme.archivePanel, padding: 5, overflow: 'visible' },
-    filterButton: { flex: 1, minHeight: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,135,53,0.3)', backgroundColor: 'rgba(9,0,13,0.32)' },
+    filterRow: { width: '100%', minHeight: 46, flexDirection: 'row', gap: 5, borderWidth: 1, borderColor: DrawerTheme.archiveBorder, borderRadius: 9, backgroundColor: DrawerTheme.archivePanel, padding: 4, overflow: 'visible' },
+    filterButton: { flex: 1, minHeight: 36, borderRadius: 7, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,135,53,0.3)', backgroundColor: 'rgba(9,0,13,0.32)' },
     filterButtonActive: { borderColor: 'rgba(244,232,208,0.68)' },
-    filterText: { fontSize: 12, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.4 },
+    filterText: { fontSize: 11, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.3 },
     filterTextActive: { color: DrawerTheme.bgBlackCherry },
-    filterCaption: { marginTop: 1, fontSize: 8, color: DrawerTheme.mutedIvory, fontWeight: '700', opacity: 0.68 },
+    filterCaption: { marginTop: 1, fontSize: 7, color: DrawerTheme.mutedIvory, fontWeight: '700', opacity: 0.68 },
     filterCaptionActive: { color: 'rgba(18,0,8,0.72)', opacity: 0.92 },
-    yearSelector: { width: '100%', flexDirection: 'row', gap: 5, paddingHorizontal: 1 },
-    yearButton: { flex: 1, minHeight: 42, borderRadius: 8, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
+    yearSelector: { width: '100%', flexDirection: 'row', gap: 4, paddingHorizontal: 1 },
+    yearButton: { flex: 1, minHeight: 34, borderRadius: 7, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
     yearButtonActive: { backgroundColor: 'rgba(50,29,18,0.92)', borderColor: DrawerTheme.brassHighlight },
-    yearText: { fontSize: 11, color: DrawerTheme.mutedIvory, fontWeight: '800' },
+    yearText: { fontSize: 10, color: DrawerTheme.mutedIvory, fontWeight: '800' },
     yearTextActive: { color: DrawerTheme.brightGold },
-    monthSelector: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 1 },
-    monthButton: { width: '15.6%', minHeight: 38, borderRadius: 8, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
+    monthSelector: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', columnGap: 2, rowGap: 3, paddingHorizontal: 2 },
+    monthButton: { width: '13.8%', minHeight: 24, borderRadius: 6, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
     monthButtonActive: { backgroundColor: 'rgba(50,29,18,0.92)', borderColor: DrawerTheme.brassHighlight },
-    monthText: { fontSize: 10, color: DrawerTheme.mutedIvory, fontWeight: '800' },
+    monthText: { fontSize: 8, color: DrawerTheme.mutedIvory, fontWeight: '800' },
     monthTextActive: { color: DrawerTheme.brightGold },
     selectionActions: { width: '100%', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: DrawerTheme.archiveBorderStrong, shadowColor: DrawerTheme.brassHighlight, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.14, shadowRadius: 8, elevation: 4 },
     selectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 },
@@ -311,7 +278,7 @@ const styles = StyleSheet.create({
     deleteAllButtonDisabled: { opacity: 0.48 },
     deleteAllText: { fontSize: 14, color: DrawerTheme.brightGold, fontWeight: '900' },
     deleteAllTextDisabled: { opacity: 0.38 },
-    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 5 },
-    hintStar: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(224,184,90,0.48)' },
-    hintText: { flex: 1, fontSize: 11, lineHeight: 15, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
+    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4 },
+    hintStar: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(224,184,90,0.48)' },
+    hintText: { flex: 1, fontSize: 10, lineHeight: 14, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
 });

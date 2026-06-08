@@ -20,7 +20,7 @@ const drawerTextureAsset = require('../../../assets/tarot-cellar/drawer-walnut.p
 const cellarBackgroundAsset = require('../../../assets/tarot-cellar/bg-cellar.png');
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachStep }) => {
+const HistoryScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const { state, actions } = useHistoryLogic(navigation);
@@ -81,8 +81,6 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 onSetArchiveMode={setArchiveMode}
                 timeFilter={timeFilter}
                 setTimeFilter={setTimeFilter}
-                currentCoachStepKey={currentCoachStepKey}
-                advanceCoachStep={advanceCoachStep}
                 selectedYear={selectedYear}
                 setSelectedYear={setSelectedYear}
                 selectedMonth={selectedMonth}
@@ -92,8 +90,6 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 setSelectionMode={setSelectionMode}
                 setSelectedIds={setSelectedIds}
                 onMultiDelete={handleMultiDelete}
-                onCaptureArchiveFrame={(frame) => onCaptureCoachFrame?.('home-archive-mode', frame)}
-                onCaptureTimeFilterFrame={(frame) => onCaptureCoachFrame?.('home-time-filter', frame)}
             />
 
             {/* Chest Top Moldings */}

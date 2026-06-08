@@ -11,7 +11,6 @@ import {
 } from '../../components';
 
 import { useAuth } from '../../hooks/useAuth';
-import { useUI } from '../../context/UIContext';
 import { APP_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
@@ -26,14 +25,6 @@ const MENU_ITEMS = {
 const SettingsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { customer, logout } = useAuth();
-  const { triggerCoachMarks } = useUI();
-
-  const replayGuide = () => {
-    navigation.navigate('Home');
-    requestAnimationFrame(() => {
-      triggerCoachMarks(`settings-replay-${Date.now()}`);
-    });
-  };
 
   return (
     <ScreenContainer safeTop={false} safeBottom={false}>
@@ -63,7 +54,7 @@ const SettingsScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <MenuRow label={MENU_ITEMS.guide} onPress={replayGuide} />
+          <MenuRow label={MENU_ITEMS.guide} />
         </View>
 
         {!customer?.isGuest && (
@@ -97,7 +88,7 @@ const SettingsScreen = ({ navigation }) => {
 };
 
 const MenuRow = ({ label, onPress, danger = false }) => (
-  <TouchableOpacity activeOpacity={0.84} onPress={onPress} accessibilityRole="button">
+  <TouchableOpacity activeOpacity={0.84} onPress={onPress} disabled={!onPress} accessibilityRole="button">
     <PremiumCard style={[styles.menuCard, danger && styles.menuCardDanger]}>
       <View style={styles.menuContent}>
         <DrawerMark size={18} filled={!danger} />
