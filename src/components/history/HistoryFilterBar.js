@@ -1,77 +1,90 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+﻿import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import {
+    RECORD_TYPE_LABELS,
+    VIEW_MODE_LABELS,
+    SORT_MODE_LABELS,
+    RECORD_STATUS_LABELS,
+} from '../../constants/historyFilters';
 
-const archiveTabs = [
-    { id: 'ON', label: '방문', caption: '방문 기록', accessibilityLabel: '서버 방문 기록 보기' },
-    { id: 'OFF', label: '개인', caption: '개인 서랍', accessibilityLabel: '개인 서랍 기록 보기' },
-    { id: 'ALL', label: '전체', caption: '모든 서랍', accessibilityLabel: '전체 기록 보기' },
-];
+const RECORD_TYPE_OPTIONS = ['visit', 'personal', 'all'];
+const VIEW_MODE_OPTIONS = ['all', 'year', 'month'];
+const SORT_MODE_OPTIONS = ['latest', 'oldest'];
+const RECORD_STATUS_OPTIONS = ['all', 'hasRecord', 'empty'];
 
-const timeTabs = [
-    { id: 'ALL', label: '전체', caption: '모든 기록' },
-    { id: 'YEAR', label: '연도별', caption: '연도 라벨' },
-    { id: 'MONTH', label: '월별', caption: '월 라벨' },
-];
+const FILTER_SHEETS = {
+    viewMode: {
+        title: '보기 방식',
+        options: VIEW_MODE_OPTIONS,
+        labels: VIEW_MODE_LABELS,
+    },
+    sortMode: {
+        title: '정렬',
+        options: SORT_MODE_OPTIONS,
+        labels: SORT_MODE_LABELS,
+    },
+    recordStatus: {
+        title: '기록 상태',
+        options: RECORD_STATUS_OPTIONS,
+        labels: RECORD_STATUS_LABELS,
+    },
+};
 
 export const HistoryFilterBar = ({
-    archiveMode,
-    onSetArchiveMode,
-    timeFilter,
-    setTimeFilter,
-    selectedYear,
-    setSelectedYear,
-    selectedMonth,
-    setSelectedMonth,
+    recordType,
+    setRecordType,
+    viewMode,
+    setViewMode,
+    sortMode,
+    setSortMode,
+    recordStatus,
+    setRecordStatus,
     selectionMode,
     selectedIds,
     setSelectionMode,
     setSelectedIds,
     onMultiDelete,
 }) => {
+    const [activeSheet, setActiveSheet] = useState(null);
+    const sheetConfig = activeSheet ? FILTER_SHEETS[activeSheet] : null;
 
-    const getYearOptions = () => {
-        const currentYear = new Date().getFullYear();
-        return Array.from({ length: 5 }, (_, i) => currentYear - i);
-    };
+    const selectedValue = useMemo(() => ({
+        viewMode,
+        sortMode,
+        recordStatus,
+    }), [viewMode, sortMode, recordStatus]);
 
-    const pressArchiveMode = (mode) => {
-        onSetArchiveMode(mode);
-    };
-
-    const pressTimeFilter = (filter) => {
-        setTimeFilter(filter);
+    const setSheetValue = (nextValue) => {
+        if (activeSheet === 'viewMode') setViewMode(nextValue);
+        if (activeSheet === 'sortMode') setSortMode(nextValue);
+        if (activeSheet === 'recordStatus') setRecordStatus(nextValue);
+        setActiveSheet(null);
     };
 
     return (
         <View style={styles.wrap} pointerEvents="box-none">
             <LinearGradient
-                colors={[DrawerTheme.archivePanel, 'rgba(31,18,12,0.82)', DrawerTheme.archivePanelDeep]}
+                colors={['rgba(18,0,8,0.88)', 'rgba(31,18,12,0.76)', 'rgba(18,0,8,0.92)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.controlShell}
+                style={styles.filterShell}
                 pointerEvents="box-none"
             >
-                <View style={styles.labelRivetLeft} />
-                <View style={styles.labelRivetRight} />
-                <Text style={styles.railLabel}>서랍 분류 명패</Text>
-                <View
-                    style={styles.archiveRow}
-                    pointerEvents="box-none"
-                >
-                    {archiveTabs.map((tab) => {
-                        const active = archiveMode === tab.id;
+                <View style={styles.primaryTabs} pointerEvents="box-none">
+                    {RECORD_TYPE_OPTIONS.map((type) => {
+                        const active = recordType === type;
                         return (
                             <TouchableOpacity
-                                key={tab.id}
-                                testID={`history-archive-${tab.id}`}
-                                accessibilityRole="button"
-                                accessibilityLabel={tab.accessibilityLabel}
+                                key={type}
+                                testID={`history-record-type-${type}`}
+                                accessibilityRole="tab"
+                                accessibilityLabel={`${RECORD_TYPE_LABELS[type]} 보기`}
                                 accessibilityState={{ selected: active }}
-                                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                                onPress={() => pressArchiveMode(tab.id)}
-                                style={[styles.archiveButton, active && styles.archiveButtonActive]}
+                                hitSlop={{ top: 6, bottom: 6, left: 3, right: 3 }}
+                                onPress={() => setRecordType(type)}
+                                style={[styles.primaryTab, active && styles.primaryTabActive]}
                                 activeOpacity={0.86}
                             >
                                 {active && (
@@ -83,202 +96,249 @@ export const HistoryFilterBar = ({
                                         style={StyleSheet.absoluteFill}
                                     />
                                 )}
-                                <Text style={[styles.archiveLabel, active && styles.archiveLabelActive]}>{tab.label}</Text>
-                                <Text style={[styles.archiveCaption, active && styles.archiveCaptionActive]}>{tab.caption}</Text>
+                                <Text style={[styles.primaryTabText, active && styles.primaryTabTextActive]}>
+                                    {RECORD_TYPE_LABELS[type]}
+                                </Text>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
+
+                <View style={styles.chipRow} pointerEvents="box-none">
+                    <FilterChip label={`${VIEW_MODE_LABELS[viewMode]} ▼`} onPress={() => setActiveSheet('viewMode')} />
+                    <FilterChip label={`${SORT_MODE_LABELS[sortMode]} ▼`} onPress={() => setActiveSheet('sortMode')} />
+                    <FilterChip label="기록 상태 ▼" onPress={() => setActiveSheet('recordStatus')} />
+                </View>
+
+                <Text style={styles.currentSummary} numberOfLines={1}>
+                    {RECORD_TYPE_LABELS[recordType]} · {VIEW_MODE_LABELS[viewMode]}
+                </Text>
+
+                {selectionMode ? (
+                    <View style={styles.selectionActions} pointerEvents="box-none">
+                        <Text style={styles.selectedCount}>{selectedIds.size}개 선택됨</Text>
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                                testID="history-selection-cancel"
+                                accessibilityRole="button"
+                                accessibilityLabel="기록 선택 취소"
+                                style={styles.cancelButton}
+                                onPress={() => {
+                                    setSelectionMode(false);
+                                    setSelectedIds(new Set());
+                                }}
+                            >
+                                <Text style={styles.cancelButtonText}>취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                testID="history-selection-delete"
+                                accessibilityRole="button"
+                                accessibilityLabel="선택한 기록 삭제"
+                                accessibilityState={{ disabled: selectedIds.size === 0 }}
+                                style={[styles.deleteAllButton, selectedIds.size === 0 && styles.deleteAllButtonDisabled]}
+                                onPress={onMultiDelete}
+                                disabled={selectedIds.size === 0}
+                            >
+                                <Text style={[styles.deleteAllText, selectedIds.size === 0 && styles.deleteAllTextDisabled]}>
+                                    선택 삭제
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                ) : (
+                    <View style={styles.hintContainer} pointerEvents="none">
+                        <View style={styles.hintStar} />
+                        <Text style={styles.hintText}>서랍을 길게 누르면 여러 기록을 한 번에 정리할 수 있어요.</Text>
+                        <View style={styles.hintStar} />
+                    </View>
+                )}
             </LinearGradient>
 
-            <View
-                style={styles.filterRow}
-                pointerEvents="box-none"
+            <Modal
+                visible={!!sheetConfig}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setActiveSheet(null)}
             >
-                {timeTabs.map((tab) => {
-                    const active = timeFilter === tab.id;
-                    return (
-                        <TouchableOpacity
-                            key={tab.id}
-                            testID={`history-time-${tab.id}`}
-                            accessibilityRole="button"
-                            accessibilityLabel={`기록 ${tab.label} 필터`}
-                            accessibilityState={{ selected: active }}
-                            style={[styles.filterButton, active && styles.filterButtonActive]}
-                            onPress={() => pressTimeFilter(tab.id)}
-                            activeOpacity={0.86}
-                            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                        >
-                            {active && (
-                                <LinearGradient
-                                    pointerEvents="none"
-                                    colors={['rgba(224,184,90,0.95)', 'rgba(184,135,53,0.78)', 'rgba(111,78,30,0.82)']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={StyleSheet.absoluteFill}
-                                />
-                            )}
-                            <Text style={[styles.filterText, active && styles.filterTextActive]}>{tab.label}</Text>
-                            <Text style={[styles.filterCaption, active && styles.filterCaptionActive]}>{tab.caption}</Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
-
-            {(timeFilter === 'YEAR' || timeFilter === 'MONTH') && (
-                <View style={styles.yearSelector} pointerEvents="box-none">
-                    {getYearOptions().map((year) => (
-                        <TouchableOpacity
-                            key={year}
-                            testID={`history-year-${year}`}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${year}년 기록 보기`}
-                            accessibilityState={{ selected: selectedYear === year }}
-                            style={[styles.yearButton, selectedYear === year && styles.yearButtonActive]}
-                            onPress={() => setSelectedYear(year)}
-                            activeOpacity={0.86}
-                            hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-                        >
-                            <Text style={[styles.yearText, selectedYear === year && styles.yearTextActive]}>{year}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
-
-            {timeFilter === 'MONTH' && (
-                <View style={styles.monthSelector} pointerEvents="box-none">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                        <TouchableOpacity
-                            key={month}
-                            testID={`history-month-${month}`}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${month}월 기록 보기`}
-                            accessibilityState={{ selected: selectedMonth === month }}
-                            style={[styles.monthButton, selectedMonth === month && styles.monthButtonActive]}
-                            onPress={() => setSelectedMonth(month)}
-                            activeOpacity={0.86}
-                            hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-                        >
-                            <Text style={[styles.monthText, selectedMonth === month && styles.monthTextActive]}>{month}월</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
-
-            {selectionMode ? (
-                <LinearGradient
-                    colors={['rgba(18,0,8,0.94)', 'rgba(74,15,43,0.72)', 'rgba(31,18,12,0.9)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.selectionActions}
-                    pointerEvents="box-none"
-                >
-                    <View style={styles.selectionHeaderRow}>
-                        <Text style={styles.selectedCount}>{selectedIds.size}개 선택됨</Text>
-                        <Text style={styles.selectionHint}>정리할 서랍을 확인하세요</Text>
-                    </View>
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity
-                            testID="history-selection-cancel"
-                            accessibilityRole="button"
-                            accessibilityLabel="기록 선택 취소"
-                            style={styles.cancelButton}
-                            onPress={() => {
-                                setSelectionMode(false);
-                                setSelectedIds(new Set());
-                            }}
-                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                        >
-                            <Text style={styles.cancelButtonText}>취소</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            testID="history-selection-delete"
-                            accessibilityRole="button"
-                            accessibilityLabel="선택한 기록 삭제"
-                            accessibilityState={{ disabled: selectedIds.size === 0 }}
-                            style={[styles.deleteAllButton, selectedIds.size === 0 && styles.deleteAllButtonDisabled]}
-                            onPress={onMultiDelete}
-                            disabled={selectedIds.size === 0}
-                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                        >
-                            <Text style={[styles.deleteAllText, selectedIds.size === 0 && styles.deleteAllTextDisabled]}>
-                                선택 삭제
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </LinearGradient>
-            ) : (
-                <View style={styles.hintContainer} pointerEvents="none">
-                    <View style={styles.hintStar} />
-                    <Text style={styles.hintText}>서랍을 길게 누르면 여러 기록을 한 번에 정리할 수 있어요.</Text>
-                    <View style={styles.hintStar} />
-                </View>
-            )}
+                <Pressable style={styles.sheetBackdrop} onPress={() => setActiveSheet(null)}>
+                    <Pressable style={styles.sheetCard}>
+                        <View style={styles.sheetHandle} />
+                        <Text style={styles.sheetTitle}>{sheetConfig?.title}</Text>
+                        {sheetConfig?.options.map((option) => {
+                            const active = selectedValue[activeSheet] === option;
+                            return (
+                                <TouchableOpacity
+                                    key={option}
+                                    testID={`history-${activeSheet}-${option}`}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected: active }}
+                                    style={[styles.sheetOption, active && styles.sheetOptionActive]}
+                                    onPress={() => setSheetValue(option)}
+                                    activeOpacity={0.86}
+                                >
+                                    <Text style={[styles.sheetOptionText, active && styles.sheetOptionTextActive]}>
+                                        {sheetConfig.labels[option]}
+                                    </Text>
+                                    {active && <Text style={styles.sheetCheck}>✓</Text>}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </View>
     );
 };
 
+const FilterChip = ({ label, onPress }) => (
+    <TouchableOpacity
+        accessibilityRole="button"
+        style={styles.filterChip}
+        onPress={onPress}
+        activeOpacity={0.84}
+        hitSlop={{ top: 7, bottom: 7, left: 3, right: 3 }}
+    >
+        <Text style={styles.filterChipText}>{label}</Text>
+    </TouchableOpacity>
+);
+
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const styles = StyleSheet.create({
-    wrap: { width: '100%', alignItems: 'center', gap: 5, marginTop: 0, marginBottom: 6 },
-    controlShell: {
+    wrap: { width: '100%', alignItems: 'center', marginTop: 0, marginBottom: 6 },
+    filterShell: {
         width: '100%',
-        minHeight: 64,
-        borderRadius: 10,
-        paddingHorizontal: 8,
-        paddingTop: 16,
+        borderRadius: 13,
+        paddingHorizontal: 9,
+        paddingTop: 9,
         paddingBottom: 7,
         borderWidth: 1,
-        borderTopWidth: 2,
-        borderColor: DrawerTheme.archiveBorderStrong,
+        borderColor: 'rgba(224,184,90,0.34)',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.28,
+        shadowOpacity: 0.24,
         shadowRadius: 10,
         elevation: 4,
         overflow: 'hidden',
     },
-    labelRivetLeft: { position: 'absolute', top: 8, left: 10, width: 5, height: 5, borderRadius: 3, backgroundColor: DrawerTheme.brassHighlight, opacity: 0.74 },
-    labelRivetRight: { position: 'absolute', top: 8, right: 10, width: 5, height: 5, borderRadius: 3, backgroundColor: DrawerTheme.brassHighlight, opacity: 0.74 },
-    railLabel: { position: 'absolute', top: 5, alignSelf: 'center', color: DrawerTheme.mutedIvory, fontSize: 8, fontWeight: '800', letterSpacing: 1.4, opacity: 0.78 },
-    archiveRow: { width: '100%', flexDirection: 'row', gap: 5, overflow: 'visible' },
-    archiveButton: { flex: 1, minHeight: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: DrawerTheme.archiveBorder, backgroundColor: 'rgba(9,0,13,0.42)' },
-    archiveButtonActive: { borderColor: 'rgba(244,232,208,0.82)', transform: [{ translateY: -1 }] },
-    archiveLabel: { fontSize: 12, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.5 },
-    archiveLabelActive: { color: DrawerTheme.bgBlackCherry, textShadowColor: 'rgba(244,232,208,0.24)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4 },
-    archiveCaption: { marginTop: 1, fontSize: 8, color: DrawerTheme.mutedIvory, fontWeight: '700', letterSpacing: 0.2, opacity: 0.76 },
-    archiveCaptionActive: { color: 'rgba(18,0,8,0.78)', opacity: 0.9 },
-    filterRow: { width: '100%', minHeight: 46, flexDirection: 'row', gap: 5, borderWidth: 1, borderColor: DrawerTheme.archiveBorder, borderRadius: 9, backgroundColor: DrawerTheme.archivePanel, padding: 4, overflow: 'visible' },
-    filterButton: { flex: 1, minHeight: 36, borderRadius: 7, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,135,53,0.3)', backgroundColor: 'rgba(9,0,13,0.32)' },
-    filterButtonActive: { borderColor: 'rgba(244,232,208,0.68)' },
-    filterText: { fontSize: 11, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.3 },
-    filterTextActive: { color: DrawerTheme.bgBlackCherry },
-    filterCaption: { marginTop: 1, fontSize: 7, color: DrawerTheme.mutedIvory, fontWeight: '700', opacity: 0.68 },
-    filterCaptionActive: { color: 'rgba(18,0,8,0.72)', opacity: 0.92 },
-    yearSelector: { width: '100%', flexDirection: 'row', gap: 4, paddingHorizontal: 1 },
-    yearButton: { flex: 1, minHeight: 34, borderRadius: 7, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
-    yearButtonActive: { backgroundColor: 'rgba(50,29,18,0.92)', borderColor: DrawerTheme.brassHighlight },
-    yearText: { fontSize: 10, color: DrawerTheme.mutedIvory, fontWeight: '800' },
-    yearTextActive: { color: DrawerTheme.brightGold },
-    monthSelector: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', columnGap: 2, rowGap: 3, paddingHorizontal: 2 },
-    monthButton: { width: '13.8%', minHeight: 24, borderRadius: 6, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
-    monthButtonActive: { backgroundColor: 'rgba(50,29,18,0.92)', borderColor: DrawerTheme.brassHighlight },
-    monthText: { fontSize: 8, color: DrawerTheme.mutedIvory, fontWeight: '800' },
-    monthTextActive: { color: DrawerTheme.brightGold },
-    selectionActions: { width: '100%', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: DrawerTheme.archiveBorderStrong, shadowColor: DrawerTheme.brassHighlight, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.14, shadowRadius: 8, elevation: 4 },
-    selectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 },
-    selectedCount: { fontSize: 15, color: DrawerTheme.brightGold, fontWeight: '900', fontFamily: serif },
-    selectionHint: { flex: 1, fontSize: 10, color: DrawerTheme.mutedIvory, textAlign: 'right', opacity: 0.76 },
-    actionButtons: { flexDirection: 'row', gap: 9 },
-    cancelButton: { flex: 1, minHeight: 46, borderRadius: 10, backgroundColor: 'rgba(244,232,208,0.08)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', alignItems: 'center', justifyContent: 'center' },
-    cancelButtonText: { fontSize: 14, color: DrawerTheme.ivory, fontWeight: '800' },
-    deleteAllButton: { flex: 1, minHeight: 46, borderRadius: 10, backgroundColor: 'rgba(74,15,43,0.78)', borderWidth: 1, borderColor: 'rgba(224,184,90,0.46)', alignItems: 'center', justifyContent: 'center' },
+    primaryTabs: { width: '100%', flexDirection: 'row', gap: 5 },
+    primaryTab: {
+        flex: 1,
+        minHeight: 35,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.26)',
+        backgroundColor: 'rgba(9,0,13,0.44)',
+    },
+    primaryTabActive: {
+        borderColor: 'rgba(244,232,208,0.84)',
+        shadowColor: DrawerTheme.brassHighlight,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.22,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    primaryTabText: {
+        fontSize: 12,
+        color: DrawerTheme.ivory,
+        fontWeight: '900',
+        fontFamily: serif,
+        letterSpacing: 0.2,
+    },
+    primaryTabTextActive: { color: DrawerTheme.bgBlackCherry },
+    chipRow: { width: '100%', flexDirection: 'row', gap: 5, marginTop: 7 },
+    filterChip: {
+        flex: 1,
+        minHeight: 27,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 7,
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.22)',
+        backgroundColor: 'rgba(244,232,208,0.055)',
+    },
+    filterChipText: {
+        fontSize: 10,
+        color: DrawerTheme.mutedIvory,
+        fontWeight: '800',
+        letterSpacing: 0.1,
+    },
+    currentSummary: {
+        alignSelf: 'flex-start',
+        marginTop: 7,
+        color: DrawerTheme.brightGold,
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 0.25,
+    },
+    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 5 },
+    hintStar: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: 'rgba(224,184,90,0.44)' },
+    hintText: { flex: 1, fontSize: 10, lineHeight: 13, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
+    selectionActions: {
+        marginTop: 7,
+        borderRadius: 10,
+        padding: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.28)',
+        backgroundColor: 'rgba(18,0,8,0.62)',
+    },
+    selectedCount: { fontSize: 12, color: DrawerTheme.brightGold, fontWeight: '900', fontFamily: serif, marginBottom: 7 },
+    actionButtons: { flexDirection: 'row', gap: 7 },
+    cancelButton: { flex: 1, minHeight: 34, borderRadius: 9, backgroundColor: 'rgba(244,232,208,0.08)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.16)', alignItems: 'center', justifyContent: 'center' },
+    cancelButtonText: { fontSize: 12, color: DrawerTheme.ivory, fontWeight: '800' },
+    deleteAllButton: { flex: 1, minHeight: 34, borderRadius: 9, backgroundColor: 'rgba(74,15,43,0.78)', borderWidth: 1, borderColor: 'rgba(224,184,90,0.42)', alignItems: 'center', justifyContent: 'center' },
     deleteAllButtonDisabled: { opacity: 0.48 },
-    deleteAllText: { fontSize: 14, color: DrawerTheme.brightGold, fontWeight: '900' },
+    deleteAllText: { fontSize: 12, color: DrawerTheme.brightGold, fontWeight: '900' },
     deleteAllTextDisabled: { opacity: 0.38 },
-    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4 },
-    hintStar: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(224,184,90,0.48)' },
-    hintText: { flex: 1, fontSize: 10, lineHeight: 14, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
+    sheetBackdrop: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.58)',
+    },
+    sheetCard: {
+        margin: 14,
+        marginBottom: 24,
+        borderRadius: 18,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: DrawerTheme.archiveBorderStrong,
+        backgroundColor: DrawerTheme.bgDeepPurple,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    sheetHandle: {
+        alignSelf: 'center',
+        width: 38,
+        height: 4,
+        borderRadius: 2,
+        marginBottom: 12,
+        backgroundColor: 'rgba(224,184,90,0.36)',
+    },
+    sheetTitle: { color: DrawerTheme.brightGold, fontSize: 15, fontWeight: '900', fontFamily: serif, marginBottom: 9 },
+    sheetOption: {
+        minHeight: 44,
+        borderRadius: 12,
+        paddingHorizontal: 13,
+        marginTop: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.18)',
+        backgroundColor: 'rgba(9,0,13,0.38)',
+    },
+    sheetOptionActive: {
+        borderColor: DrawerTheme.brassHighlight,
+        backgroundColor: 'rgba(184,135,53,0.18)',
+    },
+    sheetOptionText: { color: DrawerTheme.ivory, fontSize: 14, fontWeight: '800' },
+    sheetOptionTextActive: { color: DrawerTheme.brightGold },
+    sheetCheck: { color: DrawerTheme.brightGold, fontSize: 15, fontWeight: '900' },
 });

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+﻿import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useVisits } from './useVisits';
 import { useAuth } from './useAuth';
@@ -6,11 +6,47 @@ import { visitService } from '../services/visitService';
 import { handleApiCall, showSuccessAlert } from '../utils/errorHandler';
 import { storage, STORAGE_KEYS } from '../utils/storage';
 
+const hasWrittenRecord = (item) => (
+    !!(item?.card_review && item.card_review.trim()) || !!item?.card_image
+);
+
+const getVisitTime = (item) => {
+    const time = new Date(item?.visit_date || 0).getTime();
+    return Number.isNaN(time) ? 0 : time;
+};
+
+const getGroupTitle = (item, viewMode) => {
+    const date = new Date(item?.visit_date || 0);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    if (!year || Number.isNaN(year)) return '날짜 없는 기록';
+    if (viewMode === 'month') return `${year}년 ${month}월`;
+    return `${year}년`;
+};
+
+const groupHistoryItems = (items, viewMode) => {
+    if (viewMode === 'all') return items;
+
+    const output = [];
+    let currentTitle = null;
+
+    items.forEach((item) => {
+        const title = getGroupTitle(item, viewMode);
+        if (title !== currentTitle) {
+            currentTitle = title;
+            output.push({ id: `group-${viewMode}-${title}`, type: 'groupHeader', title });
+        }
+        output.push(item);
+    });
+
+    return output;
+};
+
 export const useHistoryLogic = (navigation) => {
     const { customer, refreshCustomer } = useAuth();
     const abortControllerRef = useRef(null);
 
-    // Cancel pending requests on user change
     useEffect(() => {
         return () => {
             if (abortControllerRef.current) {
@@ -19,7 +55,6 @@ export const useHistoryLogic = (navigation) => {
         };
     }, [customer?.id]);
 
-    // React Query for server visits
     const {
         visits: serverVisits,
         isLoading: isVisitsLoading,
@@ -28,7 +63,6 @@ export const useHistoryLogic = (navigation) => {
         deleteMultipleVisits
     } = useVisits(customer?.id);
 
-    // Local state
     const [personalNotes, setPersonalNotes] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({
@@ -36,19 +70,16 @@ export const useHistoryLogic = (navigation) => {
         visit_count: customer?.visit_count || 0
     });
 
-    // Filter state
-    const [archiveMode, setArchiveMode] = useState('ALL');
-    const [timeFilter, setTimeFilter] = useState('ALL');
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [recordType, setRecordType] = useState('visit');
+    const [viewMode, setViewMode] = useState('all');
+    const [sortMode, setSortMode] = useState('latest');
+    const [recordStatus, setRecordStatus] = useState('all');
 
-    // Selection/Modal state
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    // Data Loading
     const loadLocalData = useCallback(async () => {
         try {
             const localData = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
@@ -102,25 +133,6 @@ export const useHistoryLogic = (navigation) => {
         }
     };
 
-    // Helper: Filter Logic
-    const applyTimeFilter = useCallback((data) => {
-        if (timeFilter === 'ALL') return data;
-
-        return data.filter(item => {
-            const date = new Date(item.visit_date);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-
-            if (timeFilter === 'YEAR') {
-                return year === selectedYear;
-            }
-            if (timeFilter === 'MONTH') {
-                return year === selectedYear && month === selectedMonth;
-            }
-            return true;
-        });
-    }, [timeFilter, selectedYear, selectedMonth]);
-
     const formattedServerVisits = useMemo(
         () => serverVisits.map((visit) => ({ ...visit, is_manual: false })),
         [serverVisits]
@@ -131,25 +143,35 @@ export const useHistoryLogic = (navigation) => {
         [formattedServerVisits, personalNotes]
     );
 
-    // Helper: Display Data Construction
-    const displayData = useMemo(() => {
+    const filteredVisits = useMemo(() => {
         let data = [];
 
-        if (archiveMode === 'ON') data = formattedServerVisits;
-        else if (archiveMode === 'OFF') data = personalNotes;
-        else {
-            data = [...allVisits].sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+        if (recordType === 'visit') data = formattedServerVisits;
+        else if (recordType === 'personal') data = personalNotes;
+        else data = allVisits;
+
+        if (recordStatus === 'hasRecord') {
+            data = data.filter(hasWrittenRecord);
+        } else if (recordStatus === 'empty') {
+            data = data.filter((item) => !hasWrittenRecord(item));
         }
 
-        return applyTimeFilter(data);
-    }, [archiveMode, formattedServerVisits, personalNotes, allVisits, applyTimeFilter]);
+        return [...data].sort((a, b) => {
+            const diff = getVisitTime(b) - getVisitTime(a);
+            return sortMode === 'latest' ? diff : -diff;
+        });
+    }, [recordType, recordStatus, sortMode, formattedServerVisits, personalNotes, allVisits]);
 
-    const displayDataById = useMemo(
-        () => new Map(displayData.map((visit) => [visit.id, visit])),
-        [displayData]
+    const displayData = useMemo(
+        () => groupHistoryItems(filteredVisits, viewMode),
+        [filteredVisits, viewMode]
     );
 
-    // Actions
+    const displayDataById = useMemo(
+        () => new Map(filteredVisits.map((visit) => [visit.id, visit])),
+        [filteredVisits]
+    );
+
     const toggleSelection = useCallback((id) => {
         setSelectedIds((prev) => {
             const newSet = new Set(prev);
@@ -176,7 +198,7 @@ export const useHistoryLogic = (navigation) => {
             }
 
             if (!itemToDelete) {
-                Alert.alert('오류', '삭제할 항목을 찾을 수 없습니다.');
+                Alert.alert('오류', '삭제할 기록을 찾을 수 없습니다.');
                 return;
             }
 
@@ -200,7 +222,7 @@ export const useHistoryLogic = (navigation) => {
 
     const handleUpdateVisitReview = useCallback(async (visit, nextReview) => {
         if (!visit?.id) {
-            Alert.alert('오류', '수정할 항목을 찾을 수 없습니다.');
+            Alert.alert('오류', '수정할 기록을 찾을 수 없습니다.');
             return;
         }
 
@@ -222,21 +244,21 @@ export const useHistoryLogic = (navigation) => {
             }
 
             setSelectedItem((prev) => (prev?.id === visit.id ? { ...prev, card_review: nextReview } : prev));
-            showSuccessAlert('UPDATE', Alert, '메모 축약 결과가 기록에 반영되었습니다.');
+            showSuccessAlert('UPDATE', Alert, '기록이 반영되었습니다.');
         } catch (error) {
-            console.error('메모 축약 저장 오류:', error);
-            Alert.alert('오류', '메모 축약 결과를 저장하는 중 문제가 발생했습니다.');
+            console.error('기록 저장 오류:', error);
+            Alert.alert('오류', '기록을 저장하는 중 문제가 발생했습니다.');
         }
     }, [loadLocalData, refetch]);
 
     const handleMultiDelete = useCallback(async () => {
         if (selectedIds.size === 0) {
-            Alert.alert('선택 없음', '삭제할 항목을 선택해주세요.');
+            Alert.alert('선택 없음', '삭제할 기록을 선택해주세요.');
             return;
         }
 
         Alert.alert(
-            '다중 삭제',
+            '여러 기록 삭제',
             `선택한 기록 ${selectedIds.size}개를 정말 삭제하시겠습니까?`,
             [
                 { text: '취소', style: 'cancel' },
@@ -270,9 +292,8 @@ export const useHistoryLogic = (navigation) => {
                             setSelectedIds(new Set());
                             setSelectionMode(false);
                             if (serverIds.length > 0) await refreshCustomer();
-
                         } catch (error) {
-                            console.error('다중 삭제 오류:', error);
+                            console.error('여러 기록 삭제 오류:', error);
                             Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
                         }
                     }
@@ -292,20 +313,21 @@ export const useHistoryLogic = (navigation) => {
             },
             visits: allVisits,
             displayData,
-            archiveMode,
-            timeFilter,
-            selectedYear,
-            selectedMonth,
+            filteredVisits,
+            recordType,
+            viewMode,
+            sortMode,
+            recordStatus,
             selectionMode,
             selectedIds,
             isModalVisible,
             selectedItem,
         },
         actions: {
-            setArchiveMode,
-            setTimeFilter,
-            setSelectedYear,
-            setSelectedMonth,
+            setRecordType,
+            setViewMode,
+            setSortMode,
+            setRecordStatus,
             setSelectionMode,
             setSelectedIds,
             setIsModalVisible,

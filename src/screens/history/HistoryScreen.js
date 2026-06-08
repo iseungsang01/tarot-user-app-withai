@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+﻿import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ImageBackground, Platform } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,10 +30,10 @@ const HistoryScreen = () => {
         isVisitsLoading,
         refreshing,
         visits,
-        archiveMode,
-        timeFilter,
-        selectedYear,
-        selectedMonth,
+        recordType,
+        viewMode,
+        sortMode,
+        recordStatus,
         selectionMode,
         selectedIds,
         isModalVisible,
@@ -42,10 +42,10 @@ const HistoryScreen = () => {
     } = state;
 
     const {
-        setArchiveMode,
-        setTimeFilter,
-        setSelectedYear,
-        setSelectedMonth,
+        setRecordType,
+        setViewMode,
+        setSortMode,
+        setRecordStatus,
         setSelectionMode,
         setSelectedIds,
         setIsModalVisible,
@@ -67,24 +67,24 @@ const HistoryScreen = () => {
         }, [customer, refreshAllData])
     );
 
-    const sideTint = archiveMode === 'OFF' ? 'rgba(42,6,44,0.72)' : 'rgba(31,18,12,0.84)';
-    const emptyTitle = timeFilter !== 'ALL' ? '이 라벨의 서랍은 비어 있어요' : '아직 보관된 기록이 없습니다';
-    const emptySubtitle = timeFilter !== 'ALL'
-        ? '다른 연도나 월 라벨을 열어보세요'
-        : '오늘의 기록을 첫 번째 서랍에 넣어보세요';
+    const sideTint = recordType === 'personal' ? 'rgba(42,6,44,0.72)' : 'rgba(31,18,12,0.84)';
+    const emptyTitle = viewMode !== 'all' ? '선택한 묶음에 표시할 서랍이 없어요' : '아직 보관된 기록이 없습니다';
+    const emptySubtitle = viewMode !== 'all'
+        ? '다른 보기 방식이나 기록 상태를 선택해보세요.'
+        : '오늘의 기록을 첫 번째 서랍에 넣어보세요.';
 
     const renderHeader = () => (
         <View style={styles.headerContainer}>
             <HistoryHeader />
             <HistoryFilterBar
-                archiveMode={archiveMode}
-                onSetArchiveMode={setArchiveMode}
-                timeFilter={timeFilter}
-                setTimeFilter={setTimeFilter}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
-                selectedMonth={selectedMonth}
-                setSelectedMonth={setSelectedMonth}
+                recordType={recordType}
+                setRecordType={setRecordType}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                sortMode={sortMode}
+                setSortMode={setSortMode}
+                recordStatus={recordStatus}
+                setRecordStatus={setRecordStatus}
                 selectionMode={selectionMode}
                 selectedIds={selectedIds}
                 setSelectionMode={setSelectionMode}
@@ -123,7 +123,7 @@ const HistoryScreen = () => {
                         <AIHistoryAnalysisPanel visits={visits} />
                     </View>
 
-                    {archiveMode === 'OFF' && (
+                    {recordType === 'personal' && (
                         <TouchableOpacity
                             activeOpacity={0.8}
                             style={styles.manualAddDrawer}
@@ -214,33 +214,54 @@ const HistoryScreen = () => {
         </View>
     );
 
-    const renderItem = ({ item }) => (
-        <LinearGradient
-            colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.mainBody}
-        >
-            <View style={styles.sideRailLeft} />
-            <View style={styles.sideRailRight} />
-            <View style={styles.drawerContent}>
-                <DrawerUnit
-                    visit={item}
-                    onSelectCard={() => {
-                        if (selectionMode) {
-                            toggleSelection(item.id);
-                        } else {
-                            setSelectedItem(item);
-                            setIsModalVisible(true);
-                        }
-                    }}
-                    onLongPress={() => handleLongPress(item.id)}
-                    selectionMode={selectionMode}
-                    isSelected={selectedIds.has(item.id)}
-                />
-            </View>
-        </LinearGradient>
-    );
+    const renderItem = ({ item }) => {
+        if (item.type === 'groupHeader') {
+            return (
+                <LinearGradient
+                    colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.mainBody}
+                >
+                    <View style={styles.sideRailLeft} />
+                    <View style={styles.sideRailRight} />
+                    <View style={styles.groupHeaderWrap}>
+                        <View style={styles.groupHeaderLine} />
+                        <Text style={styles.groupHeaderText}>{item.title}</Text>
+                        <View style={styles.groupHeaderLine} />
+                    </View>
+                </LinearGradient>
+            );
+        }
+
+        return (
+            <LinearGradient
+                colors={[sideTint, DrawerTheme.walnutDark, sideTint]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.mainBody}
+            >
+                <View style={styles.sideRailLeft} />
+                <View style={styles.sideRailRight} />
+                <View style={styles.drawerContent}>
+                    <DrawerUnit
+                        visit={item}
+                        onSelectCard={() => {
+                            if (selectionMode) {
+                                toggleSelection(item.id);
+                            } else {
+                                setSelectedItem(item);
+                                setIsModalVisible(true);
+                            }
+                        }}
+                        onLongPress={() => handleLongPress(item.id)}
+                        selectionMode={selectionMode}
+                        isSelected={selectedIds.has(item.id)}
+                    />
+                </View>
+            </LinearGradient>
+        );
+    };
 
     const isInitialLoading = isVisitsLoading && !refreshing && displayData.length === 0;
 
@@ -255,7 +276,7 @@ const HistoryScreen = () => {
                 ListHeaderComponent={renderHeader}
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={renderEmptyComponent}
-                keyExtractor={(item) => `${item.is_manual ? 'off' : 'on'}-${item.id}`}
+                keyExtractor={(item) => `${item.type === 'groupHeader' ? 'group' : (item.is_manual ? 'personal' : 'visit')}-${item.id}`}
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
                 style={styles.list}
@@ -325,7 +346,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';
-    const status = isPlaceholder ? '빈 서랍' : (isWritten ? '열람 가능' : '봉인');
+    const status = isPlaceholder ? '빈 서랍' : (isWritten ? '기록 있음' : '기록 없음');
     const modeLabel = isPlaceholder ? 'SEALED' : (isManualMode ? 'PRIVATE' : 'VISIT');
 
     return (
@@ -500,6 +521,27 @@ const styles = StyleSheet.create({
     },
     emptyContainer: {
         width: '100%',
+    },
+    groupHeaderWrap: {
+        minHeight: 36,
+        paddingHorizontal: 22,
+        paddingTop: 10,
+        paddingBottom: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    groupHeaderLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(224,184,90,0.24)',
+    },
+    groupHeaderText: {
+        color: DrawerTheme.brightGold,
+        fontSize: 12,
+        fontWeight: '900',
+        fontFamily: serif,
+        letterSpacing: 0.6,
     },
     manualAddDrawer: {
         minHeight: 82,
@@ -877,3 +919,8 @@ const styles = StyleSheet.create({
 });
 
 export default HistoryScreen;
+
+
+
+
+
