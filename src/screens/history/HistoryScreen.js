@@ -67,7 +67,11 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
         }, [customer, refreshAllData])
     );
 
-    const sideTint = archiveMode === 'OFF' ? 'rgba(42,6,44,0.7)' : 'rgba(31,18,12,0.82)';
+    const sideTint = archiveMode === 'OFF' ? 'rgba(42,6,44,0.72)' : 'rgba(31,18,12,0.84)';
+    const emptyTitle = timeFilter !== 'ALL' ? '이 라벨의 서랍은 비어 있어요' : '아직 보관된 기록이 없습니다';
+    const emptySubtitle = timeFilter !== 'ALL'
+        ? '다른 연도나 월 라벨을 열어보세요'
+        : '오늘의 기록을 첫 번째 서랍에 넣어보세요';
 
     const renderHeader = () => (
         <View style={styles.headerContainer}>
@@ -119,15 +123,32 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 <View style={styles.sideRailLeft} />
                 <View style={styles.sideRailRight} />
                 <View style={styles.drawerContentHeader}>
-                    <AIHistoryAnalysisPanel visits={visits} />
+                    <View style={styles.aiPanelSlot}>
+                        <AIHistoryAnalysisPanel visits={visits} />
+                    </View>
 
                     {archiveMode === 'OFF' && (
                         <TouchableOpacity
                             activeOpacity={0.8}
                             style={styles.manualAddDrawer}
+                            accessibilityRole="button"
+                            accessibilityLabel="개인 서랍 추가"
                             onPress={() => navigation.navigate('VisitDetail', { mode: 'manual', is_manual: true })}
                         >
-                            <Text style={styles.manualAddText}>+ 개인 서랍 추가</Text>
+                            <LinearGradient
+                                pointerEvents="none"
+                                colors={['rgba(224,184,90,0.10)', 'rgba(31,18,12,0.9)', 'rgba(9,0,13,0.68)']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={StyleSheet.absoluteFill}
+                            />
+                            <View style={styles.manualAddPlaque}>
+                                <Text style={styles.manualAddPlus}>＋</Text>
+                            </View>
+                            <View style={styles.manualAddCopy}>
+                                <Text style={styles.manualAddText}>개인 서랍 추가</Text>
+                                <Text style={styles.manualAddSubtext}>새 라벨을 붙이고 기록을 보관하기</Text>
+                            </View>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -175,13 +196,18 @@ const HistoryScreen = ({ onCaptureCoachFrame, currentCoachStepKey, advanceCoachS
                 <View style={styles.sideRailLeft} />
                 <View style={styles.sideRailRight} />
                 <View style={styles.drawerContent}>
+                    <View style={styles.emptyCopyPanel}>
+                        <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+                        <Text style={styles.emptySubtitle}>{emptySubtitle}</Text>
+                    </View>
                     {Array.from({ length: 4 }).map((_, index) => (
                         <DrawerUnit
                             key={`sealed-placeholder-${index}`}
                             visit={{
                                 id: `sealed-placeholder-${index}`,
                                 visit_date: '',
-                                drawer_title: timeFilter !== 'ALL' ? '해당 기간 기록 없음' : '아직 기록이 없습니다',
+                                drawer_title: index === 0 ? emptyTitle : '닫힌 빈 서랍',
+                                drawer_subtitle: index === 0 ? emptySubtitle : '',
                                 isPlaceholder: true,
                             }}
                             onSelectCard={() => {}}
@@ -299,10 +325,12 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
         || visit.drawer_title
         || (visit.card_review?.trim()?.split('\n')[0] || '').slice(0, 28)
         || (isManualMode ? '개인 기록' : '타로 기록');
+    const subtitle = visit.drawer_subtitle;
     const displayDate = visit.visit_date
         ? visit.visit_date.split('T')[0].split('-').join(' · ')
         : '';
-    const status = isWritten && !isPlaceholder ? '열람' : '봉인';
+    const status = isPlaceholder ? '빈 서랍' : (isWritten ? '열람 가능' : '봉인');
+    const modeLabel = isPlaceholder ? 'SEALED' : (isManualMode ? 'PRIVATE' : 'VISIT');
 
     return (
         <View style={styles.drawerWrapper}>
@@ -326,6 +354,7 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
                 delayLongPress={500}
                 style={[
                     styles.drawer,
+                    isPlaceholder && styles.placeholderDrawer,
                     (isOnMode && !isWritten && !isPlaceholder) && styles.unwrittenDrawer,
                     isSelected && styles.selectedDrawer
                 ]}
@@ -359,6 +388,17 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
                         </View>
                     )}
 
+                    {isSelected && <View pointerEvents="none" style={styles.selectedGlow} />}
+
+                    <View style={styles.drawerTopRail}>
+                        <Text numberOfLines={1} style={styles.drawerModeLabel}>{modeLabel}</Text>
+                        {!!displayDate && (
+                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.drawerDate}>
+                                {displayDate}
+                            </Text>
+                        )}
+                    </View>
+
                     <View style={styles.drawerMainRow}>
                         <View style={styles.drawerLeft}>
                             <View style={styles.sealedPlaque}>
@@ -370,19 +410,20 @@ const DrawerUnit = React.memo(({ visit, onSelectCard, onLongPress, selectionMode
                             <LocalSvg
                                 asset={brassHandleAsset}
                                 style={styles.brassHandle}
-                                width={76}
-                                height={30}
+                                width={84}
+                                height={32}
                             />
                         </View>
 
                         <View style={styles.drawerRight}>
-                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.drawerDate}>
-                                {displayDate}
-                            </Text>
+                            <View style={styles.drawerRightLine} />
                         </View>
                     </View>
 
-                    {!isPlaceholder && <Text numberOfLines={1} style={styles.drawerTitle}>{title}</Text>}
+                    <View style={styles.drawerTitlePlate}>
+                        <Text numberOfLines={1} style={[styles.drawerTitle, isPlaceholder && styles.placeholderTitle]}>{title}</Text>
+                        {!!subtitle && <Text numberOfLines={1} style={styles.drawerSubtitle}>{subtitle}</Text>}
+                    </View>
                 </View>
             </TouchableOpacity>
         </View>
@@ -465,20 +506,53 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     manualAddDrawer: {
-        height: 86,
-        margin: 2,
+        minHeight: 82,
+        marginHorizontal: 5,
+        marginTop: 4,
+        marginBottom: 12,
         borderWidth: 1,
-        borderStyle: 'dashed',
-        borderColor: 'rgba(224,184,90,0.58)',
-        justifyContent: 'center',
+        borderStyle: 'solid',
+        borderColor: DrawerTheme.archiveBorderStrong,
+        borderRadius: 12,
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10,
-        backgroundColor: 'rgba(20,0,24,0.7)',
+        paddingHorizontal: 14,
+        overflow: 'hidden',
+        backgroundColor: DrawerTheme.archiveSealed,
+    },
+    manualAddPlaque: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        borderWidth: 1,
+        borderColor: 'rgba(224,184,90,0.62)',
+        backgroundColor: 'rgba(18,0,8,0.62)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    manualAddPlus: {
+        color: DrawerTheme.brightGold,
+        fontSize: 22,
+        lineHeight: 26,
+        fontWeight: '900',
+    },
+    manualAddCopy: {
+        flex: 1,
+        minWidth: 0,
     },
     manualAddText: {
         fontSize: 15,
-        fontWeight: 'bold',
-        color: DrawerTheme.brightGold,
+        fontWeight: '900',
+        color: DrawerTheme.ivory,
+        letterSpacing: 0.3,
+    },
+    manualAddSubtext: {
+        marginTop: 4,
+        fontSize: 11,
+        lineHeight: 15,
+        color: DrawerTheme.mutedIvory,
+        opacity: 0.78,
     },
     chestContainer: {
         width: '100%',
@@ -514,7 +588,7 @@ const styles = StyleSheet.create({
     mainBody: {
         borderLeftWidth: 2,
         borderRightWidth: 2,
-        borderColor: 'rgba(12,6,4,0.62)',
+        borderColor: 'rgba(12,6,4,0.72)',
         overflow: 'hidden',
     },
     mainBodyHeaderExtension: {
@@ -541,12 +615,45 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(224,184,90,0.1)',
     },
     drawerContent: {
-        paddingVertical: 4,
-        paddingHorizontal: 3,
+        paddingVertical: 5,
+        paddingHorizontal: 5,
     },
     drawerContentHeader: {
-        paddingTop: 6,
-        paddingHorizontal: 3,
+        paddingTop: 8,
+        paddingHorizontal: 4,
+    },
+    aiPanelSlot: {
+        marginHorizontal: 3,
+        marginBottom: 4,
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    emptyCopyPanel: {
+        marginHorizontal: 4,
+        marginTop: 4,
+        marginBottom: 10,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: DrawerTheme.archiveBorder,
+        backgroundColor: 'rgba(9,0,13,0.46)',
+        alignItems: 'center',
+    },
+    emptyTitle: {
+        color: DrawerTheme.ivory,
+        fontSize: 15,
+        lineHeight: 20,
+        fontWeight: '900',
+        textAlign: 'center',
+    },
+    emptySubtitle: {
+        marginTop: 5,
+        color: DrawerTheme.mutedIvory,
+        fontSize: 12,
+        lineHeight: 17,
+        textAlign: 'center',
+        opacity: 0.82,
     },
     bottomMolding: {
         width: '100%',
@@ -575,15 +682,15 @@ const styles = StyleSheet.create({
     },
     drawerWrapper: {
         width: '100%',
-        marginBottom: 9,
+        marginBottom: 10,
         borderBottomWidth: 2,
         borderBottomColor: 'rgba(5,2,1,0.58)',
     },
     drawer: {
         width: '100%',
-        minHeight: 86,
+        minHeight: 104,
         borderRadius: 12,
-        padding: 9,
+        padding: 8,
         borderTopWidth: 1,
         borderBottomWidth: 2,
         borderTopColor: 'rgba(244,232,208,0.08)',
@@ -599,7 +706,10 @@ const styles = StyleSheet.create({
         opacity: 0.82,
     },
     unwrittenDrawer: {
-        opacity: 0.78,
+        opacity: 0.84,
+    },
+    placeholderDrawer: {
+        opacity: 0.72,
     },
     selectedDrawer: {
         borderWidth: 2,
@@ -613,20 +723,43 @@ const styles = StyleSheet.create({
     drawerInnerFrame: {
         flex: 1,
         borderWidth: 1,
-        borderColor: 'rgba(200,163,64,0.58)',
+        borderColor: DrawerTheme.archiveBorderStrong,
         backgroundColor: 'rgba(0,0,0,0.08)',
-        paddingHorizontal: 7,
-        paddingVertical: 7,
+        paddingHorizontal: 9,
+        paddingVertical: 8,
+        borderRadius: 7,
+        overflow: 'hidden',
+    },
+    selectedGlow: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 7,
+        backgroundColor: 'rgba(224,184,90,0.10)',
+    },
+    drawerTopRail: {
+        minHeight: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        marginBottom: 2,
+    },
+    drawerModeLabel: {
+        color: DrawerTheme.mutedIvory,
+        fontSize: 8,
+        lineHeight: 11,
+        fontWeight: '900',
+        letterSpacing: 1.3,
+        opacity: 0.7,
     },
     drawerMainRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        minHeight: 52,
+        minHeight: 46,
         minWidth: 0,
     },
     drawerLeft: {
-        width: '28%',
-        maxWidth: 92,
+        width: '30%',
+        maxWidth: 104,
         alignItems: 'flex-start',
         justifyContent: 'center',
     },
@@ -637,38 +770,43 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     drawerRight: {
-        width: '33%',
-        maxWidth: 118,
+        width: '30%',
+        maxWidth: 104,
         alignItems: 'flex-end',
         justifyContent: 'center',
     },
+    drawerRightLine: {
+        width: '76%',
+        height: 1,
+        backgroundColor: 'rgba(224,184,90,0.24)',
+    },
     sealedPlaque: {
-        maxWidth: 82,
-        minHeight: 30,
-        paddingHorizontal: 10,
-        borderRadius: 10,
+        maxWidth: 96,
+        minHeight: 32,
+        paddingHorizontal: 9,
+        borderRadius: 9,
         borderWidth: 1,
-        borderColor: 'rgba(224,184,90,0.28)',
-        backgroundColor: 'rgba(31,18,12,0.58)',
+        borderColor: 'rgba(224,184,90,0.42)',
+        backgroundColor: 'rgba(31,18,12,0.68)',
         alignItems: 'center',
         justifyContent: 'center',
     },
     sealedText: {
         color: DrawerTheme.brightGold,
-        fontSize: 11,
+        fontSize: 10,
         fontFamily: serif,
-        fontWeight: '700',
-        letterSpacing: 0.8,
+        fontWeight: '900',
+        letterSpacing: 0.4,
     },
     brassHandle: {
-        width: 76,
-        height: 30,
+        width: 84,
+        height: 32,
         opacity: 0.96,
     },
     drawerDate: {
         color: DrawerTheme.brightGold,
-        fontSize: 13,
-        lineHeight: 17,
+        fontSize: 12,
+        lineHeight: 16,
         fontWeight: '700',
         fontFamily: serif,
         letterSpacing: 0.3,
@@ -677,16 +815,39 @@ const styles = StyleSheet.create({
         textShadowRadius: 2,
     },
     drawerTitle: {
-        position: 'absolute',
-        left: '30%',
-        right: '35%',
-        bottom: 7,
-        color: 'rgba(244,232,208,0.84)',
-        fontSize: 11,
-        lineHeight: 14,
-        fontWeight: '600',
+        color: DrawerTheme.ivory,
+        fontSize: 14,
+        lineHeight: 19,
+        fontWeight: '900',
         textAlign: 'center',
-        opacity: 0.72,
+        letterSpacing: 0.2,
+        textShadowColor: 'rgba(0,0,0,0.72)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
+    },
+    drawerTitlePlate: {
+        marginTop: 4,
+        minHeight: 26,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(244,232,208,0.08)',
+        backgroundColor: 'rgba(9,0,13,0.22)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    drawerSubtitle: {
+        marginTop: 2,
+        color: DrawerTheme.mutedIvory,
+        fontSize: 10,
+        lineHeight: 13,
+        textAlign: 'center',
+        opacity: 0.74,
+    },
+    placeholderTitle: {
+        color: DrawerTheme.mutedIvory,
+        opacity: 0.82,
     },
     checkboxContainer: {
         position: 'absolute',
@@ -707,6 +868,10 @@ const styles = StyleSheet.create({
     checkboxActive: {
         borderColor: DrawerTheme.brassHighlight,
         backgroundColor: DrawerTheme.brass,
+        shadowColor: DrawerTheme.brassHighlight,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.65,
+        shadowRadius: 6,
     },
     checkmark: {
         fontSize: 14,

@@ -39,6 +39,14 @@ export const DrawerTheme = {
   overlay: 'rgba(0,0,0,0.88)',
   glass: 'rgba(244,232,208,0.08)',
 
+  archivePanel: 'rgba(31,18,12,0.72)',
+  archivePanelDeep: 'rgba(18,0,8,0.86)',
+  archiveBorder: 'rgba(184,135,53,0.42)',
+  archiveBorderStrong: 'rgba(224,184,90,0.58)',
+  archiveIvorySoft: 'rgba(244,232,208,0.84)',
+  archiveDanger: 'rgba(74,15,43,0.78)',
+  archiveSealed: 'rgba(9,0,13,0.62)',
+
   textMain: '#F4E8D0',
   textMuted: '#CDBB96',
   textDark: '#120008',

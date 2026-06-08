@@ -12,14 +12,17 @@ import {
     ScrollView,
     Keyboard,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
+    ArchiveTitleHeader,
     CustomButton,
+    GoldActionButton,
     LoadingSpinner,
+    PremiumCard,
+    ScreenContainer,
 } from '../../components';
-import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components/common/PremiumUI';
 import { useAuth } from '../../hooks/useAuth';
 import { usePolishReview } from '../../hooks/useAI';
 import { visitService } from '../../services/visitService';
@@ -34,6 +37,9 @@ const ACTION_VARIANT = {
     PRIMARY: 'primary',
     SECONDARY: 'secondary',
 };
+
+const PICKER_OPTIONS = { allowsEditing: true, quality: 0.7 };
+const COMPRESS_OPTIONS = { maxWidth: 800, quality: 0.6 };
 
 const VisitDetailScreen = ({ route, navigation }) => {
     const insets = useSafeAreaInsets();
@@ -129,19 +135,25 @@ const VisitDetailScreen = ({ route, navigation }) => {
             : await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()), Alert);
 
-        const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
-            allowsEditing: true,
-            quality: 0.7,
-        });
+        const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)(PICKER_OPTIONS);
 
-        if (!res.canceled && res.assets[0]) {
+        if (!res.canceled && res.assets?.[0]?.uri) {
             try {
-                const comp = await compressImage(res.assets[0].uri, { maxWidth: 800, quality: 0.6 });
+                const comp = await compressImage(res.assets[0].uri, COMPRESS_OPTIONS);
                 up({ uri: comp.base64 || comp.uri });
             } catch {
                 Alert.alert('오류', '이미지 처리에 실패했습니다.');
             }
         }
+    };
+
+    const pickImage = () => {
+        if (isBusy) return;
+        Alert.alert('사진 첨부', '이미지 가져오기 방식을 선택하세요.', [
+            { text: '취소', style: 'cancel' },
+            { text: '카메라 촬영', onPress: () => onPick('cam') },
+            { text: '앨범에서 선택', onPress: () => onPick('lib') },
+        ]);
     };
 
     const effectiveReview = useMemo(() => (
@@ -229,18 +241,15 @@ const VisitDetailScreen = ({ route, navigation }) => {
         : { c: DrawerTheme.brightGold, bg: DrawerTheme.walnut, placeholder: TextColors.inputPlaceholderOn };
 
     return (
-        <ScreenContainer>
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-                    <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 50 }]}>
-                        <PremiumCard variant="walnut" style={styles.headerCard}>
-                            <ArchiveTitleHeader
-                                eyebrow={isOffMode ? 'PRIVATE DRAWER' : 'DRAWER NOTE'}
-                                title={isOffMode ? '개인 서랍 작성' : '서랍 기록 정리'}
-                                subtitle={isOffMode ? '나만의 메모를 서랍에 보관합니다' : '타로 상담 기록을 정리합니다'}
-                                style={styles.archiveTitle}
-                            />
-                        </PremiumCard>
+        <ScreenContainer safeTop={false} safeBottom={false}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+                <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 50 }]}>
+                    <ArchiveTitleHeader
+                        eyebrow={isOffMode ? 'PRIVATE DRAWER' : 'DRAWER NOTE'}
+                        title={isOffMode ? '\uAC1C\uC778 \uC11C\uB78D \uC791\uC131' : '\uC11C\uB78D \uAE30\uB85D \uC815\uB9AC'}
+                        subtitle={isOffMode ? '\uB098\uB9CC\uC758 \uBA54\uBAA8\uB97C \uC11C\uB78D\uC5D0 \uBCF4\uAD00\uD569\uB2C8\uB2E4' : '\uD0C0\uB85C \uC0C1\uB2F4 \uAE30\uB85D\uC744 \uC815\uB9AC\uD569\uB2C8\uB2E4'}
+                        style={styles.header}
+                    />
 
                         <PremiumCard style={styles.formCard}>
                             <Text style={styles.sectionLabel}>서랍 명패</Text>
@@ -253,7 +262,6 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 maxLength={40}
                                 accessibilityLabel="서랍 제목 입력"
                             />
-
                         </PremiumCard>
 
                         <PremiumCard style={styles.formCard}>
@@ -303,7 +311,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
                             <View style={[styles.polishPanel, { borderColor: `${theme.c}55` }]}>
                                 <Text style={[styles.polishTitle, { color: theme.c }]}>AI 문장 다듬기</Text>
-                                {!!polishError && <Text style={styles.errorText}>※ {polishError}</Text>}
+                                {!!polishError && <Text style={styles.errorText}>⚠ {polishError}</Text>}
                                 {!!polishedReview && (
                                     <View style={styles.compareWrap}>
                                         <TouchableOpacity style={[styles.versionChip, selectedReviewVersion === 'original' && styles.versionChipActive]} onPress={() => setSelectedReviewVersion('original')} accessibilityRole="button" accessibilityLabel="직접 작성본 보기">
@@ -318,51 +326,36 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         </PremiumCard>
 
                         <PremiumCard style={styles.formCard}>
-                            <Text style={styles.sectionLabel}>카드 슬롯</Text>
-                            <View style={[styles.imgBox, { borderColor: theme.c }]}>
-                                {s.uri ? (
-                                    <>
-                                        <Image source={{ uri: toDisplayImageUri(s.uri) }} style={styles.fullImg} />
-                                        <TouchableOpacity
-                                            onPress={() => up({ uri: null })}
-                                            style={styles.delBtn}
-                                            accessibilityRole="button"
-                                            accessibilityLabel="카드 이미지 삭제"
-                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                        >
-                                            <Text style={styles.whiteText}>×</Text>
-                                        </TouchableOpacity>
-                                    </>
-                                ) : (
-                                    <View style={styles.placeholderContainer}>
-                                        <Text style={[styles.placeholderText, { color: theme.c }]}>✦</Text>
-                                        <Text style={styles.placeholderSubText}>카드를 촬영하거나 선택하세요</Text>
-                                    </View>
-                                )}
-                            </View>
+                            <Text style={styles.sectionLabel}>카드 사진</Text>
+                            <TouchableOpacity
+                                style={[styles.uploadButton, { borderColor: `${theme.c}66` }]}
+                                onPress={pickImage}
+                                disabled={isBusy}
+                                activeOpacity={0.82}
+                                accessibilityRole="button"
+                                accessibilityLabel="서랍 사진 첨부"
+                            >
+                                <Text style={[styles.uploadButtonText, { color: theme.c }]}>사진 첨부 (카메라 · 앨범)</Text>
+                            </TouchableOpacity>
 
-                            <View style={[styles.buttonRow, styles.btnRow]}>
-                                <CustomButton
-                                    title="촬영"
-                                    onPress={() => onPick('cam')}
-                                    variant={ACTION_VARIANT.SECONDARY}
-                                    style={styles.rowButton}
-                                    numberOfLines={1}
-                                    allowFontScaling={false}
-                                    disabled={isBusy}
-                                    accessibilityLabel="카드 이미지 촬영"
-                                />
-                                <CustomButton
-                                    title="앨범 선택"
-                                    onPress={() => onPick('lib')}
-                                    variant={ACTION_VARIANT.SECONDARY}
-                                    style={styles.rowButton}
-                                    numberOfLines={1}
-                                    allowFontScaling={false}
-                                    disabled={isBusy}
-                                    accessibilityLabel="앨범에서 카드 이미지 선택"
-                                />
-                            </View>
+                            {!!s.uri && (
+                                <View style={styles.previewWrap}>
+                                    <Image
+                                        source={{ uri: toDisplayImageUri(s.uri) }}
+                                        style={styles.previewImage}
+                                        resizeMode="contain"
+                                    />
+                                    <TouchableOpacity
+                                        onPress={() => up({ uri: null })}
+                                        style={styles.removeImageButton}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="첨부 사진 제거"
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={styles.removeImageText}>×</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         </PremiumCard>
 
                         <GoldActionButton
@@ -381,43 +374,37 @@ const VisitDetailScreen = ({ route, navigation }) => {
                         >
                             <Text style={styles.bottomBackText}>서랍 기록으로 돌아가기</Text>
                         </TouchableOpacity>
-                    </ScrollView>
-                </KeyboardAvoidingView>
-            </SafeAreaView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </ScreenContainer>
     );
 };
 
 const styles = StyleSheet.create({
     flex: { flex: 1 },
-    safeArea: { flex: 1 },
     scrollContent: { padding: 18, gap: 14 },
-    headerCard: { paddingTop: 12, paddingBottom: 4, backgroundColor: DrawerTheme.walnutDark },
-    archiveTitle: { paddingBottom: 0 },
+    header: { marginBottom: 2 },
     formCard: { borderColor: 'rgba(224,184,90,0.24)' },
     sectionLabel: { color: DrawerTheme.brightGold, fontSize: 13, fontWeight: '900', marginBottom: 8, marginLeft: 2, letterSpacing: 0.8 },
     helperText: { color: DrawerTheme.mutedIvory, fontSize: 12, lineHeight: 17, marginBottom: 8, opacity: 0.82 },
-    imgBox: { width: '100%', aspectRatio: 3 / 4, maxHeight: 320, backgroundColor: 'rgba(9,0,13,0.62)', borderRadius: 16, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', marginBottom: 12, overflow: 'hidden', alignSelf: 'center' },
-    fullImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-    delBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(74,15,43,0.86)', width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(224,184,90,0.4)' },
-    placeholderContainer: { alignItems: 'center', padding: 18 },
-    placeholderText: { fontSize: 34, marginBottom: 8 },
-    placeholderSubText: { color: DrawerTheme.mutedIvory, fontSize: 13, textAlign: 'center' },
+    uploadButton: { borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,232,208,0.06)' },
+    uploadButtonText: { fontSize: 14, fontWeight: '900', letterSpacing: 0.2 },
+    previewWrap: { marginTop: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(9,0,13,0.62)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.12)' },
+    previewImage: { width: '100%', height: 220 },
+    removeImageButton: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(74,15,43,0.86)', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(224,184,90,0.4)' },
+    removeImageText: { color: DrawerTheme.ivory, fontWeight: '900', fontSize: 22, lineHeight: 24 },
     buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', minHeight: 50 },
-    btnRow: { marginBottom: 0 },
     rowButton: { flex: 1, minWidth: 130, minHeight: 50, alignSelf: 'stretch' },
     compactButtonText: { fontSize: 13, fontWeight: '700' },
     titleInput: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, color: DrawerTheme.ivory, fontSize: 14, borderWidth: 1, marginBottom: 16 },
     input: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 14, padding: 14, color: DrawerTheme.ivory, minHeight: 150, fontSize: 14, lineHeight: 21, borderWidth: 1 },
     voiceRow: { marginTop: 10, marginBottom: 8 },
     voiceUsageText: { color: DrawerTheme.mutedIvory, fontSize: 12, marginTop: 2, marginLeft: 2, opacity: 0.82 },
-    whiteText: { color: DrawerTheme.ivory, fontWeight: 'bold', fontSize: 18, lineHeight: 20 },
     saveBtn: { marginTop: 4, minHeight: 54 },
     polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 14, padding: 12, backgroundColor: 'rgba(9,0,13,0.32)' },
     polishTitle: { fontWeight: '900', fontSize: 14, marginBottom: 4 },
     errorText: { color: '#ffb4b4', marginTop: 8, fontSize: 12, lineHeight: 17 },
     compareWrap: { marginTop: 10, flexDirection: 'row', gap: 8 },
-    panelButtonRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     versionChip: { flex: 1, minWidth: 92, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(244,232,208,0.05)' },
     versionChipActive: { borderColor: DrawerTheme.goldBright, backgroundColor: 'rgba(212,175,55,0.18)' },
     versionChipText: { color: DrawerTheme.ivory, fontSize: 12, fontWeight: '700' },
@@ -427,3 +414,4 @@ const styles = StyleSheet.create({
 });
 
 export default VisitDetailScreen;
+

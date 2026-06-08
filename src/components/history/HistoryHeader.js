@@ -4,7 +4,11 @@ import { ArchiveTitleHeader } from '../common/PremiumUI';
 
 export const HistoryHeader = () => (
     <View style={styles.wrap}>
-        <ArchiveTitleHeader eyebrow="Card Drawer" title="DRAWER ARCHIVE" subtitle="타로 기록 보관함" />
+        <ArchiveTitleHeader
+            eyebrow="PRIVATE TAROT CELLAR"
+            title="DRAWER ARCHIVE"
+            subtitle="서랍 기록 보관함"
+        />
     </View>
 );
 
@@ -12,6 +16,7 @@ const styles = StyleSheet.create({
     wrap: {
         width: '100%',
         alignItems: 'center',
-        paddingBottom: 4,
+        paddingBottom: 0,
+        marginBottom: -6,
     },
 });

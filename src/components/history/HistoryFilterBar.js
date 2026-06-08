@@ -3,6 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
+const archiveTabs = [
+    { id: 'ON', label: '방문', caption: '방문 기록', accessibilityLabel: '서버 방문 기록 보기' },
+    { id: 'OFF', label: '개인', caption: '개인 서랍', accessibilityLabel: '개인 서랍 기록 보기' },
+    { id: 'ALL', label: '전체', caption: '모든 서랍', accessibilityLabel: '전체 기록 보기' },
+];
+
+const timeTabs = [
+    { id: 'ALL', label: '전체', caption: '모든 기록' },
+    { id: 'YEAR', label: '연도별', caption: '연도 라벨' },
+    { id: 'MONTH', label: '월별', caption: '월 라벨' },
+];
+
 export const HistoryFilterBar = ({
     archiveMode,
     onSetArchiveMode,
@@ -63,19 +75,23 @@ export const HistoryFilterBar = ({
 
     return (
         <View style={styles.wrap} pointerEvents="box-none">
-            <View style={styles.controlShell} pointerEvents="box-none">
-                <Text style={styles.railLabel}>BRASS DRAWER LABELS</Text>
+            <LinearGradient
+                colors={[DrawerTheme.archivePanel, 'rgba(31,18,12,0.82)', DrawerTheme.archivePanelDeep]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.controlShell}
+                pointerEvents="box-none"
+            >
+                <View style={styles.labelRivetLeft} />
+                <View style={styles.labelRivetRight} />
+                <Text style={styles.railLabel}>서랍 분류 명패</Text>
                 <View
                     ref={archiveRef}
                     style={styles.archiveRow}
                     onLayout={() => captureRefFrame(archiveRef, onCaptureArchiveFrame)}
                     pointerEvents="box-none"
                 >
-                    {[
-                        { id: 'ON', label: 'ON', accessibilityLabel: '서버 방문 기록 보기' },
-                        { id: 'OFF', label: 'OFF', accessibilityLabel: '개인 서랍 기록 보기' },
-                        { id: 'ALL', label: 'ALL', accessibilityLabel: '전체 기록 보기' },
-                    ].map((tab) => {
+                    {archiveTabs.map((tab) => {
                         const active = archiveMode === tab.id;
                         return (
                             <TouchableOpacity
@@ -92,18 +108,19 @@ export const HistoryFilterBar = ({
                                 {active && (
                                     <LinearGradient
                                         pointerEvents="none"
-                                        colors={['rgba(224,184,90,0.95)', 'rgba(184,135,53,0.88)', 'rgba(111,78,30,0.92)']}
+                                        colors={[DrawerTheme.brassHighlight, DrawerTheme.brass, DrawerTheme.darkGold]}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 1 }}
                                         style={StyleSheet.absoluteFill}
                                     />
                                 )}
                                 <Text style={[styles.archiveLabel, active && styles.archiveLabelActive]}>{tab.label}</Text>
+                                <Text style={[styles.archiveCaption, active && styles.archiveCaptionActive]}>{tab.caption}</Text>
                             </TouchableOpacity>
                         );
                     })}
                 </View>
-            </View>
+            </LinearGradient>
 
             <View
                 ref={timeFilterRef}
@@ -111,11 +128,7 @@ export const HistoryFilterBar = ({
                 onLayout={() => captureRefFrame(timeFilterRef, onCaptureTimeFilterFrame)}
                 pointerEvents="box-none"
             >
-                {[
-                    { id: 'ALL', label: '전체' },
-                    { id: 'YEAR', label: '연도별' },
-                    { id: 'MONTH', label: '월별' },
-                ].map((tab) => {
+                {timeTabs.map((tab) => {
                     const active = timeFilter === tab.id;
                     return (
                         <TouchableOpacity
@@ -132,13 +145,14 @@ export const HistoryFilterBar = ({
                             {active && (
                                 <LinearGradient
                                     pointerEvents="none"
-                                    colors={['rgba(224,184,90,0.92)', 'rgba(184,135,53,0.78)', 'rgba(111,78,30,0.78)']}
+                                    colors={['rgba(224,184,90,0.95)', 'rgba(184,135,53,0.78)', 'rgba(111,78,30,0.82)']}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                     style={StyleSheet.absoluteFill}
                                 />
                             )}
                             <Text style={[styles.filterText, active && styles.filterTextActive]}>{tab.label}</Text>
+                            <Text style={[styles.filterCaption, active && styles.filterCaptionActive]}>{tab.caption}</Text>
                         </TouchableOpacity>
                     );
                 })}
@@ -185,8 +199,17 @@ export const HistoryFilterBar = ({
             )}
 
             {selectionMode ? (
-                <View style={styles.selectionActions} pointerEvents="box-none">
-                    <Text style={styles.selectedCount}>{selectedIds.size}개 선택됨</Text>
+                <LinearGradient
+                    colors={['rgba(18,0,8,0.94)', 'rgba(74,15,43,0.72)', 'rgba(31,18,12,0.9)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.selectionActions}
+                    pointerEvents="box-none"
+                >
+                    <View style={styles.selectionHeaderRow}>
+                        <Text style={styles.selectedCount}>{selectedIds.size}개 선택됨</Text>
+                        <Text style={styles.selectionHint}>정리할 서랍을 확인하세요</Text>
+                    </View>
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
                             testID="history-selection-cancel"
@@ -217,11 +240,11 @@ export const HistoryFilterBar = ({
                             </Text>
                         </TouchableOpacity>
                     </View>
-                </View>
+                </LinearGradient>
             ) : (
                 <View style={styles.hintContainer} pointerEvents="none">
                     <View style={styles.hintStar} />
-                    <Text style={styles.hintText}>기록을 길게 누르면 여러 개를 선택할 수 있습니다.</Text>
+                    <Text style={styles.hintText}>서랍을 길게 누르면 여러 기록을 한 번에 정리할 수 있어요.</Text>
                     <View style={styles.hintStar} />
                 </View>
             )}
@@ -232,39 +255,63 @@ export const HistoryFilterBar = ({
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const styles = StyleSheet.create({
-    wrap: { width: '100%', alignItems: 'center', gap: 5, marginTop: 0, marginBottom: 6 },
-    controlShell: { width: '100%', minHeight: 42, borderRadius: 5, paddingHorizontal: 5, paddingTop: 10, paddingBottom: 4, borderWidth: 1, borderTopWidth: 2, borderColor: 'rgba(184,135,53,0.64)', backgroundColor: 'rgba(31,18,12,0.64)', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.22, shadowRadius: 8, elevation: 3 },
-    railLabel: { position: 'absolute', top: 2, left: 9, color: DrawerTheme.mutedIvory, fontSize: 7, fontWeight: '800', letterSpacing: 1, opacity: 0.68 },
-    archiveRow: { width: '100%', flexDirection: 'row', gap: 4, overflow: 'visible' },
-    archiveButton: { flex: 1, minHeight: 28, borderRadius: 4, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,135,53,0.4)', backgroundColor: 'rgba(9,0,13,0.34)' },
-    archiveButtonActive: { borderColor: 'rgba(244,232,208,0.72)', transform: [{ translateY: -2 }] },
-    archiveLabel: { fontSize: 11, color: DrawerTheme.mutedIvory, fontWeight: '800', fontFamily: serif, letterSpacing: 0.8 },
+    wrap: { width: '100%', alignItems: 'center', gap: 7, marginTop: 0, marginBottom: 8 },
+    controlShell: {
+        width: '100%',
+        minHeight: 72,
+        borderRadius: 10,
+        paddingHorizontal: 9,
+        paddingTop: 18,
+        paddingBottom: 8,
+        borderWidth: 1,
+        borderTopWidth: 2,
+        borderColor: DrawerTheme.archiveBorderStrong,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.28,
+        shadowRadius: 10,
+        elevation: 4,
+        overflow: 'hidden',
+    },
+    labelRivetLeft: { position: 'absolute', top: 8, left: 10, width: 5, height: 5, borderRadius: 3, backgroundColor: DrawerTheme.brassHighlight, opacity: 0.74 },
+    labelRivetRight: { position: 'absolute', top: 8, right: 10, width: 5, height: 5, borderRadius: 3, backgroundColor: DrawerTheme.brassHighlight, opacity: 0.74 },
+    railLabel: { position: 'absolute', top: 5, alignSelf: 'center', color: DrawerTheme.mutedIvory, fontSize: 9, fontWeight: '800', letterSpacing: 1.6, opacity: 0.78 },
+    archiveRow: { width: '100%', flexDirection: 'row', gap: 7, overflow: 'visible' },
+    archiveButton: { flex: 1, minHeight: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: DrawerTheme.archiveBorder, backgroundColor: 'rgba(9,0,13,0.42)' },
+    archiveButtonActive: { borderColor: 'rgba(244,232,208,0.82)', transform: [{ translateY: -1 }] },
+    archiveLabel: { fontSize: 13, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.6 },
     archiveLabelActive: { color: DrawerTheme.bgBlackCherry, textShadowColor: 'rgba(244,232,208,0.24)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4 },
-    filterRow: { width: '100%', minHeight: 34, flexDirection: 'row', gap: 4, borderWidth: 1, borderColor: 'rgba(184,135,53,0.42)', borderRadius: 5, backgroundColor: 'rgba(31,18,12,0.5)', padding: 3, overflow: 'visible' },
-    filterButton: { flex: 1, minHeight: 26, borderRadius: 4, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,135,53,0.3)', backgroundColor: 'rgba(9,0,13,0.28)' },
-    filterButtonActive: { borderColor: 'rgba(244,232,208,0.66)', transform: [{ translateY: -1 }] },
-    filterText: { fontSize: 11, color: DrawerTheme.mutedIvory, fontWeight: '800', fontFamily: serif, letterSpacing: 0.4 },
+    archiveCaption: { marginTop: 2, fontSize: 9, color: DrawerTheme.mutedIvory, fontWeight: '700', letterSpacing: 0.2, opacity: 0.76 },
+    archiveCaptionActive: { color: 'rgba(18,0,8,0.78)', opacity: 0.9 },
+    filterRow: { width: '100%', minHeight: 52, flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: DrawerTheme.archiveBorder, borderRadius: 10, backgroundColor: DrawerTheme.archivePanel, padding: 5, overflow: 'visible' },
+    filterButton: { flex: 1, minHeight: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,135,53,0.3)', backgroundColor: 'rgba(9,0,13,0.32)' },
+    filterButtonActive: { borderColor: 'rgba(244,232,208,0.68)' },
+    filterText: { fontSize: 12, color: DrawerTheme.ivory, fontWeight: '900', fontFamily: serif, letterSpacing: 0.4 },
     filterTextActive: { color: DrawerTheme.bgBlackCherry },
-    yearSelector: { width: '100%', flexDirection: 'row', gap: 5 },
-    yearButton: { flex: 1, paddingVertical: 5, borderRadius: 6, backgroundColor: 'rgba(9,0,13,0.55)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.18)', alignItems: 'center' },
-    yearButtonActive: { backgroundColor: 'rgba(50,29,18,0.86)', borderColor: DrawerTheme.antiqueGold },
-    yearText: { fontSize: 10, color: DrawerTheme.mutedPurple, fontWeight: '700' },
+    filterCaption: { marginTop: 1, fontSize: 8, color: DrawerTheme.mutedIvory, fontWeight: '700', opacity: 0.68 },
+    filterCaptionActive: { color: 'rgba(18,0,8,0.72)', opacity: 0.92 },
+    yearSelector: { width: '100%', flexDirection: 'row', gap: 5, paddingHorizontal: 1 },
+    yearButton: { flex: 1, minHeight: 42, borderRadius: 8, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
+    yearButtonActive: { backgroundColor: 'rgba(50,29,18,0.92)', borderColor: DrawerTheme.brassHighlight },
+    yearText: { fontSize: 11, color: DrawerTheme.mutedIvory, fontWeight: '800' },
     yearTextActive: { color: DrawerTheme.brightGold },
-    monthSelector: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-    monthButton: { width: '15.6%', paddingVertical: 5, borderRadius: 6, backgroundColor: 'rgba(9,0,13,0.55)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.18)', alignItems: 'center' },
-    monthButtonActive: { backgroundColor: 'rgba(50,29,18,0.86)', borderColor: DrawerTheme.antiqueGold },
-    monthText: { fontSize: 9, color: DrawerTheme.mutedPurple, fontWeight: '700' },
+    monthSelector: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 1 },
+    monthButton: { width: '15.6%', minHeight: 38, borderRadius: 8, backgroundColor: 'rgba(9,0,13,0.58)', borderWidth: 1, borderColor: 'rgba(200,163,64,0.22)', alignItems: 'center', justifyContent: 'center' },
+    monthButtonActive: { backgroundColor: 'rgba(50,29,18,0.92)', borderColor: DrawerTheme.brassHighlight },
+    monthText: { fontSize: 10, color: DrawerTheme.mutedIvory, fontWeight: '800' },
     monthTextActive: { color: DrawerTheme.brightGold },
-    selectionActions: { width: '100%', backgroundColor: 'rgba(9,0,13,0.78)', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: 'rgba(224,184,90,0.55)' },
-    selectedCount: { fontSize: 13, color: DrawerTheme.brightGold, fontWeight: '700', marginBottom: 9, textAlign: 'center', fontFamily: serif },
+    selectionActions: { width: '100%', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: DrawerTheme.archiveBorderStrong, shadowColor: DrawerTheme.brassHighlight, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.14, shadowRadius: 8, elevation: 4 },
+    selectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 },
+    selectedCount: { fontSize: 15, color: DrawerTheme.brightGold, fontWeight: '900', fontFamily: serif },
+    selectionHint: { flex: 1, fontSize: 10, color: DrawerTheme.mutedIvory, textAlign: 'right', opacity: 0.76 },
     actionButtons: { flexDirection: 'row', gap: 9 },
-    cancelButton: { flex: 1, paddingVertical: 11, borderRadius: 8, backgroundColor: 'rgba(244,232,208,0.08)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.14)', alignItems: 'center' },
-    cancelButtonText: { fontSize: 13, color: DrawerTheme.mutedIvory, fontWeight: '700' },
-    deleteAllButton: { flex: 1, paddingVertical: 11, borderRadius: 8, backgroundColor: 'rgba(74,15,43,0.62)', borderWidth: 1, borderColor: 'rgba(224,184,90,0.38)', alignItems: 'center' },
-    deleteAllButtonDisabled: { opacity: 0.55 },
-    deleteAllText: { fontSize: 13, color: DrawerTheme.brightGold, fontWeight: '800' },
-    deleteAllTextDisabled: { opacity: 0.35 },
-    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 4 },
+    cancelButton: { flex: 1, minHeight: 46, borderRadius: 10, backgroundColor: 'rgba(244,232,208,0.08)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.18)', alignItems: 'center', justifyContent: 'center' },
+    cancelButtonText: { fontSize: 14, color: DrawerTheme.ivory, fontWeight: '800' },
+    deleteAllButton: { flex: 1, minHeight: 46, borderRadius: 10, backgroundColor: 'rgba(74,15,43,0.78)', borderWidth: 1, borderColor: 'rgba(224,184,90,0.46)', alignItems: 'center', justifyContent: 'center' },
+    deleteAllButtonDisabled: { opacity: 0.48 },
+    deleteAllText: { fontSize: 14, color: DrawerTheme.brightGold, fontWeight: '900' },
+    deleteAllTextDisabled: { opacity: 0.38 },
+    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 5 },
     hintStar: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(224,184,90,0.48)' },
-    hintText: { flex: 1, fontSize: 11, lineHeight: 15, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.72 },
+    hintText: { flex: 1, fontSize: 11, lineHeight: 15, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
 });
