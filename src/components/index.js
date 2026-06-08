@@ -22,4 +22,3 @@ export { VoteDetail } from './vote/VoteDetail';
 export { AISummaryPanel, AIHistoryAnalysisPanel } from './history/AIInsightPanel';
 export { HistoryHeader } from './history/HistoryHeader';
 export { HistoryFilterBar } from './history/HistoryFilterBar';
-export { default as CoachMarksOverlay } from './common/CoachMarksOverlay';
