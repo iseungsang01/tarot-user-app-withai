@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useAuth } from '../../hooks/useAuth';
 import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
+import { showDailyFortuneRewardedAd } from '../../services/rewardedAdService';
 import { storage } from '../../utils/storage';
 import {
   buildCardContext,
@@ -16,6 +17,7 @@ import {
   getDrawButtonLabel,
   getLocalDateString,
   getStoredDrawCount,
+  needsRewardedAdForDailyFortune,
   pickRandomMajorArcana,
 } from '../../utils/dailyFortune';
 
@@ -28,6 +30,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
   const [selectedCardPreview, setSelectedCardPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
+  const drawingRef = useRef(false);
 
   const todayStr = useMemo(() => getLocalDateString(), []);
 
@@ -57,20 +60,32 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
   }, [loadTodayFortune]);
 
   const handleDraw = async () => {
-    const latestStored = normalizeDailyFortunePayload(await storage.getDailyFortune(todayStr));
-    if (!canDrawDailyFortune(latestStored)) {
-      setTodayFortune(latestStored);
-      Alert.alert('오늘의 카드', '오늘의 카드는 모두 뽑았습니다.');
-      return;
-    }
-
-    const card = pickRandomMajorArcana();
-    const nextDrawCount = getStoredDrawCount(latestStored) + 1;
-    setSelectedCard(card);
-    setResultFortune(null);
+    if (drawingRef.current) return;
+    drawingRef.current = true;
     setIsDrawing(true);
+    setResultFortune(null);
 
     try {
+      const latestStored = normalizeDailyFortunePayload(await storage.getDailyFortune(todayStr));
+      if (!canDrawDailyFortune(latestStored)) {
+        setTodayFortune(latestStored);
+        Alert.alert('오늘의 카드', '잠시 후 다시 시도해 주세요.');
+        return;
+      }
+
+      if (needsRewardedAdForDailyFortune(latestStored)) {
+        const adResult = await showDailyFortuneRewardedAd();
+        const rewarded = adResult === true || adResult?.rewarded === true;
+        if (!rewarded) {
+          Alert.alert('광고 시청 필요', '광고 시청이 완료되어야 다시 뽑을 수 있습니다.');
+          return;
+        }
+      }
+
+      const card = pickRandomMajorArcana();
+      const nextDrawCount = getStoredDrawCount(latestStored) + 1;
+      setSelectedCard(card);
+
       const nickname = customer?.nickname || customer?.name || '사용자';
       const previousFortune = latestStored?.fortune || '';
       const cardContext = buildCardContext(card);
@@ -94,14 +109,14 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Daily fortune draw error:', error);
       if (!error?.isAuthError && !error?.requiresReLogin) {
-        Alert.alert('오류', '카드의 의미를 해석하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+        Alert.alert('오류', '카드의 흐름을 해석하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
       }
     } finally {
+      drawingRef.current = false;
       setIsDrawing(false);
     }
   };
-
-  const canDraw = canDrawDailyFortune(todayFortune) && !isDrawing;
+  const canDraw = !isDrawing;
   const selectedCardImage = useTarotCardImage(selectedCard?.id);
   const canPreviewResultCard = Boolean(selectedCard && selectedCardImage);
 

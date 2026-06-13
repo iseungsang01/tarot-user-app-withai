@@ -7,12 +7,17 @@ import { UIProvider } from './src/context/UIContext';
 import { ErrorProvider } from './src/context/ErrorContext';
 import { ErrorBoundary, GlobalErrorDisplay } from './src/components';
 import AppNavigator from './src/navigation/AppNavigator';
+import { initializeAdMob } from './src/services/rewardedAdService';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
 
 export default function App() {
+  useEffect(() => {
+    initializeAdMob();
+  }, []);
+
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 

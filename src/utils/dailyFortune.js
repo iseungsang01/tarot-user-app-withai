@@ -1,7 +1,5 @@
 import { MAJOR_ARCANA } from '../constants/TarotCards';
 
-const MAX_DAILY_FORTUNE_DRAWS = 30;
-
 export const getLocalDateString = (date = new Date()) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -15,17 +13,17 @@ export const getStoredDrawCount = (fortune) => {
   return fortune ? 1 : 0;
 };
 
-export const getRemainingDraws = (fortune) => Math.max(0, MAX_DAILY_FORTUNE_DRAWS - getStoredDrawCount(fortune));
+export const getRemainingDraws = () => Infinity;
 
-export const canDrawDailyFortune = (fortune) => getStoredDrawCount(fortune) < MAX_DAILY_FORTUNE_DRAWS;
+export const canDrawDailyFortune = () => true;
+
+export const needsRewardedAdForDailyFortune = (fortune) => getStoredDrawCount(fortune) > 0;
 
 export const getDrawButtonLabel = (fortune) => {
   const drawCount = getStoredDrawCount(fortune);
-  const remaining = Math.max(0, MAX_DAILY_FORTUNE_DRAWS - drawCount);
 
   if (drawCount <= 0) return '오늘의 카드 뽑기';
-  if (remaining <= 0) return '오늘의 카드는 모두 뽑았습니다';
-  return `다시 뽑기 (남은 횟수 ${remaining}회)`;
+  return '광고 보고 다시 뽑기';
 };
 
 export const pickRandomMajorArcana = () => MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];

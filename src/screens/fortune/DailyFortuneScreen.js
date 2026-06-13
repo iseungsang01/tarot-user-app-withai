@@ -12,8 +12,8 @@ import {
   getCardById,
   getDrawButtonLabel,
   getLocalDateString,
-  getRemainingDraws,
   getStoredDrawCount,
+  needsRewardedAdForDailyFortune,
 } from '../../utils/dailyFortune';
 
 const isErrorFortune = (fortune) => {
@@ -87,7 +87,6 @@ const DailyFortuneScreen = ({ navigation }) => {
   };
 
   const handleStartCardDraw = () => {
-    if (!canDrawDailyFortune(allFortunes[todayStr])) return;
     navigation.navigate('DailyFortuneDraw');
   };
 
@@ -136,8 +135,8 @@ const DailyFortuneScreen = ({ navigation }) => {
   const selectedCard = selectedFortune ? getCardById(selectedFortune.cardId) : null;
   const selectedIsToday = selectedDate === todayStr;
   const drawCount = getStoredDrawCount(todayFortune);
-  const remainingDraws = getRemainingDraws(todayFortune);
   const canDrawToday = canDrawDailyFortune(todayFortune);
+  const requiresAd = needsRewardedAdForDailyFortune(todayFortune);
 
   return (
     <ScreenContainer safeTop={false} safeBottom={false}>
@@ -161,9 +160,10 @@ const DailyFortuneScreen = ({ navigation }) => {
           <Text style={styles.statusTitle}>오늘의 운세 상태</Text>
           <Text style={styles.statusText}>
             {hasValidFortune(todayFortune)
-              ? `오늘 열람 ${drawCount}회 · 남은 횟수 ${remainingDraws}회`
+              ? `오늘 ${drawCount}회 뽑았습니다. 다시 뽑기는 광고 시청 후 가능합니다.`
               : '아직 오늘의 카드를 열람하지 않았습니다.'}
           </Text>
+          {requiresAd && <Text style={styles.rewardHint}>광고 시청 완료 후 새 카드를 다시 뽑을 수 있어요.</Text>}
           <GoldActionButton onPress={handleStartCardDraw} disabled={!canDrawToday} dark={!canDrawToday} style={styles.drawButton}>
             {getDrawButtonLabel(todayFortune)}
           </GoldActionButton>
@@ -276,6 +276,7 @@ const styles = StyleSheet.create({
   statusCard: { marginTop: 12, marginBottom: 10 },
   statusTitle: { color: DrawerTheme.antiqueGold, fontSize: 15, fontWeight: '700', marginBottom: 7 },
   statusText: { color: DrawerTheme.ivory, fontSize: 13, lineHeight: 20, marginBottom: 12 },
+  rewardHint: { color: DrawerTheme.goldBright, fontSize: 12, fontWeight: '800', lineHeight: 18, marginTop: -4, marginBottom: 12 },
   drawButton: { marginTop: 2 },
   fortuneCard: { marginTop: 10 },
   fortuneTitle: { fontSize: 18, fontWeight: '900', color: DrawerTheme.antiqueGold, marginBottom: 12 },
