@@ -26,7 +26,23 @@ export const getDrawButtonLabel = (fortune) => {
   return '광고 보고 다시 뽑기';
 };
 
-export const pickRandomMajorArcana = () => MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
+export const getUniformRandomIndex = (itemCount, random = Math.random) => {
+  if (!Number.isInteger(itemCount) || itemCount <= 0) {
+    throw new Error('itemCount must be a positive integer');
+  }
+
+  const value = random();
+  if (!Number.isFinite(value) || value < 0 || value >= 1) {
+    throw new Error('random must return a number in the range [0, 1)');
+  }
+
+  return Math.floor(value * itemCount);
+};
+
+export const pickRandomMajorArcana = (random = Math.random) => {
+  const index = getUniformRandomIndex(MAJOR_ARCANA.length, random);
+  return MAJOR_ARCANA[index];
+};
 
 export const getCardById = (cardId) => MAJOR_ARCANA.find((card) => card.id === cardId) || null;
 
