@@ -102,6 +102,17 @@ type GoogleGenerationConfig = {
 };
 
 const responseSchemasByTask: Record<string, Record<string, unknown>> = {
+  polishReviewText: {
+    type: 'object',
+    properties: {
+      polished: {
+        type: 'string',
+        description: 'Polished Korean consultation memo, preserving original facts and intent',
+      },
+    },
+    required: ['polished'],
+    additionalProperties: false,
+  },
   condenseVoiceMemo: {
     type: 'object',
     properties: {

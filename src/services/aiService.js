@@ -219,6 +219,35 @@ const cleanJSONLikeValue = (value) => {
         .trim());
 };
 
+const POLISH_PLACEHOLDER_VALUES = new Set([
+    'text',
+    'string',
+    'polished',
+    'polished text',
+    '다듬어진 상담 기록 텍스트',
+]);
+
+const isUsablePolishedText = (value) => {
+    const cleaned = cleanJSONLikeValue(value);
+    if (!cleaned) return '';
+    if (POLISH_PLACEHOLDER_VALUES.has(cleaned.trim().toLowerCase())) return '';
+    return cleaned;
+};
+
+const extractPolishedReviewText = (payload) => {
+    const parsed = parseFirstJSONObject(payload);
+    if (parsed && typeof parsed === 'object') {
+        const fields = ['polished', 'text', 'content', 'result', 'review', 'data'];
+        for (const field of fields) {
+            const value = isUsablePolishedText(parsed[field]);
+            if (value) return value;
+        }
+        return '';
+    }
+
+    return isUsablePolishedText(stripJSONDecorators(payload));
+};
+
 const extractLooseField = (text, fieldName) => {
     const cleaned = stripJSONDecorators(text);
     if (!cleaned) return '';
@@ -507,14 +536,12 @@ export const polishReviewText = async (reviewText, signal = null) => {
     const { data, error } = await callAIProxy(messages, { temperature: 0.4, maxTokens: 600, signal }, 'polishReviewText');
     if (error) return { data: null, error };
 
-    try {
-        const parsed = parseFirstJSONObject(data);
-        if (!parsed) throw new Error('AI JSON parse failed.');
-        // Robust key validation and fallback mapping
-        return { data: parsed.polished || data || '', error: null };
-    } catch {
-        return { data: data || '', error: null };
+    const polished = extractPolishedReviewText(data);
+    if (!polished) {
+        return { data: null, error: new Error('AI 문장 다듬기 결과가 비어 있습니다. 다시 시도해 주세요.') };
     }
+
+    return { data: polished, error: null };
 };
 
 // ─────────────────────────────────────────────────────────────

@@ -81,6 +81,58 @@ test('aiService: sends customer session token in a custom header', async () => {
   assert.equal(Object.prototype.hasOwnProperty.call(invokedOptions.headers, 'Authorization'), false);
 });
 
+test('aiService: polishReviewText accepts text-shaped JSON proxy output', async () => {
+  const { polishReviewText } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({
+            data: {
+              data: JSON.stringify({ text: '상담에서 나온 고민을 차분히 정리한 문장입니다.' }),
+              usage: {},
+              provider: 'mock',
+            },
+            error: null,
+          }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await polishReviewText('원문 상담 메모');
+
+  assert.equal(result.error, null);
+  assert.equal(result.data, '상담에서 나온 고민을 차분히 정리한 문장입니다.');
+});
+
+test('aiService: polishReviewText rejects placeholder text output', async () => {
+  const { polishReviewText } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({
+            data: {
+              data: JSON.stringify({ polished: 'text' }),
+              usage: {},
+              provider: 'mock',
+            },
+            error: null,
+          }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
+      withAuthErrorHandling: (error) => error,
+    },
+  });
+
+  const result = await polishReviewText('원문 상담 메모');
+
+  assert.equal(result.data, null);
+  assert.match(result.error.message, /AI 문장 다듬기 결과/);
+});
+
 test('aiService: daily fortune extracts JSON object from decorated model output', async () => {
   const modelOutput = `오늘의 운세입니다.\n\n\`\`\`json\n{\n  "fortune": "차분하게 기회를 살피면 좋은 하루입니다.",\n  "luckyColor": "남색",\n  "luckyItem": "노트"\n}\n\`\`\``;
 
