@@ -87,6 +87,7 @@ SupabaseSQL.md
 
 
 # Local agent/runtime state
+.omc/
 .omx/
 
 # Supabase local CLI state
