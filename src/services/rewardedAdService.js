@@ -15,7 +15,24 @@ const getPlatformOS = () => {
   }
 };
 
+const NATIVE_ADS_MODULE_NAME = 'RNGoogleMobileAdsModule';
+
+const isNativeAdsModuleLinked = () => {
+  try {
+    const reactNative = require('react-native');
+    // Probe the registry first: react-native-google-mobile-ads calls
+    // TurboModuleRegistry.getEnforcing() while it loads, and in dev Metro turns that
+    // throw into a fatal redbox instead of letting the catch below see it.
+    if (reactNative?.TurboModuleRegistry?.get?.(NATIVE_ADS_MODULE_NAME)) return true;
+    return Boolean(reactNative?.NativeModules?.[NATIVE_ADS_MODULE_NAME]);
+  } catch {
+    return false;
+  }
+};
+
 const getGoogleMobileAdsModule = () => {
+  if (!isNativeAdsModuleLinked()) return null;
+
   try {
     return require('react-native-google-mobile-ads');
   } catch {

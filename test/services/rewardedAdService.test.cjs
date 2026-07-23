@@ -2,8 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadModule } = require('../helpers/moduleLoader.cjs');
 
+const linkedReactNative = {
+  Platform: { OS: 'android' },
+  NativeModules: { RNGoogleMobileAdsModule: {} },
+};
+
 const loadRewardedAdService = (mocks = {}) => loadModule('src/services/rewardedAdService.js', {
-  'react-native': { Platform: { OS: 'android' } },
+  'react-native': linkedReactNative,
   ...mocks,
 });
 
@@ -72,6 +77,23 @@ test('rewardedAdService: fails closed when no Google Mobile Ads adapter is avail
     rewarded: false,
     reason: 'missing_rewarded_ad_adapter',
   });
+});
+
+test('rewardedAdService: fails closed without loading the ads package when the native module is unlinked', async () => {
+  let adsPackageLoaded = false;
+  const { showDailyFortuneRewardedAd } = loadModule('src/services/rewardedAdService.js', {
+    'react-native': { Platform: { OS: 'android' }, NativeModules: {} },
+    get 'react-native-google-mobile-ads'() {
+      adsPackageLoaded = true;
+      throw new Error("TurboModuleRegistry.getEnforcing(...): 'RNGoogleMobileAdsModule' could not be found.");
+    },
+  });
+
+  assert.deepEqual(await showDailyFortuneRewardedAd(), {
+    rewarded: false,
+    reason: 'missing_rewarded_ad_adapter',
+  });
+  assert.equal(adsPackageLoaded, false);
 });
 
 test('rewardedAdService: shows AdMob rewarded ad and resolves only after earned reward', async () => {
