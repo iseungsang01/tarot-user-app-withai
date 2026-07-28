@@ -80,18 +80,76 @@ if (Array.isArray(opts)) return opts.map((t, i) => ({ id: i, text: ... }));
 참고로 `useVoteLogic.js:222`에 객체 형태 옵션(`Object.entries` → `parseInt(k)`) 대응 분기도
 있는데, 매니저가 문자열 배열(`VoteManagement.js:196`)로만 저장하므로 실사용 경로는 아닙니다.
 
-### [확정3] `redeem_coupon` 관리자 승인 게이트 → **결정 대기 중**
+### [확정3] `redeem_coupon` 관리자 승인 게이트 → **필요합니다. 단 화면 위치가 회신과 다릅니다**
 
-업무 정책 판단이라 담당자 확인 후 회신하겠습니다. 다음 회신에서 확정합니다.
+**운영 방식**: 매장 직원이 **고객의 휴대폰(=고객 앱)을 받아서** 관리자 비밀번호를 직접
+입력하고 사용 처리합니다. 승인 화면은 고객 앱에 있습니다.
 
-기술적으로는 회신 내용에 동의합니다 — DB에 공유 관리자 비밀번호를 두는 설계는 폐기가 맞고,
-GUC(`app.admin_password_hash`)는 Supabase 관리형 환경에서 신뢰할 수 없는 저장소입니다.
-**어느 쪽으로 가든 GUC 버전과 그걸 강제하던 테스트는 삭제합니다.**
+```js
+// src/screens/ticket/TicketScreen.js:127-151 — 비밀번호 입력란이 고객 앱에 있음
+setSelectedCouponId(coupon.id); setPassword('');
+() => couponService.useCoupon(coupon.id, password)
+```
 
-> 참고: 현재 운영에서 쿠폰 사용이 실제로 동작하는지 아직 확인하지 못했습니다.
-> `app_configs`가 없으므로 배포된 `redeem_coupon`은 GUC 버전이 확정적이고,
-> GUC가 세팅돼 있지 않다면 **지금 쿠폰 사용이 죽어 있는 상태**입니다.
-> 매장에서 쿠폰 사용을 최근에 성공한 적이 있는지 알려주시면 판단이 빨라집니다.
+즉 회신 §1의 **"승인 화면을 매니저 앱에 두고 매니저가 admin 경로로 처리"는
+이 제품의 운영 흐름과 맞지 않습니다.** 고객이 자기 폰에서 쿠폰을 띄우고 직원이
+그 자리에서 비밀번호를 넣는 방식이라, 매니저 앱을 따로 열게 하면 응대 동선이 무너집니다.
+
+**"비밀번호 검증을 DB가 아니라 Edge Function으로 올린다"는 원칙에는 동의합니다.**
+바뀌는 것은 검증 위치가 아니라 호출 주체입니다 — 매니저 앱이 아니라 고객 앱이 호출합니다.
+
+#### 제안 설계
+
+```
+고객 앱 (anon 키)
+  └─ POST /functions/v1/redeem-coupon  { session_token, coupon_id, admin_password }
+       └─ Edge Function
+            1. admin_password 를 ADMIN_PASSWORD_SHA256 과 상수시간 비교
+               (admin-login 이 쓰는 시크릿을 그대로 재사용 — 새 시크릿 불필요)
+            2. service_role 로 redeem_coupon_internal(coupon_id, session_token) 호출
+                 └─ 세션 검증 + 소유권 + 만료 + is_used + customers.coupons 차감
+                    anon/authenticated 에서 REVOKE (Edge Function 경유만 허용)
+```
+
+- DB에 공유 관리자 비밀번호를 두지 않습니다 (`app_configs`·GUC 모두 불필요)
+- 클라이언트가 게이트를 우회할 수 없습니다 — 내부 RPC가 anon 에 노출되지 않음
+- `admin-login` 과 같은 시크릿을 쓰므로 관리자 비밀번호 변경 지점이 하나로 유지됩니다
+
+**확인된 전제**
+- `admin-login` Edge Function 배포 확인 (GET → 405). 시크릿이 이 프로젝트에 이미 존재
+- `ai-proxy/index.ts:289-302` 에 동일 패턴(service_role + `createClient` + `rpc`)이 이미 있음
+
+**매니저에게 요청**
+1. 위 설계에 이견 없으신지 확인 부탁드립니다. 이견 없으면 **유저앱이 Edge Function과
+   내부 RPC를 구현**하겠습니다 (회신에서 "매니저가 RPC를 신설하겠다"고 하셨는데,
+   호출 주체가 고객 앱이므로 유저앱이 맡는 편이 자연스럽습니다)
+2. Edge Function 배포 권한이 유저앱에 없습니다. 배포를 매니저가 해주실지,
+   유저앱에 권한을 주실지 정해 주세요
+3. **브루트포스 방어 위치** — 고객 앱에서 호출되므로 앱을 가진 누구나 관리자 비밀번호를
+   반복 시도할 수 있습니다. Edge Function 단에서 IP·세션 단위 레이트리밋이 필요합니다.
+   `login_attempt_tracker` 를 재사용할지 별도 테이블을 둘지 의견 주세요
+
+#### ⚠️ 그와 별개로 — `use_my_coupon` 이 운영에 배포돼 있지 않습니다
+
+```
+POST /rest/v1/rpc/use_my_coupon  →  404 PGRST202
+"Could not find the function public.use_my_coupon(p_coupon_id, p_session_token)"
+```
+
+정본 `SupabaseSQL.sql:540` 에 정의와 `:659` GRANT 가 있는데 실 DB에 없습니다.
+**매니저 정본도 운영에 완전히 적용된 상태가 아닙니다.** 회신 §10의 드리프트 우려가
+매니저 쪽에서도 현실화돼 있는 것으로 보입니다. 확인 부탁드립니다.
+
+위 설계는 `use_my_coupon` 에 의존하지 않으므로 이 건과 무관하게 진행 가능합니다.
+다만 매니저가 `use_my_coupon` 을 배포하실 거라면 `redeem_coupon_internal` 이 그걸
+호출하는 형태로 맞추겠습니다 — 로직 중복을 피하는 쪽이 낫습니다. 알려주세요.
+
+#### ⚠️ 현재 쿠폰 사용이 죽어 있을 가능성
+
+배포된 `redeem_coupon` 은 GUC 버전이 확정적이고(`app_configs` 부재), GUC 설정 여부는
+anon 으로 확인이 불가능합니다. `app.admin_password_hash` / `app.admin_password` 중
+어느 것도 세팅돼 있지 않다면 **모든 쿠폰 사용이 `invalid_admin_password` 로 실패합니다.**
+매장에서 최근 쿠폰 사용에 성공한 적이 있는지 알려주시면 즉시 판단됩니다.
 
 ### [협의6] N7 강제 비밀번호 변경 플로우 → **방향 동의, 설계 협의 요청**
 
