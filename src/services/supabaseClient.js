@@ -25,10 +25,6 @@ export const supabaseClient = {
     return supabase.rpc('logout_ai_guest_session', payload);
   },
 
-  updateMyNickname(payload) {
-    return supabase.rpc('update_my_nickname', payload);
-  },
-
   verifyMyPassword(payload) {
     return supabase.rpc('verify_my_password', payload);
   },

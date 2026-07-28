@@ -226,21 +226,6 @@ export const authService = {
     }
   },
 
-  async updateNickname(customerId, newNickname) {
-    try {
-      const { data, error } = await supabaseClient.updateMyNickname({
-        p_id: customerId,
-        p_new_nickname: newNickname,
-      });
-
-      if (error) throw error;
-      return { success: data };
-    } catch (error) {
-      console.error('Update Nickname Error:', error);
-      return { success: false, message: error.message };
-    }
-  },
-
   async register(phoneNumber, password, nickname = '') {
     try {
       const normalizedPhone = phoneNumber.trim();
@@ -298,16 +283,4 @@ export const authService = {
     }
   },
 
-  async deleteAccount(customerId) {
-    try {
-      const { data, error } = await supabaseClient.deleteMyAccount({ p_id: customerId });
-      if (error) throw error;
-
-      if (data) await this.logout();
-      return { success: data };
-    } catch (error) {
-      console.error('Delete Account Error:', error);
-      return { success: false, message: error.message };
-    }
-  },
 };
