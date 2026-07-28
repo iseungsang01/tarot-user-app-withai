@@ -292,6 +292,7 @@ CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer ON public.customer_ses
 CREATE INDEX IF NOT EXISTS idx_customer_sessions_valid ON public.customer_sessions(token_hash, expires_at) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_customer_password_audit_customer ON public.customer_password_audit_logs(customer_id, changed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_guest_sessions_valid ON public.ai_guest_sessions(token_hash, expires_at) WHERE revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_ai_guest_sessions_expires_at ON public.ai_guest_sessions(expires_at);
 
 ALTER TABLE public.login_attempt_tracker ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_sessions ENABLE ROW LEVEL SECURITY;
@@ -992,8 +993,11 @@ BEGIN
     RETURN false;
   END IF;
 
+  -- phone_number 는 건드리지 않는다. '_deleted_' 접미사를 붙이면 varchar(13) 초과(22001)
+  -- 또는 chk_customers_phone_format 위반(23514)으로 탈퇴가 항상 실패한다.
+  -- 중복 회피는 idx_customers_phone_active(WHERE deleted_at IS NULL)가 이미 처리한다.
   UPDATE public.customers
-  SET deleted_at = now(), phone_number = phone_number || '_deleted_' || substring(md5(random()::text) from 1 for 5)
+  SET deleted_at = now()
   WHERE id = v_customer_id AND deleted_at IS NULL;
 
   IF NOT FOUND THEN RETURN false; END IF;
@@ -1009,6 +1013,29 @@ $$;
 GRANT EXECUTE ON FUNCTION public.verify_my_password(text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_my_password(text, text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_my_account(text, text) TO anon, authenticated;
+
+-- 1.0.8: AI 게스트 세션 정리. issue_ai_guest_session 이 anon 에 무제한 공개라
+-- 호출당 행이 1개씩 쌓이고 만료 후에도 삭제되지 않는다.
+-- 운영자(service_role/postgres)가 주기 실행한다. 클라이언트 롤에는 노출하지 않는다.
+CREATE OR REPLACE FUNCTION public.cleanup_ai_guest_sessions(p_retention interval DEFAULT interval '7 days')
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_deleted integer;
+BEGIN
+  DELETE FROM public.ai_guest_sessions
+  WHERE expires_at < now() - p_retention
+     OR (revoked_at IS NOT NULL AND revoked_at < now() - p_retention);
+
+  GET DIAGNOSTICS v_deleted = ROW_COUNT;
+  RETURN v_deleted;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.cleanup_ai_guest_sessions(interval) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.get_my_coupons(text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_coupon_count(text, boolean) TO anon, authenticated;

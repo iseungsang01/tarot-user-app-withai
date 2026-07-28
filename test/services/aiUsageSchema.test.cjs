@@ -179,3 +179,31 @@ test('account schema: sensitive operations resolve customer from session token',
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.update_my_password\(text, text, text, text\) TO anon, authenticated;/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.delete_my_account\(text, text\) TO anon, authenticated;/);
 });
+
+test('account schema: soft delete does not rewrite phone_number', () => {
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  const deleteAccount = schema.match(
+    /CREATE OR REPLACE FUNCTION public\.delete_my_account\(p_session_token text, input_password text\)[\s\S]*?\n\$\$;/,
+  )[0];
+
+  // phone_number 는 varchar(13) + chk_customers_phone_format 이라
+  // '_deleted_' 접미사를 붙이면 22001/23514 로 탈퇴가 항상 실패한다.
+  // 중복 회피는 idx_customers_phone_active 부분 인덱스가 처리한다.
+  const statements = deleteAccount.replace(/^\s*--.*$/gm, '');
+  assert.doesNotMatch(statements, /phone_number/);
+  assert.doesNotMatch(statements, /_deleted_/);
+  assert.match(deleteAccount, /SET deleted_at = now\(\)\s+WHERE id = v_customer_id AND deleted_at IS NULL/);
+  assert.match(schema, /CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_phone_active[\s\S]*?WHERE deleted_at IS NULL/);
+});
+
+test('guest session schema: expired AI guest sessions are purgeable', () => {
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  const cleanup = getFunctionBody('cleanup_ai_guest_sessions');
+
+  assert.match(cleanup, /DELETE FROM public\.ai_guest_sessions/);
+  assert.match(cleanup, /expires_at < now\(\) - p_retention/);
+  assert.match(schema, /CREATE INDEX IF NOT EXISTS idx_ai_guest_sessions_expires_at/);
+  // 정리 함수는 운영자 전용이라 클라이언트 롤에 노출되면 안 된다.
+  assert.match(schema, /REVOKE ALL ON FUNCTION public\.cleanup_ai_guest_sessions\(interval\) FROM PUBLIC, anon, authenticated;/);
+  assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.cleanup_ai_guest_sessions/);
+});
