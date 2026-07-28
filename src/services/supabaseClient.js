@@ -41,14 +41,6 @@ export const supabaseClient = {
     return supabase.rpc('get_my_visits', payload);
   },
 
-  updateVisit(visitId, payload) {
-    return supabase.from('visit_history').update(payload).eq('id', visitId).select().single();
-  },
-
-  createVisit(payload) {
-    return supabase.from('visit_history').insert(payload).select().single();
-  },
-
   getMyVisit(payload) {
     return supabase.rpc('get_my_visit', payload).single();
   },

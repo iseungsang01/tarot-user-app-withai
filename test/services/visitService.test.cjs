@@ -17,12 +17,10 @@ test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
   };
 
   const supabaseClient = {
-    createVisit: async () => ({ data: { id: 10, customer_id: 'c1', visit_date: '2026-03-01' }, error: null }),
     getMyVisit: async (payload) => {
       calls.getMyVisit = payload;
       return { data: { id: 10, customer_id: 'c1', visit_date: '2026-03-01' }, error: null };
     },
-    updateVisit: async (id, payload) => { calls.update = [id, payload]; return { data: { id }, error: null }; },
     hideMyVisit: async (payload) => { calls.hide = payload; return { data: true, error: null }; },
   };
 
@@ -36,16 +34,14 @@ test('visitService: CRUD ?듭떖 ?쒕굹由ъ삤', async () => {
     '../utils/storage': { storage: mockedStorage },
   });
 
-  const created = await visitService.createVisit({ customer_id: 'c1', visit_date: '2026-03-01', card_image: 'img' });
   const fetched = await visitService.getVisit(10);
-  await visitService.updateVisit(10, { visit_date: '2026-03-02', title: 'new title' });
+  // visit_date 는 서버 쓰기 경로가 없으므로 무시되고, title 만 로컬에 저장된다.
+  await visitService.updateVisit(10, { visit_date: '2026-03-02', title: 'new title', card_image: 'img' });
   const deleted = await visitService.deleteVisit(10, 'c1');
 
-  assert.equal(created.error, null);
   assert.deepEqual(calls.saveImage, [10, 'img']);
   assert.deepEqual(calls.getMyVisit, { p_session_token: 'test-token', p_visit_id: 10 });
   assert.equal(fetched.data.card_review, 'review');
-  assert.deepEqual(calls.update, [10, { visit_date: '2026-03-02' }]);
   assert.equal(deleted.error, null);
   assert.deepEqual(calls.hide, { p_session_token: 'test-token', p_visit_id: 10 });
   assert.equal(calls.deleteId, 10);
@@ -115,10 +111,13 @@ test('visitService: updateVisit keeps local-only fields bound to storage object 
     saveCardAIInsight(id, value) { assert.equal(this, mockedStorage); calls.push(['saveCardAIInsight', id, value]); },
     deleteCardAIInsight(id) { assert.equal(this, mockedStorage); calls.push(['deleteCardAIInsight', id]); },
   };
-  let serverPayload = null;
-  const supabaseClient = {
-    updateVisit: async (id, payload) => { serverPayload = [id, payload]; return { data: { id }, error: null }; },
-  };
+  // visit_history 서버 쓰기 경로는 제거됐다. supabaseClient 에 쓰기 메서드가
+  // 남아 있으면 안 되므로, 어떤 메서드든 호출되면 즉시 실패하도록 둔다.
+  const supabaseClient = new Proxy({}, {
+    get(_target, prop) {
+      throw new Error(`updateVisit 가 supabaseClient.${String(prop)} 를 호출하면 안 된다`);
+    },
+  });
 
   const { visitService } = loadModule('src/services/visitService.js', {
     './supabase': {
@@ -144,5 +143,4 @@ test('visitService: updateVisit keeps local-only fields bound to storage object 
     ['saveCardTitle', 44, 'title'],
     ['deleteCardAIInsight', 44],
   ]);
-  assert.deepEqual(serverPayload, [44, { visit_date: '2026-06-06' }]);
 });

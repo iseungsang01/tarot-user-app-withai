@@ -38,6 +38,14 @@ export const visitService = {
     }
   },
 
+  /**
+   * 방문 기록의 로컬 전용 필드(카드 이미지/후기/제목/AI 해석)만 저장한다.
+   *
+   * visit_history 서버 쓰기 경로는 제거했다. 스탬프 적립은 매장에서 직원이
+   * 매니저 앱으로 처리하는 것이 정본이고, 고객이 자기 방문을 직접 생성·수정하는
+   * 기능은 로드맵에 없다(매니저 회신 §8). 실제로 visit_history 는 anon 에
+   * GRANT 도 RLS 정책도 없어 호출됐다면 42501 로 실패했을 코드였다.
+   */
   async updateVisit(visitId, updates) {
     try {
       const authError = await requireSession();
@@ -45,51 +53,9 @@ export const visitService = {
 
       await this.syncLocalVisitFields(visitId, updates);
 
-      const serverPayload = {};
-      if (updates.visit_date) serverPayload.visit_date = updates.visit_date;
-      if (updates.customer_id) serverPayload.customer_id = updates.customer_id;
-
-      let updatedServerData = {};
-      if (Object.keys(serverPayload).length > 0) {
-        const { data, error } = await supabaseClient.updateVisit(visitId, serverPayload);
-
-        if (error) throw withAuthErrorHandling(error, authError.message);
-        updatedServerData = data;
-      }
-
-      return { data: updatedServerData, error: null };
+      return { data: {}, error: null };
     } catch (error) {
       console.error('❌ [visitService] updateVisit 오류:', error);
-      return { data: null, error };
-    }
-  },
-
-  async createVisit(visitData) {
-    try {
-      if (visitData.customer_id === 'guest') {
-        return { data: null, error: 'Guest cannot save to server' };
-      }
-
-      const authError = await requireSession();
-      if (authError) return { data: null, error: authError };
-
-      const serverPayload = {
-        customer_id: visitData.customer_id,
-        visit_date: visitData.visit_date,
-      };
-
-      const { data, error } = await supabaseClient.createVisit(serverPayload);
-
-      if (error) throw withAuthErrorHandling(error, authError?.message);
-
-      if (visitData.card_image) await storage.saveCardImage(data.id, visitData.card_image);
-      if (visitData.card_review) await storage.saveCardReview(data.id, visitData.card_review);
-      if (visitData.title) await storage.saveCardTitle(data.id, visitData.title);
-      if (visitData.ai_insight) await storage.saveCardAIInsight(data.id, visitData.ai_insight);
-
-      return { data: { ...data, is_manual: false }, error: null };
-    } catch (error) {
-      console.error('❌ [visitService] createVisit 오류:', error);
       return { data: null, error };
     }
   },

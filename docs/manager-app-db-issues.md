@@ -1,7 +1,14 @@
 # 매니저 앱 협의 요청 — DB 무결성 점검 결과
 
 작성일: 2026-07-28 · 작성: 유저앱(tarot-user-app-withai)
-대상: 매니저 앱 스키마(`docs/tarot-manager-supabase-schema.sql`) 소유 항목
+
+> ⚠️ **이 문서는 1차 요청입니다. 매니저 회신으로 §0·§1·§5 전제가 정정됐습니다.**
+> 최신 상태는 [`manager-app-db-issues-round2.md`](./manager-app-db-issues-round2.md)를 보세요.
+>
+> 주요 정정: 이 문서의 소유권 분석은 유저앱이 들고 있던 6월 8일자 매니저 스키마
+> **사본**을 근거로 했는데, 매니저 정본은 `tarot-manager-app/SupabaseSQL.sql`(6월 12일)입니다.
+> 해당 사본은 삭제했으므로 이 문서의 `docs/tarot-manager-supabase-schema.sql:NNN` 형태
+> 줄 번호 참조는 더 이상 유효하지 않습니다.
 
 ---
 

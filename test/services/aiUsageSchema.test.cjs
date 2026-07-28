@@ -147,9 +147,37 @@ test('session schema: AI guest sessions are server-issued and resolvable by the 
 });
 
 test('password schema: customer password change clears forced-change flag', () => {
-  const functionBody = getFunctionBody('update_customer_password');
+  // uuid 판(update_customer_password)은 제거됐다. 세션 토큰판이 같은 역할을 한다.
+  const functionBody = getFunctionBody('update_my_password');
 
   assert.match(functionBody, /SET password = extensions\.crypt\(new_password, extensions\.gen_salt\('bf'\)\),\s+must_change_password = false/);
+});
+
+test('account schema: uuid-keyed account RPCs are gone and never re-granted', () => {
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+
+  // 세션 검증 없이 anon 에 노출됐던 5개. 정의든 GRANT 든 하나라도 되살아나면
+  // 스키마를 다시 적용하는 순간 매니저의 DROP 이 원복된다.
+  const forbidden = [
+    /CREATE OR REPLACE FUNCTION public\.update_my_nickname\s*\(\s*p_id uuid/,
+    /CREATE OR REPLACE FUNCTION public\.delete_my_account\s*\(\s*p_id uuid/,
+    /CREATE OR REPLACE FUNCTION public\.soft_delete_customer\s*\(/,
+    /CREATE OR REPLACE FUNCTION public\.verify_password\s*\(\s*customer_uuid uuid/,
+    /CREATE OR REPLACE FUNCTION public\.update_customer_password\s*\(\s*customer_uuid uuid/,
+    /GRANT EXECUTE ON FUNCTION public\.update_my_nickname\(uuid, text\)/,
+    /GRANT EXECUTE ON FUNCTION public\.delete_my_account\(uuid\)/,
+    /GRANT EXECUTE ON FUNCTION public\.soft_delete_customer\(uuid\)/,
+    /GRANT EXECUTE ON FUNCTION public\.verify_password\(uuid, text\)/,
+    /GRANT EXECUTE ON FUNCTION public\.update_customer_password\(uuid, text, text\)/,
+  ];
+  for (const pattern of forbidden) {
+    assert.doesNotMatch(schema, pattern);
+  }
+
+  // 대체 경로는 남아 있어야 한다.
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.verify_my_password\(text, text\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.update_my_password\(text, text, text, text\) TO anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.delete_my_account\(text, text\) TO anon, authenticated;/);
 });
 
 test('coupon schema: direct coupon mutations are denied to client roles', () => {

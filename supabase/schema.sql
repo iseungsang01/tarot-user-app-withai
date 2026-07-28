@@ -664,62 +664,13 @@ $$;
 REVOKE ALL ON FUNCTION public.hide_my_visit(text, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.hide_my_visit(text, integer) TO anon, authenticated;
 
-CREATE OR REPLACE FUNCTION public.update_my_nickname(p_id uuid, p_new_nickname text)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  UPDATE public.customers SET nickname = p_new_nickname WHERE id = p_id AND deleted_at IS NULL;
-  RETURN FOUND;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.delete_my_account(p_id uuid)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  UPDATE public.customers
-  SET deleted_at = now(), phone_number = phone_number || '_deleted_' || substring(md5(random()::text) from 1 for 5)
-  WHERE id = p_id AND deleted_at IS NULL;
-  RETURN FOUND;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.soft_delete_customer(customer_uuid uuid)
-RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-  SELECT public.delete_my_account(customer_uuid)
-$$;
-
-CREATE OR REPLACE FUNCTION public.verify_password(customer_uuid uuid, input_password text)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE v_hashed_password text;
-BEGIN
-  SELECT password INTO v_hashed_password FROM public.customers WHERE id = customer_uuid AND deleted_at IS NULL;
-  RETURN v_hashed_password IS NOT NULL AND v_hashed_password = extensions.crypt(input_password, v_hashed_password);
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.update_customer_password(customer_uuid uuid, new_password text, p_reason text DEFAULT 'user_change')
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-BEGIN
-  IF NOT public.validate_password_complexity(new_password) THEN RAISE EXCEPTION 'Password must be at least 6 characters.'; END IF;
-
-  UPDATE public.customers
-  SET password = extensions.crypt(new_password, extensions.gen_salt('bf')), must_change_password = false
-  WHERE id = customer_uuid AND deleted_at IS NULL;
-
-  IF NOT FOUND THEN RETURN false; END IF;
-
-  INSERT INTO public.customer_password_audit_logs (customer_id, changed_by, reason, metadata)
-  VALUES (customer_uuid, 'customer', p_reason, jsonb_build_object('source', 'update_customer_password'));
-  RETURN true;
-END;
-$$;
+-- uuid 기반 계정 조작 RPC 5개(update_my_nickname / delete_my_account(uuid) /
+-- soft_delete_customer / verify_password / update_customer_password)는 삭제했다.
+-- 세션 검증 없이 anon 에 노출돼 uuid 만 알면 타인 계정을 조작할 수 있었다.
+-- 대체 경로는 전부 세션 토큰판이다: update_my_password, verify_my_password,
+-- delete_my_account(text, text).
+-- 매니저 앱이 DROP 하기 전에 유저앱이 먼저 GRANT 를 걷어내야 원복되지 않는다.
+-- 근거: docs/manager-app-db-issues.md §2, 매니저 회신 §2.
 
 CREATE OR REPLACE FUNCTION public.get_my_coupons(p_session_token text, p_valid_only boolean DEFAULT false)
 RETURNS SETOF public.coupon_history LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -910,11 +861,8 @@ GRANT EXECUTE ON FUNCTION public.logout_ai_guest_session(text) TO anon, authenti
 GRANT EXECUTE ON FUNCTION public.get_my_profile(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.logout_customer(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_customer_stats(text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.update_my_nickname(uuid, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.delete_my_account(uuid) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.soft_delete_customer(uuid) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.verify_password(uuid, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.update_customer_password(uuid, text, text) TO anon, authenticated;
+-- uuid 기반 5개 함수의 GRANT 는 삭제했다(위 정의 삭제와 한 쌍).
+-- 이 줄이 남아 있으면 스키마를 한 번만 다시 적용해도 매니저의 DROP 이 원복된다.
 
 -- 1.0.6: session-token based sensitive customer account operations.
 CREATE OR REPLACE FUNCTION public.verify_my_password(p_session_token text, input_password text)
