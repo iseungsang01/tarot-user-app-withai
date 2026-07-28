@@ -5,6 +5,30 @@
 
 ---
 
+## 운영 DB 실측 결과 (2026-07-28, 프로젝트 `gvoedaagemotwuzmfxfe`)
+
+anon 키로 재현 가능한 probe를 돌린 결과입니다. 재실행: `node supabase/tests/probe_rpc_surface.mjs`
+(상태 변경 없음 — uuid 자리에 잘못된 문자열을 넣어 캐스트 실패로 존재 여부만 확인)
+
+| 확인 대상 | 결과 | 의미 |
+|---|---|---|
+| `app_configs` 테이블 | **없음** (PGRST205) | 매니저 스키마가 이 DB에 적용된 적이 없을 가능성 |
+| `verify_admin_password` | **없음** (PGRST202) | 위와 일관됨 |
+| `redeem_coupon(int,text,text)` | 존재, `invalid_session` 정상 반환 | 시그니처는 양쪽 동일이라 이것만으론 판별 불가 |
+| uuid 기반 RPC 5개 | **5/5 anon 호출 가능** (22P02) | §2 IDOR이 실제로 열려 있음 |
+| `delete_my_account(text,text)` | 존재, 무효 세션 정상 거부 | 유저앱 전용판 배포 확인 |
+| `customers`/`visit_history`/`ai_guest_sessions` | anon 차단 정상 | |
+
+**핵심**: `app_configs`가 없으므로 배포된 `redeem_coupon`은 **GUC 버전이 확정적**입니다.
+매니저 버전은 본문에서 `public.app_configs`를 SELECT하므로 그 테이블 없이는 실행 자체가
+`relation does not exist`로 실패합니다.
+
+**그래서 §0의 "공유 DB" 전제부터 재확인이 필요합니다** — 매니저 앱이 정말 이 프로젝트를
+쓰고 있는지, 아니면 별도 Supabase 프로젝트인지 알려주세요. 답에 따라 아래 항목들의
+소유권 판단이 통째로 바뀝니다.
+
+---
+
 ## 0. 왜 협의가 필요한가 (소유권 경계)
 
 두 앱이 같은 Supabase 프로젝트를 쓰고, 스키마 파일을 **각자 한 벌씩** 들고 있습니다.
@@ -42,10 +66,25 @@ GUC를 읽게 되고, GUC가 세팅돼 있지 않으면 모든 쿠폰 사용이 
 GUC 버전을 **통과 조건으로 못 박아** 두었습니다. 그래서 유저앱에서 이걸 고치면 테스트가 깨집니다.
 유저앱이 단독으로 바꾸지 않고 여기에 올리는 이유입니다.
 
-**요청**: 아래 중 택 1을 확정해 주세요.
-- **(A) 권장** — `redeem_coupon` 소유권을 매니저로 단일화. 유저앱은 정의를 삭제하고
-  테스트도 `app_configs` 기준으로 교체합니다. 유저앱에서 처리할 작업량은 작습니다.
-- (B) 유저앱 정의를 `app_configs` 버전으로 동기화(양쪽 동일 본문 유지). 계속 수동 동기화 부담이 남습니다.
+**운영 실측 (2026-07-28)**: `app_configs` 테이블이 **존재하지 않습니다.**
+따라서 배포된 `redeem_coupon`은 GUC 버전이 확정적입니다. 그렇다면 쿠폰 사용은
+`app.admin_password_hash` GUC가 DB/롤 레벨에 세팅돼 있을 때만 동작합니다
+(`ALTER DATABASE ... SET app.admin_password_hash = '...'`). anon 키로는 GUC 확인이
+불가능하니, **앱에서 쿠폰을 한 번 사용해 보면 즉시 갈립니다** —
+`invalid_admin_password`가 뜨면 GUC 미설정이고 쿠폰 기능이 현재 죽어 있는 상태입니다.
+
+**요청**: 먼저 두 가지를 알려주세요.
+1. 매니저 앱이 이 Supabase 프로젝트(`gvoedaagemotwuzmfxfe`)를 쓰나요, 별도 프로젝트인가요?
+   `app_configs`가 없는 걸 보면 후자로 보입니다.
+2. 관리자 비밀번호를 지금 어디에 보관하고 계신가요? (GUC / app_configs / 매니저 앱 자체 보관)
+
+그 다음 아래 중 택 1:
+- **(A) 권장** — `app_configs` 테이블을 만들고 `redeem_coupon` 소유권을 매니저로 단일화.
+  유저앱은 정의를 삭제하고 테스트도 `app_configs` 기준으로 교체합니다.
+- (B) GUC 방식을 정본으로 확정. 이 경우 `ALTER DATABASE`로 GUC를 세팅하고
+  매니저 스키마의 `app_configs` 버전을 폐기해야 합니다.
+- (C) 두 앱이 서로 다른 프로젝트를 쓴다면 — 이 항목은 협의가 불필요하고
+  유저앱이 GUC 세팅만 확인하면 끝납니다.
 
 ---
 
@@ -73,10 +112,16 @@ CREATE UNIQUE INDEX idx_customers_phone_active ON customers(phone_number) WHERE 
 ```
 소프트 삭제된 행은 유니크 검사 대상이 아니라 접미사 없이도 동일 번호 재가입이 정상 동작합니다.
 
-**문제 3 — 세션 검증이 없습니다.**
-`p_id`만 받고 `resolve_customer_session` 호출이 없는데 `anon`에 EXECUTE가 부여돼 있습니다
-(`:728`). anon 키는 앱에 배포되므로, **uuid만 알면 아무나 남의 계정을 탈퇴시킬 수 있습니다.**
-같은 문제가 4개 더 있습니다:
+**문제 3 — 세션 검증이 없습니다. 운영에서 실제로 열려 있는 것을 확인했습니다.**
+`p_id`만 받고 `resolve_customer_session` 호출이 없는데 `anon`에 EXECUTE가 부여돼 있습니다.
+anon 키는 앱 번들에 그대로 들어가므로, **uuid만 알면 아무나 남의 계정을 탈퇴시키거나
+비밀번호를 바꿀 수 있습니다.**
+
+2026-07-28 운영 probe 결과 아래 5개 **전부 anon 호출 가능**(22P02 = uuid 캐스트 단계까지
+도달)으로 확인됐습니다. 추정이 아니라 실측입니다.
+
+또한 이 GRANT는 매니저 스키마(`:727-731`)뿐 아니라 **유저앱 `supabase/schema.sql:913-917`에도
+동일하게 들어 있습니다.** 매니저 앱이 이 DB를 쓰지 않는다면 유저앱 단독으로 정리 가능합니다.
 
 | 함수 | GRANT 위치 | 세션 검증 |
 |---|---|---|
