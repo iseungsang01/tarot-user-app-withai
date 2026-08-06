@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SettingDeleteAccount } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
+import { CommonStyles } from '../../styles/CommonStyles';
 import { customerService } from '../../services/customerService';
 import { createValidationError, handleApiCall, showErrorAlert } from '../../utils/errorHandler';
 
@@ -57,9 +58,9 @@ const DeleteAccountScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           disabled={processing}
           activeOpacity={0.75}
-          style={[styles.backButton, processing && styles.disabled]}
+          style={[CommonStyles.backLinkButton, processing && CommonStyles.disabled]}
         >
-          <Text style={styles.backText}>설정으로 돌아가기</Text>
+          <Text style={CommonStyles.backLinkText}>설정으로 돌아가기</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenContainer>
@@ -73,21 +74,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 16,
-  },
-  backButton: {
-    alignSelf: 'center',
-    marginTop: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-  backText: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: 14,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
 });
 

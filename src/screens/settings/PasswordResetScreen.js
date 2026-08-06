@@ -2,30 +2,23 @@ import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SettingPasswordForm } from '../../components';
+import { CommonStyles } from '../../styles/CommonStyles';
 import { customerService } from '../../services/customerService';
-import { createValidationError, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
-import { getPasswordValidationMessage, validatePassword } from '../../utils/validators';
+import { showSuccessAlert } from '../../utils/errorHandler';
+import { validatePasswordChange } from '../../utils/validators';
 
 const PasswordResetScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [processing, setProcessing] = useState(false);
 
-  const handlePasswordReset = async ({ currentPassword, newPassword, confirmPassword }) => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showErrorAlert({ ...createValidationError('REQUIRED_FIELD'), message: '모든 필드를 입력해 주세요.' }, Alert);
+  const handlePasswordReset = async (fields) => {
+    const inputError = validatePasswordChange(fields);
+    if (inputError) {
+      Alert.alert('오류', inputError);
       return;
     }
 
-    if (!validatePassword(newPassword)) {
-      Alert.alert('오류', getPasswordValidationMessage());
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('오류', '새 비밀번호 확인이 일치하지 않습니다.');
-      return;
-    }
-
+    const { currentPassword, newPassword } = fields;
     setProcessing(true);
     try {
       const { success, error } = await customerService.updateMyPassword(
@@ -63,9 +56,9 @@ const PasswordResetScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           disabled={processing}
           activeOpacity={0.75}
-          style={[styles.backButton, processing && styles.disabled]}
+          style={[CommonStyles.backLinkButton, processing && CommonStyles.disabled]}
         >
-          <Text style={styles.backText}>설정으로 돌아가기</Text>
+          <Text style={CommonStyles.backLinkText}>설정으로 돌아가기</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenContainer>
@@ -79,21 +72,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 16,
-  },
-  backButton: {
-    alignSelf: 'center',
-    marginTop: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-  backText: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: 14,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
 });
 

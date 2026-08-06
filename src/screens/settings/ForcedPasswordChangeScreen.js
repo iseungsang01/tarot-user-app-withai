@@ -3,31 +3,24 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, PremiumCard, ScreenContainer, SettingPasswordForm } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { CommonStyles } from '../../styles/CommonStyles';
 import { customerService } from '../../services/customerService';
 import { useAuth } from '../../hooks/useAuth';
-import { getPasswordValidationMessage, validatePassword } from '../../utils/validators';
+import { validatePasswordChange } from '../../utils/validators';
 
 const ForcedPasswordChangeScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { refreshCustomer, logout } = useAuth();
   const [processing, setProcessing] = useState(false);
 
-  const handlePasswordReset = async ({ currentPassword, newPassword, confirmPassword }) => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('입력 필요', '새 비밀번호를 입력해주세요.');
+  const handlePasswordReset = async (fields) => {
+    const inputError = validatePasswordChange(fields);
+    if (inputError) {
+      Alert.alert('오류', inputError);
       return;
     }
 
-    if (!validatePassword(newPassword)) {
-      Alert.alert('오류', getPasswordValidationMessage());
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('입력 오류', '새 비밀번호 확인이 일치하지 않습니다.');
-      return;
-    }
-
+    const { currentPassword, newPassword } = fields;
     setProcessing(true);
     try {
       const { success: changed, error } = await customerService.updateMyPassword(
@@ -76,9 +69,9 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
           onPress={logout}
           disabled={processing}
           activeOpacity={0.75}
-          style={[styles.cancelButton, processing && styles.cancelButtonDisabled]}
+          style={[CommonStyles.backLinkButton, processing && CommonStyles.disabled]}
         >
-          <Text style={styles.cancelText}>취소하고 로그인 화면으로 돌아가기</Text>
+          <Text style={CommonStyles.backLinkText}>취소하고 로그인 화면으로 돌아가기</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenContainer>
@@ -103,21 +96,6 @@ const styles = StyleSheet.create({
   description: {
     color: DrawerTheme.ivory,
     lineHeight: 21,
-  },
-  cancelButton: {
-    alignSelf: 'center',
-    marginTop: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  cancelButtonDisabled: {
-    opacity: 0.45,
-  },
-  cancelText: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: 14,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
 });
 

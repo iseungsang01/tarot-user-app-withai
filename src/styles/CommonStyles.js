@@ -1,7 +1,25 @@
 import { Platform } from 'react-native';
 import { DrawerTheme } from '../constants/DrawerTheme';
+import { TextColors } from '../constants/Colors';
 
 export const CommonStyles = {
+    // 화면 하단의 "돌아가기" 텍스트 링크 (설정 계열 화면 공통)
+    backLinkButton: {
+        alignSelf: 'center',
+        marginTop: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+    },
+    backLinkText: {
+        color: TextColors.subTextHigh,
+        fontSize: 14,
+        fontWeight: '700',
+        textDecorationLine: 'underline',
+    },
+    disabled: {
+        opacity: 0.45,
+    },
+
     // 고전풍 게시판/섹션 헤더 공통 스타일 (공지, 설정, 쿠폰, 투표 등에 적용)
     headerBoard: {
         width: '100%',
