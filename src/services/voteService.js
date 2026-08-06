@@ -1,24 +1,6 @@
 import { supabase } from './supabase';
 import { supabaseClient } from './supabaseClient';
-import { storage } from '../utils/storage';
-
-const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
-
-const getCustomerSessionToken = async () => {
-  const session = await storage.get(CUSTOMER_SESSION_KEY);
-  return session?.token || null;
-};
-
-const requireCustomerSessionToken = async () => {
-  const token = await getCustomerSessionToken();
-  if (!token) {
-    const error = new Error('Login is required. Please sign in again.');
-    error.code = 'AUTH_REQUIRED';
-    error.requiresReLogin = true;
-    throw error;
-  }
-  return token;
-};
+import { requireCustomerSessionToken } from './customerSession';
 
 /**
  * 투표 서비스

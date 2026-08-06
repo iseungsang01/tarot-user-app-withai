@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet } from 'react-native';
 
 const DEFAULT_ASPECT_RATIO = 1.6;

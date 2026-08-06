@@ -1,4 +1,3 @@
-import React from 'react';
 import { StyleSheet, FlatList, RefreshControl, View } from 'react-native';
 
 import { GradientBackground, LoadingSpinner, VoteList, VoteDetail } from '../../../components';

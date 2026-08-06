@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { errorEmitter } from '../utils/errorEmitter';
 
 const ErrorContext = createContext();

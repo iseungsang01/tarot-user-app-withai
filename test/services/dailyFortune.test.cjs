@@ -17,11 +17,10 @@ const dailyFortune = (deck = oneCardDeck) => loadModule('src/utils/dailyFortune.
 });
 
 test('daily fortune draw stays available after previous draws', () => {
-  const { canDrawDailyFortune, getRemainingDraws } = dailyFortune();
+  const { canDrawDailyFortune } = dailyFortune();
 
   assert.equal(canDrawDailyFortune({ drawCount: 30, fortune: 'old' }), true);
   assert.equal(canDrawDailyFortune({ drawCount: 300, fortune: 'old' }), true);
-  assert.equal(getRemainingDraws({ drawCount: 300 }), Infinity);
 });
 
 test('daily fortune redraw requires a rewarded ad after first draw', () => {

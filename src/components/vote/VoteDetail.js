@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { VoteResultBar } from './VoteResultBar';

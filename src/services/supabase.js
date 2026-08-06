@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { STORAGE_KEYS } from '../utils/storage/core';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -10,7 +11,7 @@ if (!hasSupabaseConfig) {
 }
 
 const AUTH_ERROR_CODES = new Set(['PGRST301', '401', '403']);
-const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
+const CUSTOMER_SESSION_KEY = STORAGE_KEYS.CUSTOMER_SESSION;
 
 let globalAuthErrorHandler = null;
 let cachedSupabaseClient = null;

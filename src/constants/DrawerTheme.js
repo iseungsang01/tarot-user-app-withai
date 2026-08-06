@@ -51,5 +51,3 @@ export const DrawerTheme = {
   textMuted: '#CDBB96',
   textDark: '#120008',
 };
-
-export default DrawerTheme;

@@ -3,31 +3,26 @@ const assert = require('node:assert/strict');
 const { loadModule } = require('../helpers/moduleLoader.cjs');
 
 test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async () => {
-  const supabaseClient = {
-    invokeAIProxy: async () => ({ data: { data: '일반 텍스트 응답', usage: {}, provider: 'mock' }, error: null }),
-  };
-
-  const { summarizeReview } = loadModule('src/services/aiService.js', {
-    './supabaseClient': { supabaseClient },
-    './supabase': { 
-      supabase: { 
-        functions: { 
-          invoke: async () => ({ data: { data: '일반 텍스트 응답', usage: {}, provider: 'mock' }, error: null }) 
-        } 
-      }, 
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }) 
+  const { analyzeVisitHistory } = loadModule('src/services/aiService.js', {
+    './supabase': {
+      supabase: {
+        functions: {
+          invoke: async () => ({ data: { data: '일반 텍스트 응답', usage: {}, provider: 'mock' }, error: null }),
+        },
+      },
+      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
     },
   });
 
-  const result = await summarizeReview('상담 기록 메모');
+  const result = await analyzeVisitHistory([{ card_review: '상담 기록 메모', visit_date: '2026-01-01' }]);
 
   assert.equal(result.error, null);
   assert.deepEqual(result.data, {
-    summary: '일반 텍스트 응답',
-    keywords: [],
-    mood: '중립',
-    moodEmoji: '📝',
-    advice: '',
+    overallSummary: '일반 텍스트 응답',
+    patterns: [],
+    growthPoints: '',
+    recommendation: '',
+    totalVisits: 1,
   });
 });
 
@@ -337,14 +332,14 @@ test('aiService: daily fortune collapses degenerate repeated English tokens', as
   assert.equal(normalizeDailyFortunePayload({ fortune: repeatedFortune }).fortune, cleanedFortune);
 });
 
-test('aiService: chat responses collapse degenerate repeated English tokens before display', async () => {
-  const { sendChatMessage } = loadModule('src/services/aiService.js', {
+test('aiService: AI responses collapse degenerate repeated English tokens before display', async () => {
+  const { polishReviewText } = loadModule('src/services/aiService.js', {
     './supabase': {
       supabase: {
         functions: {
           invoke: async () => ({
             data: {
-              data: '카드는 지금 자신의 속도를 own own own own 믿어도 된다고 말합니다.',
+              data: JSON.stringify({ polished: '카드는 지금 자신의 속도를 own own own own 믿어도 된다고 말합니다.' }),
               usage: {},
               provider: 'mock',
             },
@@ -357,7 +352,7 @@ test('aiService: chat responses collapse degenerate repeated English tokens befo
     },
   });
 
-  const result = await sendChatMessage([], '오늘 운세 알려줘');
+  const result = await polishReviewText('오늘 상담 메모');
 
   assert.equal(result.error, null);
   assert.equal(result.data, '카드는 지금 자신의 속도를 own 믿어도 된다고 말합니다.');

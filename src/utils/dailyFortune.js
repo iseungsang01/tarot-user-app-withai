@@ -13,8 +13,6 @@ export const getStoredDrawCount = (fortune) => {
   return fortune ? 1 : 0;
 };
 
-export const getRemainingDraws = () => Infinity;
-
 export const canDrawDailyFortune = () => true;
 
 export const needsRewardedAdForDailyFortune = (fortune) => getStoredDrawCount(fortune) > 0;

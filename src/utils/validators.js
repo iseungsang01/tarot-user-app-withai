@@ -17,7 +17,7 @@
  */
 export const validatePhoneNumber = (phone) => /^010-\d{4}-\d{4}$/.test(phone);
 
-export const MIN_PASSWORD_LENGTH = 6;
+const MIN_PASSWORD_LENGTH = 6;
 
 export const validatePassword = (password) => (
   typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH

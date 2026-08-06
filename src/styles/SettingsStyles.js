@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { DrawerTheme } from '../constants/DrawerTheme';
 import { CommonStyles } from './CommonStyles';
 

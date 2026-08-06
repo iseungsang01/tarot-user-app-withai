@@ -40,7 +40,7 @@ const getGoogleMobileAdsModule = () => {
   }
 };
 
-export const getDailyFortuneRewardedAdUnitId = () => {
+const getDailyFortuneRewardedAdUnitId = () => {
   const platform = getPlatformOS();
   const testUnitId = platform === 'ios' ? GOOGLE_IOS_REWARDED_TEST_UNIT_ID : GOOGLE_ANDROID_REWARDED_TEST_UNIT_ID;
 
@@ -161,10 +161,4 @@ export const showDailyFortuneRewardedAd = async () => {
       finish({ rewarded: false, reason: 'rewarded_ad_load_failed', error });
     }
   });
-};
-
-export default {
-  getDailyFortuneRewardedAdUnitId,
-  initializeAdMob,
-  showDailyFortuneRewardedAd,
 };

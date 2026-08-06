@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+﻿import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { PremiumCard } from '../common/PremiumUI';
 

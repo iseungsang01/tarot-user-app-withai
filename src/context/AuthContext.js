@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { authService } from '../services/authService';
 import { setGlobalAuthErrorHandler } from '../services/supabase';

@@ -12,47 +12,6 @@ const ensureDirExists = async () => {
   }
 };
 
-
-const updateImageCacheMetadata = async (visitId, metadata) => {
-  try {
-    const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
-    cache[visitId] = metadata;
-    await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
-  } catch (error) {
-    console.error('??? ?? ????? ?? ??:', error);
-  }
-};
-
-const deleteImageCacheMetadata = async (visitId) => {
-  try {
-    const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
-    delete cache[visitId];
-    await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, cache);
-  } catch (error) {
-    console.error('??? ?? ????? ?? ??:', error);
-  }
-};
-
-const formatBytes = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-};
-
-const findOldestImage = (cache) => {
-  const entries = Object.entries(cache);
-  if (entries.length === 0) return null;
-  return entries.reduce((oldest, [id, meta]) => (!oldest || new Date(meta.timestamp) < new Date(oldest.timestamp)) ? { visitId: id, ...meta } : oldest, null);
-};
-
-const findNewestImage = (cache) => {
-  const entries = Object.entries(cache);
-  if (entries.length === 0) return null;
-  return entries.reduce((newest, [id, meta]) => (!newest || new Date(meta.timestamp) > new Date(newest.timestamp)) ? { visitId: id, ...meta } : newest, null);
-};
-
 export const imageStorage = {
   async saveCardImage(visitId, imageData) {
     console.log('💾 [Storage] 이미지 저장 시작:', visitId);
@@ -77,9 +36,6 @@ export const imageStorage = {
       }
 
       await coreStorage._updateMap(STORAGE_KEYS.CARD_IMAGES, visitId, finalUri);
-      const fileInfo = isRemoteUri(finalUri) ? { size: 0 } : await FileSystem.getInfoAsync(finalUri);
-      const metadata = { visitId, timestamp: new Date().toISOString(), size: fileInfo.size || 0 };
-      await updateImageCacheMetadata(visitId, metadata);
 
       if (prevFileUri && prevFileUri !== finalUri && prevFileUri.startsWith(IMAGE_DIR)) {
         await FileSystem.deleteAsync(prevFileUri, { idempotent: true });
@@ -121,93 +77,8 @@ export const imageStorage = {
         console.error('❌ [Storage] 파일 삭제 중 오류:', e);
       }
       await coreStorage._updateMap(STORAGE_KEYS.CARD_IMAGES, visitId, null, true);
-      await deleteImageCacheMetadata(visitId);
       return true;
     }
     return false;
-  },
-
-  async _updateImageCacheMetadata(visitId, metadata) {
-    return updateImageCacheMetadata(visitId, metadata);
-  },
-
-  async _deleteImageCacheMetadata(visitId) {
-    return deleteImageCacheMetadata(visitId);
-  },
-
-  async getImageCacheMetadata() {
-    return await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
-  },
-
-  async clearImageCache() {
-    try {
-      console.log('🧹 [Storage] 이미지 캐시 정리 시작');
-      const images = await imageStorage.getAllCardImages();
-      await Promise.allSettled(
-        Object.values(images)
-          .filter((uri) => typeof uri === 'string' && uri.startsWith(IMAGE_DIR))
-          .map((uri) => FileSystem.deleteAsync(uri, { idempotent: true }))
-      );
-      await coreStorage.remove(STORAGE_KEYS.CARD_IMAGES);
-      await coreStorage.remove(STORAGE_KEYS.IMAGE_CACHE);
-      console.log('✅ [Storage] 이미지 캐시 정리 완료');
-    } catch (error) {
-      console.error('❌ [Storage] 이미지 캐시 정리 오류:', error);
-    }
-  },
-
-  async clearOldImageCache(days = 30) {
-    try {
-      const cache = await imageStorage.getImageCacheMetadata();
-      const thresholdTime = new Date().getTime() - (days * 24 * 60 * 60 * 1000);
-      const deletePromises = [];
-      for (const [visitId, metadata] of Object.entries(cache)) {
-        if (new Date(metadata.timestamp).getTime() < thresholdTime) {
-          deletePromises.push(imageStorage.deleteCardImage(visitId));
-        }
-      }
-      await Promise.allSettled(deletePromises);
-    } catch (error) {
-      console.error('❌ [Storage] 오래된 이미지 캐시 정리 오류:', error);
-    }
-  },
-
-  async getImageCacheStats() {
-    try {
-      const cache = await imageStorage.getImageCacheMetadata();
-      const images = await imageStorage.getAllCardImages();
-      const totalImages = Object.keys(images).length;
-      const totalSize = Object.values(cache).reduce((sum, meta) => sum + (meta.size || 0), 0);
-      return {
-        totalImages,
-        totalSize,
-        totalSizeFormatted: formatBytes(totalSize),
-        oldestImage: findOldestImage(cache),
-        newestImage: findNewestImage(cache),
-      };
-    } catch (error) {
-      console.error('❌ [Storage] 이미지 캐시 통계 조회 오류:', error);
-      return null;
-    }
-  },
-
-  _formatBytes: formatBytes,
-
-  _findOldestImage: findOldestImage,
-
-  _findNewestImage: findNewestImage,
-
-  async cleanupOrphanedImages(ids) {
-    console.log('🧹 [Storage] cleanupOrphanedImages 시작');
-    const imageCount = await coreStorage._cleanup(STORAGE_KEYS.CARD_IMAGES, ids);
-    const cache = await coreStorage.get(STORAGE_KEYS.IMAGE_CACHE) || {};
-    const beforeMetaCount = Object.keys(cache).length;
-    const filtered = Object.fromEntries(Object.entries(cache).filter(([id]) => ids.includes(parseInt(id))));
-    const removedMetaCount = beforeMetaCount - Object.keys(filtered).length;
-    if (removedMetaCount > 0) {
-      await coreStorage.save(STORAGE_KEYS.IMAGE_CACHE, filtered);
-      console.log('✅ [Storage] 메타데이터 정리 완료:', removedMetaCount, '개 삭제됨');
-    }
-    return imageCount;
   }
 };

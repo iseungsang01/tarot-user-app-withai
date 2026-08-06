@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { formatDateShort } from '../../utils/formatters';
 import { DrawerTheme } from '../../constants/DrawerTheme';

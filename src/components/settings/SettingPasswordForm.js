@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { CustomButton } from '../common/CustomButton';
 import { styles } from '../../styles/SettingsStyles';

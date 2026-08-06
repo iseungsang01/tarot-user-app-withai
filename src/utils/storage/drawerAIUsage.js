@@ -1,12 +1,12 @@
 import { coreStorage, STORAGE_KEYS } from './core';
 
-export const DRAWER_AI_USAGE_LIMITS = {
+const DRAWER_AI_USAGE_LIMITS = {
   voiceCondense: 30,
   polishReview: 30,
   historySummary: 30,
 };
 
-export const getDrawerAIUsageMonthKey = (date = new Date()) => {
+const getDrawerAIUsageMonthKey = (date = new Date()) => {
   const d = date instanceof Date ? date : new Date(date);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -30,7 +30,7 @@ export const getDrawerAIUsage = async (month = getDrawerAIUsageMonthKey()) => {
   return normalizeMonthUsage(allUsage[month]);
 };
 
-export const getDrawerAIFeatureLimit = (featureKey) => DRAWER_AI_USAGE_LIMITS[featureKey] || 0;
+const getDrawerAIFeatureLimit = (featureKey) => DRAWER_AI_USAGE_LIMITS[featureKey] || 0;
 
 export const getRemainingDrawerAIUsage = async (featureKey, month = getDrawerAIUsageMonthKey()) => {
   const usage = await getDrawerAIUsage(month);

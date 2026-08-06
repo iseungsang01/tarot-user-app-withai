@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+﻿import { View, Text, StyleSheet } from 'react-native';
 import { VoteCard } from './VoteCard';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { DrawerMark, PremiumCard } from '../common/PremiumUI';

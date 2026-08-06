@@ -1,8 +1,9 @@
 import { supabaseClient } from './supabaseClient';
 import { storage } from '../utils/storage';
+import { STORAGE_KEYS } from '../utils/storage/core';
 
-const CUSTOMER_KEY = 'tarot_customer';
-const CUSTOMER_SESSION_KEY = 'tarot_customer_session';
+const CUSTOMER_KEY = STORAGE_KEYS.CUSTOMER;
+const CUSTOMER_SESSION_KEY = STORAGE_KEYS.CUSTOMER_SESSION;
 
 const LOGIN_GUARD_KEY = 'auth_login_guard';
 const MAX_FAILED_ATTEMPTS = 5;

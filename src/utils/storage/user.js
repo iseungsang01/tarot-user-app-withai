@@ -7,7 +7,6 @@ export const userStorage = {
     const updated = [...new Set([...read, ...noticeIds])];
     await coreStorage.save(STORAGE_KEYS.READ_NOTICES, updated);
   },
-  async isNoticeRead(noticeId) { return (await coreStorage.get(STORAGE_KEYS.READ_NOTICES) || []).includes(noticeId); },
   async getReadNotices() { return await coreStorage.get(STORAGE_KEYS.READ_NOTICES) || []; },
   async getUnreadNoticeCount(allNoticeIds) {
     const read = await coreStorage.get(STORAGE_KEYS.READ_NOTICES) || [];
@@ -19,14 +18,6 @@ export const userStorage = {
     if (read.length !== filtered.length) {
       await coreStorage.save(STORAGE_KEYS.READ_NOTICES, filtered);
     }
-  },
-
-  async saveAppSettings(settings) {
-    const curr = await coreStorage.get(STORAGE_KEYS.APP_SETTINGS) || {};
-    await coreStorage.save(STORAGE_KEYS.APP_SETTINGS, { ...curr, ...settings });
-  },
-  async getAppSettings() {
-    return await coreStorage.get(STORAGE_KEYS.APP_SETTINGS) || { darkMode: true, notifications: true, autoRefresh: true };
   },
 
   _getLocalDateString() {
@@ -48,17 +39,6 @@ export const userStorage = {
   async getAllFortunes() {
     return await coreStorage.get(STORAGE_KEYS.DAILY_FORTUNE) || {};
   },
-  async deleteDailyFortune(dateStr) {
-    const date = dateStr || this._getLocalDateString();
-    const allFortunes = await coreStorage.get(STORAGE_KEYS.DAILY_FORTUNE) || {};
-    if (allFortunes[date]) {
-      delete allFortunes[date];
-      await coreStorage.save(STORAGE_KEYS.DAILY_FORTUNE, allFortunes);
-      return true;
-    }
-    return false;
-  },
-
   async saveAttendance(dateStr) {
     const date = dateStr || this._getLocalDateString();
     const history = await coreStorage.get(STORAGE_KEYS.ATTENDANCE) || [];
@@ -69,10 +49,5 @@ export const userStorage = {
   },
   async getAttendanceHistory() {
     return await coreStorage.get(STORAGE_KEYS.ATTENDANCE) || [];
-  },
-  async checkAttendance(dateStr) {
-    const date = dateStr || this._getLocalDateString();
-    const history = await coreStorage.get(STORAGE_KEYS.ATTENDANCE) || [];
-    return history.includes(date);
   }
 };
