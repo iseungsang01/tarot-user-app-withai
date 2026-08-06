@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, I
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { MAJOR_ARCANA } from '../../constants/TarotCards';
 import { ArchiveTitleHeader, CouponCard, DrawerMark, PremiumCard, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { useTarotCardImage } from '../../hooks/useTarotCardImage';
@@ -11,18 +12,8 @@ import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert 
 
 const MAX_STAMPS = 10;
 
-const tarotCards = [
-  { id: 'm00', name: 'The Fool' },
-  { id: 'm01', name: 'The Magician' },
-  { id: 'm02', name: 'The High Priestess' },
-  { id: 'm03', name: 'The Empress' },
-  { id: 'm04', name: 'The Emperor' },
-  { id: 'm05', name: 'The Hierophant' },
-  { id: 'm06', name: 'The Lovers' },
-  { id: 'm07', name: 'The Chariot' },
-  { id: 'm08', name: 'Strength' },
-  { id: 'm09', name: 'The Hermit' },
-];
+// 스탬프 10칸은 메이저 아르카나 앞 10장을 그대로 쓴다
+const tarotCards = MAJOR_ARCANA.slice(0, MAX_STAMPS);
 
 const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
 

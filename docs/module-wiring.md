@@ -6,7 +6,7 @@
 
 ```
 App.js
-  └ context/ (AuthProvider · UIProvider · ErrorProvider)
+  └ context/AuthContext (AuthProvider — 유일한 Provider)
       └ navigation/ (AppNavigator → AuthNavigator | MainNavigator)
           └ screens/
               ├ components/   ← 배럴: components/index.js
@@ -16,6 +16,9 @@ App.js
 ```
 
 의존 방향은 위에서 아래로만 흐른다. `utils/`는 어떤 상위 계층도 import하지 않는다.
+
+**전역 에러 표시**는 Context를 거치지 않는다. 서비스/유틸이 `utils/errorEmitter`로 발행하고
+`components/common/GlobalErrorDisplay`가 직접 구독한다 (구독자가 그 컴포넌트 하나뿐이라 Provider가 불필요).
 
 ## 단일 진입점 (중복 정의 금지)
 
@@ -92,10 +95,27 @@ App.js
 - `hasUnreadNotices`가 `syncReadNotices` 직후 같은 키를 다시 읽던 것 제거
 - `visitService`의 `getVisit`·`deleteVisit`에서 독립적인 storage 호출 4건씩을 `Promise.all`로
 
+## 단순화 내역 (2026-08-08)
+
+**껍데기만 남은 계층 제거**
+- `context/UIContext.js` 삭제 — 코치마크 기능이 걷힌 뒤 `startCoachMarks`/`completeCoachMarks`/`triggerCoachMarks`가 전부 빈 함수였고, 노출하던 `showCoachMarks`·`coachMarksSessionId`·`uiLoading`도 전부 고정 상수였다. 유일한 소비처인 `AppNavigator`의 로딩 분기에서 `uiLoading`은 항상 `false`
+- `context/ErrorContext.js` 삭제 — `errorEmitter`를 구독해 `GlobalErrorDisplay` 하나에만 넘기는 1:1 중간층이었다. 컴포넌트가 직접 구독하도록 바꿔 Provider 두 개가 App.js에서 사라졌다
+
+**중복 제거**
+- `errorHandler.handleApiCall`의 try 블록과 catch 블록이 같은 5단계 보고 절차(로깅 여부 판단 → 파싱 → 로깅 → emit → onError)를 복붙하던 것을 `report()` 하나로
+- `TicketScreen`이 스탬프용 카드 10장을 별도 배열로 하드코딩하던 것을 `MAJOR_ARCANA.slice(0, MAX_STAMPS)`로. 이 과정에서 `m07` 이름이 두 곳에서 달랐던 것(`Chariot` vs `The Chariot`)이 드러나 표준 명칭 `The Chariot`으로 통일
+- `showSuccessAlert` 안의 지연 `require('../constants/ErrorMessages')`를 파일 상단 import로 (같은 모듈을 위에서 이미 import 중이었다)
+
 ## 배선 점검 방법
 
-새 고아 노드가 생겼는지 확인하려면 import 그래프를 다시 뜨면 된다. 확인 시 아래 3가지는 정적 분석의 구조적 오탐이므로 제외하고 봐야 한다.
+새 고아 노드가 생겼는지 확인하려면 import 그래프를 다시 뜨면 된다. 확인 시 아래 2가지는 정적 분석의 구조적 오탐이므로 제외하고 봐야 한다.
 
 1. 동적 `import()` — `TarotCardImages.js`
-2. `require()` 호출 — `errorHandler.js`가 `ErrorMessages.js`의 `SUCCESS_MESSAGES`를 이렇게 읽는다
-3. `test/helpers/moduleLoader.cjs`의 문자열 경로 주입 — `getSupabase` `validateCondensedVoiceMemo` `getUniformRandomIndex` `getDrawerAIUsage`는 테스트 전용 export다
+2. `test/helpers/moduleLoader.cjs`의 문자열 경로 주입 — `getSupabase` `validateCondensedVoiceMemo` `getUniformRandomIndex` `getDrawerAIUsage`는 테스트 전용 export다
+
+**import 그래프만으로는 안 잡히는 죽은 코드**가 따로 있다. UIContext처럼 배선은 살아 있는데 값이
+죽은 경우다. 주기적으로 아래를 함께 훑을 것.
+
+- 빈 함수: `grep -rn "=> {}" src`
+- 상수만 반환하는 함수 — 호출부의 분기가 통째로 죽어 있을 수 있다 (`canDrawDailyFortune`, `getRemainingDraws`가 이 경우였다)
+- Context value에 담긴 리터럴 상수 (`uiLoading: false`)

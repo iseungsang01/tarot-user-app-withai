@@ -1,4 +1,4 @@
-import { ERROR_TYPES, ERROR_MESSAGES } from '../constants/ErrorMessages';
+import { ERROR_TYPES, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants/ErrorMessages';
 import { errorEmitter } from './errorEmitter';
 
 /**
@@ -115,46 +115,26 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
     silentErrorCodes = [],
   } = options;
 
-  const shouldLogError = (error) => !silentErrorCodes.includes(error?.code);
+  // 호출이 { error }를 돌려준 경우와 예외를 던진 경우를 같은 방식으로 보고한다
+  const report = (error) => {
+    const shouldLog = !silentErrorCodes.includes(error?.code);
+    const errorInfo = parseSupabaseError(error, { log: shouldLog });
+
+    if (shouldLog) logError(context, error, additionalInfo);
+    if (showAlert) errorEmitter.emit(errorInfo);
+    if (onError) onError(errorInfo);
+
+    return errorInfo;
+  };
 
   try {
     const result = await apiCall();
 
-    if (result.error) {
-      const shouldLog = shouldLogError(result.error);
-      const errorInfo = parseSupabaseError(result.error, { log: shouldLog });
-      if (shouldLog) {
-        logError(context, result.error, additionalInfo);
-      }
-
-      if (showAlert) {
-        errorEmitter.emit(errorInfo);
-      }
-
-      if (onError) {
-        onError(errorInfo);
-      }
-
-      return { data: null, error: result.error, errorInfo };
-    }
+    if (result.error) return { data: null, error: result.error, errorInfo: report(result.error) };
 
     return { data: result.data, error: null, errorInfo: null };
   } catch (error) {
-    const shouldLog = shouldLogError(error);
-    const errorInfo = parseSupabaseError(error, { log: shouldLog });
-    if (shouldLog) {
-      logError(context, error, additionalInfo);
-    }
-
-    if (showAlert) {
-      errorEmitter.emit(errorInfo);
-    }
-
-    if (onError) {
-      onError(errorInfo);
-    }
-
-    return { data: null, error, errorInfo };
+    return { data: null, error, errorInfo: report(error) };
   }
 };
 
@@ -212,7 +192,6 @@ export const showErrorAlert = (errorInfo, Alert) => {
  * @param {string} customMessage - 커스텀 메시지 (선택)
  */
 export const showSuccessAlert = (successType, Alert, customMessage = null) => {
-  const { SUCCESS_MESSAGES } = require('../constants/ErrorMessages');
   const successData = SUCCESS_MESSAGES[successType];
 
   if (!successData) {

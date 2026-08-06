@@ -1,6 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
-import { useUI } from '../context/UIContext';
 import { Colors } from '../constants/Colors';
 import { GradientBackground, LoadingSpinner } from '../components';
 import AuthNavigator from './AuthNavigator';
@@ -8,10 +7,9 @@ import MainNavigator from './MainNavigator';
 
 const AppNavigator = () => {
   const { customer, loadingState } = useAuth();
-  const { uiLoading } = useUI();
   const blockingAuthLoading = loadingState?.initializing || loadingState?.loggingOut;
 
-  if (blockingAuthLoading || uiLoading) {
+  if (blockingAuthLoading) {
     return (
       <GradientBackground>
         <LoadingSpinner message="앱 로딩 중..." />

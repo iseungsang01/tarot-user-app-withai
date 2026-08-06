@@ -3,8 +3,6 @@ import { Platform, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
-import { UIProvider } from './src/context/UIContext';
-import { ErrorProvider } from './src/context/ErrorContext';
 import { ErrorBoundary, GlobalErrorDisplay } from './src/components';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initializeAdMob } from './src/services/rewardedAdService';
@@ -57,18 +55,14 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <QueryClientProvider client={queryClient}>
           <SafeAreaProvider>
-            <ErrorProvider>
-              <AuthProvider>
-                <UIProvider>
-                  <StatusBar
-                    barStyle="light-content"
-                    backgroundColor="#1a0033"
-                  />
-                  <AppNavigator />
-                  <GlobalErrorDisplay />
-                </UIProvider>
-              </AuthProvider>
-            </ErrorProvider>
+            <AuthProvider>
+              <StatusBar
+                barStyle="light-content"
+                backgroundColor="#1a0033"
+              />
+              <AppNavigator />
+              <GlobalErrorDisplay />
+            </AuthProvider>
           </SafeAreaProvider>
         </QueryClientProvider>
       </GestureHandlerRootView>

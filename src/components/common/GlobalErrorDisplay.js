@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { useError } from '../../context/ErrorContext';
+import { errorEmitter } from '../../utils/errorEmitter';
 import { Colors } from '../../constants/Colors';
+
+const AUTO_HIDE_MS = 3000;
 
 /**
  * 전역 에러 표시 컴포넌트
@@ -9,12 +11,30 @@ import { Colors } from '../../constants/Colors';
  *
  * 에러 흐름:
  *   서비스/유틸 → errorEmitter.emit()
- *   → ErrorContext(구독) → setError()
- *   → GlobalErrorDisplay(useError) → 렌더링
+ *   → GlobalErrorDisplay(구독) → 렌더링
  */
 export const GlobalErrorDisplay = () => {
-  const { error, hideError } = useError();
-  const slideAnim = React.useRef(new Animated.Value(-100)).current;
+  const [error, setError] = useState(null);
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const hideTimerRef = useRef(null);
+
+  const hideError = useCallback(() => {
+    clearTimeout(hideTimerRef.current);
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = errorEmitter.subscribe((errorInfo) => {
+      clearTimeout(hideTimerRef.current);
+      setError(errorInfo);
+      hideTimerRef.current = setTimeout(() => setError(null), AUTO_HIDE_MS);
+    });
+
+    return () => {
+      unsubscribe();
+      clearTimeout(hideTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (error) {

@@ -116,7 +116,7 @@ export const MAJOR_ARCANA = [
   }),
   withDomains({
     id: 'm07',
-    name: 'Chariot',
+    name: 'The Chariot',
     nameKr: '7. 전차',
     keywords: ['추진력', '집중', '승부', '이동', '방향'],
     light: '목표를 정하면 힘 있게 밀고 나갈 수 있는 날',
