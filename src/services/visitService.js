@@ -7,7 +7,7 @@ const requireSession = async () => {
   return session.ok ? null : session.error;
 };
 
-const getSessionState = async () => ensureAuthenticatedSession();
+
 
 export const visitService = {
   syncLocalVisitFields: async (visitId, updates) => {
@@ -23,7 +23,7 @@ export const visitService = {
     if (customerId === 'guest') return { data: [], error: null };
 
     try {
-      const sessionState = await getSessionState();
+      const sessionState = await ensureAuthenticatedSession();
       if (!sessionState.ok) return { data: [], error: sessionState.error };
 
       const { data, error } = await supabaseClient.getMyVisits({
@@ -62,7 +62,7 @@ export const visitService = {
 
   async getVisit(visitId) {
     try {
-      const sessionState = await getSessionState();
+      const sessionState = await ensureAuthenticatedSession();
       if (!sessionState.ok) return { data: null, error: sessionState.error };
 
       const { data, error } = await supabaseClient.getMyVisit({
@@ -72,15 +72,15 @@ export const visitService = {
 
       if (error) return { data: null, error: withAuthErrorHandling(error, sessionState.error?.message) };
 
+      const [card_image, card_review, title, ai_insight] = await Promise.all([
+        storage.getCardImage(visitId),
+        storage.getCardReview(visitId),
+        storage.getCardTitle(visitId),
+        storage.getCardAIInsight(visitId),
+      ]);
+
       return {
-        data: {
-          ...data,
-          is_manual: false,
-          card_image: await storage.getCardImage(visitId),
-          card_review: await storage.getCardReview(visitId),
-          title: await storage.getCardTitle(visitId),
-          ai_insight: await storage.getCardAIInsight(visitId),
-        },
+        data: { ...data, is_manual: false, card_image, card_review, title, ai_insight },
         error: null,
       };
     } catch (error) {
@@ -91,7 +91,7 @@ export const visitService = {
 
   async deleteVisit(visitId, customerId) {
     try {
-      const sessionState = await getSessionState();
+      const sessionState = await ensureAuthenticatedSession();
       if (!sessionState.ok) return { error: sessionState.error };
 
       const { data, error } = await supabaseClient.hideMyVisit({
@@ -103,10 +103,12 @@ export const visitService = {
         throw new Error('Visit not found or already hidden.');
       }
 
-      await storage.deleteCardImage(visitId);
-      await storage.deleteCardReview(visitId);
-      await storage.deleteCardTitle(visitId);
-      await storage.deleteCardAIInsight(visitId);
+      await Promise.all([
+        storage.deleteCardImage(visitId),
+        storage.deleteCardReview(visitId),
+        storage.deleteCardTitle(visitId),
+        storage.deleteCardAIInsight(visitId),
+      ]);
 
       return { error: null };
     } catch (error) {
@@ -121,7 +123,7 @@ export const visitService = {
     }
 
     try {
-      const sessionState = await getSessionState();
+      const sessionState = await ensureAuthenticatedSession();
       if (!sessionState.ok) return { data: null, error: sessionState.error };
 
       const { data, error } = await supabaseClient.getCustomerStats({

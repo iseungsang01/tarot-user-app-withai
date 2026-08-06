@@ -22,10 +22,20 @@ App.js
 | 대상 | 정의 위치 | 비고 |
 |---|---|---|
 | AsyncStorage 키 | `utils/storage/core.js`의 `STORAGE_KEYS` | 키 문자열을 다른 파일에 하드코딩하지 않는다 |
+| AsyncStorage 접근 | `utils/storage/core.js`의 `coreStorage` | 앱 코드에서 `AsyncStorage`를 직접 import하지 않는다 |
 | 고객 RPC 세션 토큰 | `services/customerSession.js` | `requireCustomerSessionToken()`만 export |
 | Supabase 클라이언트 | `services/supabase.js` | `supabase` Proxy 경유. RPC 래퍼는 `services/supabaseClient.js` |
+| 월 한도가 걸린 AI 액션 | `hooks/useAI.js`의 `createDrawerAIAction` | 상태·취소·사용량 회계를 한 곳에서 관리 |
+| 날짜 표기 | `utils/formatters.js` | `formatDateShort`(12월25일) · `formatDateDot`(24.12.25) |
 | 에러 문구 | `constants/ErrorMessages.js` | |
 | 디자인 토큰 | `constants/DrawerTheme.js` (named export only) | |
+
+## 스토리지 스코프
+
+로컬 데이터는 `tarot_local:<scope>:<key>` 형태로 계정별 격리된다 (`scope`는 `guest` 또는 `member:<id>`).
+스코프는 `CUSTOMER_SESSION`·`CUSTOMER` 두 키로 결정되므로 `coreStorage`가 이를 캐시하고,
+그 두 키가 `save`/`remove`될 때만 캐시를 버린다. **세션을 `AsyncStorage`로 직접 쓰면 캐시가 어긋난다** —
+세션 쓰기는 반드시 `storage.save`/`storage.remove`를 거칠 것.
 
 ## 배럴 파일
 
@@ -59,6 +69,28 @@ App.js
 - 소비자 없는 default export 제거: `aiService` `rewardedAdService` `DrawerTheme`
 - 내부 전용 전환: `MIN_PASSWORD_LENGTH` `getDailyFortuneRewardedAdUnitId` `getCustomerSessionToken` `DRAWER_AI_USAGE_LIMITS` `getDrawerAIUsageMonthKey` `getDrawerAIFeatureLimit`
 - 미사용 import 43건 (`React` 41건 포함 — Expo SDK 54는 automatic JSX runtime이라 불필요)
+
+## 단순화 내역 (2026-08-07, 정리 후속)
+
+살아있는 코드에서 중복·죽은 분기·낭비 I/O를 걷어냈다. 동작 변경 없음.
+
+**중복 제거**
+- `useAI.js`의 세 훅(전체 요약·메모 축약·문장 다듬기)이 ~90% 복붙이던 것을 `createDrawerAIAction` 팩토리로 통합 (278줄 → 165줄). 취소 처리 같은 수정이 이제 한 곳에서 끝난다
+- `NoticeCard`/`VoteCard`에 각각 복사돼 있던 `formatShortDate` → `formatters.formatDateDot`
+- `supabase.js`가 `AsyncStorage`로 직접 읽던 세션 → `coreStorage.get`. 세션 읽기 경로가 3개에서 1개로
+- `cards.js`의 3개 CRUD 그룹 → `cardField` 팩토리
+
+**죽은 코드**
+- `dailyFortune.canDrawDailyFortune` — 항상 `true`를 반환해 호출부의 분기·`disabled` prop이 전부 죽어 있었다 (3개 파일)
+- `customerService`의 미사용 `requireSession`, `visitService`의 순수 forwarding 래퍼 `getSessionState`
+- `useVisits`의 게스트 분기에서 결과를 버리는 storage 읽기 2건
+
+**낭비 I/O**
+- `coreStorage`가 매 `get`/`save`/`remove`마다 스코프를 재조회하던 것을 캐시 (스토리지 접근이 호출당 2~3회 → 1회)
+- `getVoteResults`/`getVoteParticipants`가 같은 `get_vote_summary` RPC를 각각 호출하던 것을 `getVoteSummary` 하나로 (투표 조회 네트워크 왕복 절반)
+- `incrementDrawerAIUsage`가 이미 돌려주는 잔여 횟수를 버리고 다시 읽던 것 제거
+- `hasUnreadNotices`가 `syncReadNotices` 직후 같은 키를 다시 읽던 것 제거
+- `visitService`의 `getVisit`·`deleteVisit`에서 독립적인 storage 호출 4건씩을 `Promise.all`로
 
 ## 배선 점검 방법
 

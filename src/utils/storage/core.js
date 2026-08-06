@@ -34,10 +34,8 @@ const safeParse = (raw, fallback = null) => {
   try { return JSON.parse(raw); } catch { return fallback; }
 };
 
-const normalizeScopedValue = (raw) => {
-  if (raw === null || raw === undefined) return null;
-  return safeParse(raw, raw);
-};
+// 스코프 키는 과거에 원시 문자열로 저장된 값이 남아 있어, 파싱 실패 시 원본을 그대로 살린다.
+const normalizeScopedValue = (raw) => safeParse(raw, raw);
 
 const getStoredJson = async (key) => {
   try {
@@ -47,7 +45,13 @@ const getStoredJson = async (key) => {
   }
 };
 
-const getCurrentScope = async () => {
+// 스코프는 로그인/로그아웃 때만 바뀌는데 모든 get/save/remove가 이 값을 필요로 한다.
+// 매번 다시 읽으면 스토리지 접근이 통째로 2~3배가 되므로 캐시하고,
+// 스코프를 결정하는 두 키(CUSTOMER_SESSION · CUSTOMER)가 쓰일 때만 버린다.
+const SCOPE_DECIDING_KEYS = new Set([STORAGE_KEYS.CUSTOMER_SESSION, STORAGE_KEYS.CUSTOMER]);
+let cachedScope = null;
+
+const resolveCurrentScope = async () => {
   const session = await getStoredJson(STORAGE_KEYS.CUSTOMER_SESSION);
   if (session?.type === 'ai_guest_session' || session?.customerId === 'guest') return 'guest';
   if (session?.customerId) return `member:${session.customerId}`;
@@ -56,6 +60,15 @@ const getCurrentScope = async () => {
   if (customer?.isGuest || customer?.id === 'guest') return 'guest';
   if (customer?.id) return `member:${customer.id}`;
   return 'guest';
+};
+
+const getCurrentScope = async () => {
+  if (cachedScope === null) cachedScope = await resolveCurrentScope();
+  return cachedScope;
+};
+
+const invalidateScopeIfNeeded = (key) => {
+  if (SCOPE_DECIDING_KEYS.has(key)) cachedScope = null;
 };
 
 const scopeKey = (scope, key) => `${LOCAL_SCOPE_PREFIX}:${scope}:${key}`;
@@ -94,16 +107,14 @@ export const coreStorage = {
     try {
       const resolvedKey = shouldScope(key) ? scopeKey(await getCurrentScope(), key) : key;
       await AsyncStorage.setItem(resolvedKey, JSON.stringify(value));
+      invalidateScopeIfNeeded(key);
     }
     catch (e) { console.error(`Storage save error (${key}):`, e); }
   },
 
   async get(key) {
     try {
-      if (!shouldScope(key)) {
-        const val = await AsyncStorage.getItem(key);
-        return val ? JSON.parse(val) : null;
-      }
+      if (!shouldScope(key)) return safeParse(await AsyncStorage.getItem(key));
 
       const scopedVal = await AsyncStorage.getItem(scopeKey(await getCurrentScope(), key));
       if (scopedVal !== null) return normalizeScopedValue(scopedVal);
@@ -117,6 +128,7 @@ export const coreStorage = {
     try {
       const resolvedKey = shouldScope(key) ? scopeKey(await getCurrentScope(), key) : key;
       await AsyncStorage.removeItem(resolvedKey);
+      invalidateScopeIfNeeded(key);
     }
     catch (e) { console.error(`Storage remove error (${key}):`, e); }
   },

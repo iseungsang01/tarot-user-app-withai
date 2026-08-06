@@ -1,25 +1,30 @@
 import { coreStorage, STORAGE_KEYS } from './core';
 
+/** visitId를 키로 하는 맵 하나에 대한 CRUD 묶음을 만든다. */
+const cardField = (storageKey) => ({
+  save: (visitId, value) => coreStorage._updateMap(storageKey, visitId, value),
+  get: async (visitId) => (await coreStorage.get(storageKey) || {})[visitId] || null,
+  getAll: async () => await coreStorage.get(storageKey) || {},
+  remove: (visitId) => coreStorage._updateMap(storageKey, visitId, null, true),
+});
+
+const review = cardField(STORAGE_KEYS.CARD_REVIEWS);
+const title = cardField(STORAGE_KEYS.CARD_TITLES);
+const aiInsight = cardField(STORAGE_KEYS.CARD_AI_INSIGHTS);
+
 export const cardsStorage = {
-  async saveCardReview(visitId, review) { await coreStorage._updateMap(STORAGE_KEYS.CARD_REVIEWS, visitId, review); },
-  async getCardReview(visitId) { return (await coreStorage.get(STORAGE_KEYS.CARD_REVIEWS) || {})[visitId] || null; },
-  async getAllCardReviews() { return await coreStorage.get(STORAGE_KEYS.CARD_REVIEWS) || {}; },
-  async deleteCardReview(visitId) {
-    const reviews = await coreStorage.get(STORAGE_KEYS.CARD_REVIEWS) || {};
-    if (visitId in reviews) {
-      await coreStorage._updateMap(STORAGE_KEYS.CARD_REVIEWS, visitId, null, true);
-      return true;
-    }
-    return false;
-  },
+  saveCardReview: review.save,
+  getCardReview: review.get,
+  getAllCardReviews: review.getAll,
+  deleteCardReview: review.remove,
 
-  async saveCardTitle(visitId, title) { await coreStorage._updateMap(STORAGE_KEYS.CARD_TITLES, visitId, title); },
-  async getCardTitle(visitId) { return (await coreStorage.get(STORAGE_KEYS.CARD_TITLES) || {})[visitId] || null; },
-  async getAllCardTitles() { return await coreStorage.get(STORAGE_KEYS.CARD_TITLES) || {}; },
-  async deleteCardTitle(visitId) { await coreStorage._updateMap(STORAGE_KEYS.CARD_TITLES, visitId, null, true); },
+  saveCardTitle: title.save,
+  getCardTitle: title.get,
+  getAllCardTitles: title.getAll,
+  deleteCardTitle: title.remove,
 
-  async saveCardAIInsight(visitId, insight) { await coreStorage._updateMap(STORAGE_KEYS.CARD_AI_INSIGHTS, visitId, insight); },
-  async getCardAIInsight(visitId) { return (await coreStorage.get(STORAGE_KEYS.CARD_AI_INSIGHTS) || {})[visitId] || null; },
-  async getAllCardAIInsights() { return await coreStorage.get(STORAGE_KEYS.CARD_AI_INSIGHTS) || {}; },
-  async deleteCardAIInsight(visitId) { await coreStorage._updateMap(STORAGE_KEYS.CARD_AI_INSIGHTS, visitId, null, true); },
+  saveCardAIInsight: aiInsight.save,
+  getCardAIInsight: aiInsight.get,
+  getAllCardAIInsights: aiInsight.getAll,
+  deleteCardAIInsight: aiInsight.remove,
 };

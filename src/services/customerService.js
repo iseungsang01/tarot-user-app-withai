@@ -1,11 +1,6 @@
 import { ensureAuthenticatedSession, withAuthErrorHandling } from './supabase';
 import { supabaseClient } from './supabaseClient';
 
-const requireSession = async () => {
-  const state = await ensureAuthenticatedSession();
-  return state.ok ? null : state.error;
-};
-
 /**
  * 고객 서비스
  * 고객 정보 조회 및 업데이트

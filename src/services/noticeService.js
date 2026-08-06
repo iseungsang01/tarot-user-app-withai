@@ -89,8 +89,7 @@ export const noticeService = {
   async hasUnreadNotices() {
     try {
       const noticeIds = await this.getPublishedNoticeIds();
-      await storage.syncReadNotices(noticeIds);
-      const readNotices = await storage.getReadNotices();
+      const readNotices = await storage.syncReadNotices(noticeIds);
       return { hasUnread: noticeIds.some((id) => !readNotices.includes(id)), error: null };
     } catch (error) {
       console.error('Check unread notices error:', error);

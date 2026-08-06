@@ -114,38 +114,20 @@ export const voteService = {
   },
 
   /**
-   * 투표 결과 조회
+   * 투표 집계 조회 (선택지별 결과 + 총 참여자 수)
    * @param {number} voteId - 투표 ID
-   * @returns {object} { results, error }
+   * @returns {object} { data: { results, count }, error }
    */
-  async getVoteResults(voteId) {
+  async getVoteSummary(voteId) {
     try {
       const { data, error } = await supabaseClient.getVoteSummary({ p_vote_id: voteId });
 
       if (error) throw error;
 
-      return { data: { results: data?.results || {} }, error: null };
-
+      return { data: { results: data?.results || {}, count: data?.count || 0 }, error: null };
     } catch (error) {
-      console.error('Get vote results error:', error);
-      return { data: { results: {} }, error };
-    }
-  },
-
-  /**
-   * 투표 총 참여자 수 조회
-   * @param {number} voteId - 투표 ID
-   * @returns {object} { count, error }
-   */
-  async getVoteParticipants(voteId) {
-    try {
-      const { data, error } = await supabaseClient.getVoteSummary({ p_vote_id: voteId });
-
-      if (error) throw error;
-      return { data: { count: data?.count || 0 }, error: null };
-    } catch (error) {
-      console.error('Get vote participants error:', error);
-      return { data: { count: 0 }, error };
+      console.error('Get vote summary error:', error);
+      return { data: { results: {}, count: 0 }, error };
     }
   },
 

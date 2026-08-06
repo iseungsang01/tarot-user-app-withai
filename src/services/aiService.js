@@ -20,16 +20,22 @@ const stringifyError = (errorValue) => {
     return String(errorValue);
 };
 
-const extractFirstJSONObject = (text) => {
-    if (text && typeof text === 'object') return text;
-    if (typeof text !== 'string') return null;
-
-    const cleaned = text
+/** 모델 출력에서 코드펜스와 스마트 따옴표를 걷어낸다. */
+const stripJSONDecorators = (text) => {
+    if (typeof text !== 'string') return '';
+    return text
         .replace(/```(?:json)?\s*/gi, '')
         .replace(/```/g, '')
         .replace(/[“”]/g, '"')
         .replace(/[‘’]/g, "'")
         .trim();
+};
+
+const extractFirstJSONObject = (text) => {
+    if (text && typeof text === 'object') return text;
+    if (typeof text !== 'string') return null;
+
+    const cleaned = stripJSONDecorators(text);
     const start = cleaned.indexOf('{');
     if (start === -1) return null;
 
@@ -136,17 +142,6 @@ const parseFirstJSONObject = (text) => {
             return null;
         }
     }
-};
-
-
-const stripJSONDecorators = (text) => {
-    if (typeof text !== 'string') return '';
-    return text
-        .replace(/```(?:json)?\s*/gi, '')
-        .replace(/```/g, '')
-        .replace(/[“”]/g, '"')
-        .replace(/[‘’]/g, "'")
-        .trim();
 };
 
 const collapseDegenerateKoreanRepeats = (text) => {

@@ -12,12 +12,14 @@ export const userStorage = {
     const read = await coreStorage.get(STORAGE_KEYS.READ_NOTICES) || [];
     return allNoticeIds.filter(id => !read.includes(id)).length;
   },
+  /** 사라진 공지 id를 읽음 목록에서 걷어내고, 정리된 읽음 목록을 돌려준다. */
   async syncReadNotices(activeIds) {
     const read = await coreStorage.get(STORAGE_KEYS.READ_NOTICES) || [];
     const filtered = read.filter(id => activeIds.includes(id));
     if (read.length !== filtered.length) {
       await coreStorage.save(STORAGE_KEYS.READ_NOTICES, filtered);
     }
+    return filtered;
   },
 
   _getLocalDateString() {

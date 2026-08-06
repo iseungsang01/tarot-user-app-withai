@@ -1,17 +1,9 @@
 ﻿import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { PremiumCard } from '../common/PremiumUI';
+import { formatDateDot } from '../../utils/formatters';
 
 export const VoteCard = ({ vote, onPress }) => {
-  const formatShortDate = (dateString) => {
-    if (!dateString) return '마감 없음';
-    const date = new Date(dateString);
-    const yy = String(date.getFullYear()).slice(-2);
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yy}.${mm}.${dd}`;
-  };
-
   const isExpired = vote.ends_at && new Date(vote.ends_at) < new Date();
 
   return (
@@ -31,7 +23,7 @@ export const VoteCard = ({ vote, onPress }) => {
               </View>
             )}
           </View>
-          <Text style={styles.dateText}>{formatShortDate(vote.ends_at)} 마감</Text>
+          <Text style={styles.dateText}>{formatDateDot(vote.ends_at, '마감 없음')} 마감</Text>
         </View>
 
         <Text style={styles.title} numberOfLines={2}>{vote.title}</Text>

@@ -40,3 +40,24 @@ export const formatDateShort = (dateStr) => {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}월${date.getDate()}일`;
 };
+
+/**
+ * 날짜 포맷팅 (점 구분 형식)
+ * 목록 카드에서 쓰는 짧은 표기
+ *
+ * @param {string} dateStr - ISO 날짜 문자열
+ * @param {string} [fallback=''] - 날짜가 없을 때 표시할 문구
+ * @returns {string} 포맷된 날짜
+ *
+ * @example
+ * formatDateDot('2024-12-25T10:30:00')        // '24.12.25'
+ * formatDateDot(null, '마감 없음')             // '마감 없음'
+ */
+export const formatDateDot = (dateStr, fallback = '') => {
+  if (!dateStr) return fallback;
+  const date = new Date(dateStr);
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}.${mm}.${dd}`;
+};

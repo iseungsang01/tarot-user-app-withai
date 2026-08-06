@@ -16,13 +16,6 @@ const dailyFortune = (deck = oneCardDeck) => loadModule('src/utils/dailyFortune.
   [tarotCardsPath]: { MAJOR_ARCANA: deck },
 });
 
-test('daily fortune draw stays available after previous draws', () => {
-  const { canDrawDailyFortune } = dailyFortune();
-
-  assert.equal(canDrawDailyFortune({ drawCount: 30, fortune: 'old' }), true);
-  assert.equal(canDrawDailyFortune({ drawCount: 300, fortune: 'old' }), true);
-});
-
 test('daily fortune redraw requires a rewarded ad after first draw', () => {
   const { getDrawButtonLabel, needsRewardedAdForDailyFortune } = dailyFortune();
 

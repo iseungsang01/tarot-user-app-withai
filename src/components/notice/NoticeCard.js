@@ -1,17 +1,9 @@
 ﻿import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { PremiumCard } from '../common/PremiumUI';
+import { formatDateDot } from '../../utils/formatters';
 
 export const NoticeCard = ({ notice, onPress }) => {
-  const formatShortDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const yy = String(date.getFullYear()).slice(-2);
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yy}.${mm}.${dd}`;
-  };
-
   const parseContent = (content) => {
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
     const parts = [];
@@ -48,7 +40,7 @@ export const NoticeCard = ({ notice, onPress }) => {
             )}
             <Text style={styles.title} numberOfLines={1}>{notice.title}</Text>
           </View>
-          <Text style={styles.dateText}>{formatShortDate(notice.created_at)}</Text>
+          <Text style={styles.dateText}>{formatDateDot(notice.created_at)}</Text>
         </View>
 
         <View style={styles.contentContainer}>

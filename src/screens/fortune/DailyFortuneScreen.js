@@ -8,7 +8,6 @@ import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { normalizeDailyFortunePayload } from '../../services/aiService';
 import { storage } from '../../utils/storage';
 import {
-  canDrawDailyFortune,
   getCardById,
   getDrawButtonLabel,
   getLocalDateString,
@@ -135,7 +134,6 @@ const DailyFortuneScreen = ({ navigation }) => {
   const selectedCard = selectedFortune ? getCardById(selectedFortune.cardId) : null;
   const selectedIsToday = selectedDate === todayStr;
   const drawCount = getStoredDrawCount(todayFortune);
-  const canDrawToday = canDrawDailyFortune(todayFortune);
   const requiresAd = needsRewardedAdForDailyFortune(todayFortune);
 
   return (
@@ -164,7 +162,7 @@ const DailyFortuneScreen = ({ navigation }) => {
               : '아직 오늘의 카드를 열람하지 않았습니다.'}
           </Text>
           {requiresAd && <Text style={styles.rewardHint}>광고 시청 완료 후 새 카드를 다시 뽑을 수 있어요.</Text>}
-          <GoldActionButton onPress={handleStartCardDraw} disabled={!canDrawToday} dark={!canDrawToday} style={styles.drawButton}>
+          <GoldActionButton onPress={handleStartCardDraw} style={styles.drawButton}>
             {getDrawButtonLabel(todayFortune)}
           </GoldActionButton>
         </PremiumCard>

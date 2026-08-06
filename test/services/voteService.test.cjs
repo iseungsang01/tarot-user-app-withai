@@ -67,8 +67,10 @@ test('voteService: submits votes through customer-session RPC without trusting c
 });
 
 test('voteService: reads aggregate vote results through summary RPC', async () => {
+  let summaryCalls = 0;
   const supabaseClient = {
     getVoteSummary: async (payload) => {
+      summaryCalls += 1;
       assert.deepEqual(payload, { p_vote_id: 5 });
       return { data: { results: { 0: 2, 1: 1 }, count: 3 }, error: null };
     },
@@ -80,6 +82,7 @@ test('voteService: reads aggregate vote results through summary RPC', async () =
     '../utils/storage': { storage: createStorageMock() },
   });
 
-  assert.deepEqual(await voteService.getVoteResults(5), { data: { results: { 0: 2, 1: 1 } }, error: null });
-  assert.deepEqual(await voteService.getVoteParticipants(5), { data: { count: 3 }, error: null });
+  assert.deepEqual(await voteService.getVoteSummary(5), { data: { results: { 0: 2, 1: 1 }, count: 3 }, error: null });
+  // 결과와 참여자 수는 한 번의 RPC로 함께 얻는다
+  assert.equal(summaryCalls, 1);
 });

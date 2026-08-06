@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import { STORAGE_KEYS } from '../utils/storage/core';
+import { coreStorage, STORAGE_KEYS } from '../utils/storage/core';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -61,14 +60,7 @@ const isAuthContextError = (error) => {
   );
 };
 
-const getCustomerRpcSession = async () => {
-  try {
-    const rawSession = await AsyncStorage.getItem(CUSTOMER_SESSION_KEY);
-    return rawSession ? JSON.parse(rawSession) : null;
-  } catch {
-    return null;
-  }
-};
+const getCustomerRpcSession = async () => coreStorage.get(CUSTOMER_SESSION_KEY);
 
 export const withAuthErrorHandling = (error, defaultMessage) => {
   if (isAuthContextError(error)) {

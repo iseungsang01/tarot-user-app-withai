@@ -53,14 +53,14 @@ export const useVoteLogic = () => {
     const loadVoteData = useCallback(async (vId) => {
         setVoteDataLoading(true);
         try {
-            const [resRes, countRes] = await Promise.all([
-                handleApiCall('VotePanel.loadVoteResults', () => voteService.getVoteResults(vId), { showAlert: false }),
-                handleApiCall('VotePanel.loadCount', () => voteService.getVoteParticipants(vId), { showAlert: false })
-            ]);
+            const summaryRes = await handleApiCall(
+                'VotePanel.loadVoteSummary',
+                () => voteService.getVoteSummary(vId),
+                { showAlert: false }
+            );
 
-            const finalResults = resRes.data?.results || {};
-            setVoteResults(finalResults);
-            setParticipantCount(countRes.data?.count || 0);
+            setVoteResults(summaryRes.data?.results || {});
+            setParticipantCount(summaryRes.data?.count || 0);
 
         } catch (e) {
             console.error(e);

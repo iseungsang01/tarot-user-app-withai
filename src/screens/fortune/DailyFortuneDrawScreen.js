@@ -13,7 +13,6 @@ import { storage } from '../../utils/storage';
 import {
   buildCardContext,
   buildStoredDailyFortune,
-  canDrawDailyFortune,
   getDrawButtonLabel,
   getLocalDateString,
   getStoredDrawCount,
@@ -67,11 +66,6 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
 
     try {
       const latestStored = normalizeDailyFortunePayload(await storage.getDailyFortune(todayStr));
-      if (!canDrawDailyFortune(latestStored)) {
-        setTodayFortune(latestStored);
-        Alert.alert('오늘의 카드', '잠시 후 다시 시도해 주세요.');
-        return;
-      }
 
       if (needsRewardedAdForDailyFortune(latestStored)) {
         const adResult = await showDailyFortuneRewardedAd();
