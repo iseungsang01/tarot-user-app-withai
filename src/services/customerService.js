@@ -33,35 +33,23 @@ export const customerService = {
         new_password: newPassword,
         p_reason: reason,
       });
-      return { success: data === true, error: error ? withAuthErrorHandling(error, '비밀번호 변경에 실패했습니다. 다시 로그인해 주세요.') : null };
+
+      if (error) {
+        return { success: false, error: withAuthErrorHandling(error, '비밀번호 변경에 실패했습니다. 다시 로그인해 주세요.') };
+      }
+
+      // RPC 는 현재 비밀번호가 틀렸을 때도 예외 없이 false 만 돌려준다
+      if (data !== true) {
+        return {
+          success: false,
+          error: { code: 'invalid_password', message: '현재 비밀번호가 일치하지 않거나 다시 로그인이 필요합니다.' },
+        };
+      }
+
+      return { success: true, error: null };
     } catch (error) {
       return { success: false, error: withAuthErrorHandling(error, '다시 로그인해 주세요.') };
     }
-  },
-
-  async getCustomer(_customerId) {
-    const state = await ensureAuthenticatedSession();
-    if (!state.ok) return { data: null, error: withAuthErrorHandling(state.error, '?? ???? ???.') };
-
-    const { data, error } = await supabaseClient.getMyProfile({
-      p_session_token: state.session.token,
-    });
-
-    return { data, error: error ? withAuthErrorHandling(error, '?? ??? ???? ?????. ?? ???? ???.') : null };
-  },
-
-  async getCustomerByPhone(_phoneNumber) {
-    return {
-      data: null,
-      error: { message: '?? ???? ?? ??? ??? ??? ???? ????.' },
-    };
-  },
-
-  async updateCustomer(_customerId, _updates) {
-    return {
-      data: null,
-      error: { message: '?? ?? ?? ??? ??? ??? ???? ????.' },
-    };
   },
 
   async deleteCustomer(_customerId, inputPassword) {
@@ -81,7 +69,7 @@ export const customerService = {
       if (data === false) {
         return {
           success: false,
-          error: { message: '비밀번호가 일치하지 않거나 다시 로그인이 필요합니다.' },
+          error: { code: 'invalid_password', message: '비밀번호가 일치하지 않거나 다시 로그인이 필요합니다.' },
         };
       }
 

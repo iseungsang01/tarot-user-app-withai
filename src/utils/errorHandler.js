@@ -12,17 +12,8 @@ import { dialog } from './dialog';
  * @param {Error} error - Supabase 에러 객체
  * @returns {object} { type, title, message, icon }
  */
-const parseSupabaseError = (error, options = {}) => {
-  const { log = true } = options;
-
-  if (log) {
-    console.error('?? [ErrorHandler] Supabase Error:', {
-      message: error?.message,
-      code: error?.code,
-      details: error?.details,
-      hint: error?.hint,
-    });
-  }
+const parseSupabaseError = (error) => {
+  // 로깅은 logError 한 곳에서만 한다 (여기서도 찍으면 한 건이 두 번 남는다)
 
   // 네트워크 에러
   if (!error || error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
@@ -72,33 +63,17 @@ const parseSupabaseError = (error, options = {}) => {
  * @param {object} additionalInfo - 추가 정보
  */
 export const logError = (context, error, additionalInfo = {}) => {
-  const isDev = __DEV__;
-
-  const errorLog = {
-    timestamp: new Date().toISOString(),
-    context,
-    error: {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
-    },
-    ...additionalInfo,
-  };
-
-  if (isDev) {
-    console.error('========================================');
-    console.error('🔴 [ERROR LOG]');
-    console.error('📍 Context:', context);
-    console.error('⏰ Time:', errorLog.timestamp);
-    console.error('❌ Message:', error?.message);
-    console.error('🔢 Code:', error?.code);
-    console.error('📋 Additional Info:', additionalInfo);
-    console.error('📚 Stack:', error?.stack);
-    console.error('========================================');
-  } else {
+  if (!__DEV__) {
     // 프로덕션: 에러 추적 서비스로 전송 (예: Sentry, Firebase Crashlytics)
-    // sendToErrorTracking(errorLog);
+    return;
   }
+
+  // 한 건의 에러는 한 줄로 남긴다. 나눠 찍으면 LogBox 에 그만큼 쌓인다
+  console.error(`[${context}] ${error?.message || '알 수 없는 오류'}`, {
+    code: error?.code,
+    ...additionalInfo,
+    stack: error?.stack,
+  });
 };
 
 /**
@@ -118,10 +93,9 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
 
   // 호출이 { error }를 돌려준 경우와 예외를 던진 경우를 같은 방식으로 보고한다
   const report = (error) => {
-    const shouldLog = !silentErrorCodes.includes(error?.code);
-    const errorInfo = parseSupabaseError(error, { log: shouldLog });
+    const errorInfo = parseSupabaseError(error);
 
-    if (shouldLog) logError(context, error, additionalInfo);
+    if (!silentErrorCodes.includes(error?.code)) logError(context, error, additionalInfo);
     if (showAlert) errorEmitter.emit(errorInfo);
     if (onError) onError(errorInfo);
 

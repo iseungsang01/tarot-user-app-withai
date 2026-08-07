@@ -25,10 +25,7 @@ export const couponService = {
         p_valid_only: false,
       });
 
-      if (error) {
-        console.error('Fetch coupons error:', error);
-        throw error;
-      }
+      if (error) throw error;
       return { data, error: null };
     } catch (error) {
       console.error('Get coupons error:', error);
@@ -51,11 +48,7 @@ export const couponService = {
         p_valid_only: false,
       });
 
-      if (error) {
-        console.error('Count coupons error:', error);
-        throw error;
-      }
-
+      if (error) throw error;
 
       return { count: count || 0, error: null };
     } catch (error) {
@@ -84,10 +77,7 @@ export const couponService = {
         p_session_token: token,
       });
 
-      if (error) {
-        console.error('Use coupon error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       const result = Array.isArray(data) ? data[0] : data;
 

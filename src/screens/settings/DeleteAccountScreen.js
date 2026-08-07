@@ -29,9 +29,14 @@ const DeleteAccountScreen = ({ navigation }) => {
           text: '탈퇴',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await handleApiCall('DeleteAccountScreen.delete', () => customerService.deleteCustomer(customer.id, password));
+            const { error } = await handleApiCall(
+              'DeleteAccountScreen.delete',
+              () => customerService.deleteCustomer(customer.id, password),
+              { silentErrorCodes: ['invalid_password'] },
+            );
             if (error) {
               setProcessing(false);
+              dialog.alert('탈퇴 실패', error.message || '회원 탈퇴 처리 중 문제가 발생했습니다.');
               return;
             }
             await logout();
