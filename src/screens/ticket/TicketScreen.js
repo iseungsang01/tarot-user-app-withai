@@ -162,6 +162,7 @@ const TicketScreen = () => {
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 108 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
       <ArchiveTitleHeader eyebrow="Stamp Coupon" title="COUPON ARCHIVE" subtitle="스탬프 쿠폰 보관함">
