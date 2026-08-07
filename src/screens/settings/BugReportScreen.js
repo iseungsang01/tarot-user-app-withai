@@ -7,7 +7,7 @@ import { noticeService } from '../../services/noticeService';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 import { dialog } from '../../utils/dialog';
-const getStatusColor = (s) => ({ 접수: '#ffa500', 확인중: '#2196f3', 완료: '#4caf50' }[s] || DrawerTheme.woodLight);
+const getStatusColor = (s) => ({ 접수: '#ffa500', 확인중: '#2196f3', 완료: '#4caf50' }[s] || DrawerTheme.mutedIvory);
 
 const BugReportScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();

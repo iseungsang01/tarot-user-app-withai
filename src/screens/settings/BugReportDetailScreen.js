@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     header: { marginBottom: 16 },
     card: { backgroundColor: 'rgba(0,0,0,0.45)', borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 18 },
     titleText: { color: '#fff', fontWeight: '800', fontSize: 20, marginBottom: 12 },
-    meta: { color: DrawerTheme.woodLight, marginBottom: 6 },
+    meta: { color: DrawerTheme.mutedIvory, marginBottom: 6 },
     desc: { color: '#ddd', lineHeight: 24, marginTop: 8 },
     image: { marginTop: 14, borderRadius: 10 },
     emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
