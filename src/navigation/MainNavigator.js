@@ -13,6 +13,7 @@ import HistoryScreen from '../screens/history/HistoryScreen';
 import VisitDetailScreen from '../screens/history/VisitDetailScreen';
 import NewsScreen from '../screens/news/NewsScreen';
 import NoticeDetailScreen from '../screens/notice/NoticeDetailScreen';
+import AppGuideScreen from '../screens/settings/AppGuideScreen';
 import BugReportDetailScreen from '../screens/settings/BugReportDetailScreen';
 import BugReportScreen from '../screens/settings/BugReportScreen';
 import DeleteAccountScreen from '../screens/settings/DeleteAccountScreen';
@@ -148,6 +149,7 @@ const MainNavigator = () => {
       <Stack.Screen name="DailyFortuneDraw" component={DailyFortuneDrawScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="NoticeDetail" component={NoticeDetailScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="AppGuide" component={AppGuideScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="PasswordReset" component={PasswordResetScreen} options={{ presentation: 'card' }} />

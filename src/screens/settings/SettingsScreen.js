@@ -15,9 +15,9 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const MENU_ITEMS = {
   info: '계정 정보',
-  guide: '앱 이용 가이드 다시보기',
+  guide: '앱 이용 가이드',
   password: '비밀번호 재설정',
-  reports: '버그 접수/내역 보기',
+  reports: '버그 접수 · 내역',
   delete: '회원 탈퇴',
 };
 
@@ -53,8 +53,26 @@ const SettingsScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <MenuRow label={MENU_ITEMS.guide} />
+          <MenuRow label={MENU_ITEMS.guide} onPress={() => navigation.navigate('AppGuide')} />
         </View>
+
+        {customer?.isGuest && (
+          <PremiumCard variant="walnut" style={styles.guestCard}>
+            <Text style={styles.guestTitle}>회원가입하면 기록이 이어집니다</Text>
+            <Text style={styles.guestText}>
+              지금 게스트로 남긴 기록은 가입 후에도 그대로 남습니다. 매장 스탬프와 쿠폰은 회원만 쌓을 수 있습니다.
+            </Text>
+            <GoldActionButton
+              title="로그아웃하고 회원가입"
+              onPress={() => Alert.alert(
+                '회원가입',
+                '로그인 화면으로 이동합니다. 지금까지의 기록은 가입 후 그대로 이어집니다.',
+                [{ text: '취소', style: 'cancel' }, { text: '이동', onPress: logout }],
+              )}
+              style={styles.guestButton}
+            />
+          </PremiumCard>
+        )}
 
         {!customer?.isGuest && (
           <>
@@ -166,6 +184,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  guestCard: {
+    marginTop: 14,
+  },
+  guestTitle: {
+    color: DrawerTheme.ivory,
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  guestText: {
+    marginTop: 6,
+    color: DrawerTheme.mutedIvory,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  guestButton: {
+    marginTop: 14,
   },
   logoutButton: {
     marginTop: 18,
