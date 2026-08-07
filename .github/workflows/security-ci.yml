@@ -57,4 +57,7 @@ jobs:
       - run: npm ci
       - run: npm run security-check
       - run: bash scripts/verify-ai-proxy-config.sh
-      - run: npm audit --audit-level=high
+      # npm audit --audit-level=high 를 직접 쓰지 않는다. 업스트림에 패치가 없는 권고
+      # 하나 때문에 게이트가 영구히 실패하면 아무도 안 보게 된다. audit-gate 는
+      # high/critical 을 그대로 차단하되, 근거와 재검토 기한을 적어둔 권고만 통과시킨다.
+      - run: npm run audit-gate
