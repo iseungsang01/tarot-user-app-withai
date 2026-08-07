@@ -3,7 +3,7 @@ import { Platform, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
-import { ErrorBoundary, GlobalErrorDisplay } from './src/components';
+import { AppDialog, ErrorBoundary, GlobalErrorDisplay } from './src/components';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initializeAdMob } from './src/services/rewardedAdService';
 
@@ -62,6 +62,7 @@ export default function App() {
               />
               <AppNavigator />
               <GlobalErrorDisplay />
+              <AppDialog />
             </AuthProvider>
           </SafeAreaProvider>
         </QueryClientProvider>

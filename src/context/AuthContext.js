@@ -1,10 +1,10 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { authService } from '../services/authService';
 import { setGlobalAuthErrorHandler } from '../services/supabase';
 import { resetAuthNoticeState, shouldDisplayAuthNotice } from '../utils/authErrorNotice';
 import { logError } from '../utils/errorHandler';
 
+import { dialog } from '../utils/dialog';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
 
       const message = authError?.message || '인증이 만료되었습니다. 다시 로그인해주세요.';
       if (shouldDisplayAuthNotice(message)) {
-        Alert.alert('로그인 필요', message);
+        dialog.alert('로그인 필요', message);
       }
     } catch (error) {
       logError('AuthContext.handleAuthFailure', error);

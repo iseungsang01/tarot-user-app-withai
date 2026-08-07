@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, PremiumCard, ScreenContainer, SettingPasswordForm } from '../../components';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -8,6 +8,7 @@ import { customerService } from '../../services/customerService';
 import { useAuth } from '../../hooks/useAuth';
 import { validatePasswordChange } from '../../utils/validators';
 
+import { dialog } from '../../utils/dialog';
 const ForcedPasswordChangeScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { refreshCustomer, logout } = useAuth();
@@ -16,7 +17,7 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
   const handlePasswordReset = async (fields) => {
     const inputError = validatePasswordChange(fields);
     if (inputError) {
-      Alert.alert('오류', inputError);
+      dialog.alert('오류', inputError);
       return;
     }
 
@@ -30,12 +31,12 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
       );
 
       if (error || !changed) {
-        Alert.alert('변경 실패', error?.message || '비밀번호 변경에 실패했습니다.');
+        dialog.alert('변경 실패', error?.message || '비밀번호 변경에 실패했습니다.');
         return;
       }
 
       await refreshCustomer();
-      Alert.alert('완료', '비밀번호가 변경되었습니다.');
+      dialog.alert('완료', '비밀번호가 변경되었습니다.');
       navigation.replace('MainTabs');
     } finally {
       setProcessing(false);

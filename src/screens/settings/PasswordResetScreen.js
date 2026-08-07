@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SettingPasswordForm } from '../../components';
 import { CommonStyles } from '../../styles/CommonStyles';
@@ -7,6 +7,7 @@ import { customerService } from '../../services/customerService';
 import { showSuccessAlert } from '../../utils/errorHandler';
 import { validatePasswordChange } from '../../utils/validators';
 
+import { dialog } from '../../utils/dialog';
 const PasswordResetScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [processing, setProcessing] = useState(false);
@@ -14,7 +15,7 @@ const PasswordResetScreen = ({ navigation }) => {
   const handlePasswordReset = async (fields) => {
     const inputError = validatePasswordChange(fields);
     if (inputError) {
-      Alert.alert('오류', inputError);
+      dialog.alert('오류', inputError);
       return;
     }
 
@@ -29,11 +30,11 @@ const PasswordResetScreen = ({ navigation }) => {
 
       if (error || !success) {
         console.error('Update password error:', error);
-        Alert.alert('\uC624\uB958', error?.message || '\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.');
+        dialog.alert('\uC624\uB958', error?.message || '\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.');
         return;
       }
 
-      showSuccessAlert('UPDATE', Alert, '비밀번호가 변경되었습니다.');
+      showSuccessAlert('UPDATE', '비밀번호가 변경되었습니다.');
       navigation.goBack();
     } finally {
       setProcessing(false);

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { CustomButton } from '../common/CustomButton';
 import { styles } from '../../styles/SettingsStyles';
 import { compressImage } from '../../utils/imageOptimizer';
 import { toDisplayImageUri } from '../../utils/imageUri';
 
+import { dialog } from '../../utils/dialog';
 const INITIAL_REPORT_DATA = {
   title: '',
   description: '',
@@ -45,7 +46,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
   );
 
   const pickImage = () => {
-    Alert.alert('스크린샷 첨부', '이미지 가져오기 방식을 선택하세요.', [
+    dialog.alert('스크린샷 첨부', '이미지 가져오기 방식을 선택하세요.', [
       { text: '취소', style: 'cancel' },
       { text: '카메라 촬영', onPress: pickImageFromCamera },
       { text: '앨범에서 선택', onPress: pickImageFromLibrary },

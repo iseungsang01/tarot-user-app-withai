@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
 import { showDailyFortuneRewardedAd } from '../../services/rewardedAdService';
 import { storage } from '../../utils/storage';
+import { dialog } from '../../utils/dialog';
 import {
   buildCardContext,
   buildStoredDailyFortune,
@@ -71,7 +72,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
         const adResult = await showDailyFortuneRewardedAd();
         const rewarded = adResult === true || adResult?.rewarded === true;
         if (!rewarded) {
-          Alert.alert('광고 시청 필요', '광고 시청이 완료되어야 다시 뽑을 수 있습니다.');
+          dialog.alert('광고 시청 필요', '광고 시청이 완료되어야 다시 뽑을 수 있습니다.');
           return;
         }
       }
@@ -103,7 +104,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Daily fortune draw error:', error);
       if (!error?.isAuthError && !error?.requiresReLogin) {
-        Alert.alert('오류', '카드의 흐름을 해석하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+        dialog.alert('오류', '카드의 흐름을 해석하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
       }
     } finally {
       drawingRef.current = false;

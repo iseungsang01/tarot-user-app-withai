@@ -1,13 +1,14 @@
-import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PremiumCard } from './PremiumUI';
 import { STORE_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
+import { dialog } from '../../utils/dialog';
 const openLink = async (url) => {
     try {
         await Linking.openURL(url);
     } catch {
-        Alert.alert('링크를 열 수 없습니다', '잠시 후 다시 시도해 주세요.');
+        dialog.alert('링크를 열 수 없습니다', '잠시 후 다시 시도해 주세요.');
     }
 };
 

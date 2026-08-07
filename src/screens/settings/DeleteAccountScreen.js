@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArchiveTitleHeader, ScreenContainer, SettingDeleteAccount } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,6 +7,7 @@ import { CommonStyles } from '../../styles/CommonStyles';
 import { customerService } from '../../services/customerService';
 import { createValidationError, handleApiCall, showErrorAlert } from '../../utils/errorHandler';
 
+import { dialog } from '../../utils/dialog';
 const DeleteAccountScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { customer, logout } = useAuth();
@@ -14,7 +15,7 @@ const DeleteAccountScreen = ({ navigation }) => {
 
   const handleDeleteAccount = async (password) => {
     if (!password) {
-      showErrorAlert(createValidationError('PASSWORD_EMPTY'), Alert);
+      showErrorAlert(createValidationError('PASSWORD_EMPTY'));
       return;
     }
 
@@ -22,7 +23,7 @@ const DeleteAccountScreen = ({ navigation }) => {
     setProcessing(true);
     try {
             keepProcessingForConfirmation = true;
-      Alert.alert('회원 탈퇴', '정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', [
+      dialog.alert('회원 탈퇴', '정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', [
         { text: '취소', style: 'cancel', onPress: () => setProcessing(false) },
         {
           text: '탈퇴',

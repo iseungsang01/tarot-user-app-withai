@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { APP_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
+import { dialog } from '../../utils/dialog';
 const MENU_ITEMS = {
   info: '계정 정보',
   guide: '앱 이용 가이드',
@@ -67,7 +68,7 @@ const SettingsScreen = ({ navigation }) => {
             </Text>
             <GoldActionButton
               title="로그아웃하고 회원가입"
-              onPress={() => Alert.alert(
+              onPress={() => dialog.alert(
                 '회원가입',
                 '로그인 화면으로 이동합니다. 지금까지의 기록은 가입 후 그대로 이어집니다.',
                 [{ text: '취소', style: 'cancel' }, { text: '이동', onPress: logout }],
@@ -95,7 +96,7 @@ const SettingsScreen = ({ navigation }) => {
 
         <GoldActionButton
           title="LOG OUT"
-          onPress={() => Alert.alert('로그아웃', '로그아웃 하시겠습니까?', [{ text: '취소' }, { text: '로그아웃', onPress: logout }])}
+          onPress={() => dialog.alert('로그아웃', '로그아웃 하시겠습니까?', [{ text: '취소' }, { text: '로그아웃', onPress: logout }])}
           dark
           style={styles.logoutButton}
         />

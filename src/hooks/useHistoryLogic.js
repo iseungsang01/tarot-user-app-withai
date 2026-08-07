@@ -1,11 +1,11 @@
 ﻿import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { useVisits } from './useVisits';
 import { useAuth } from './useAuth';
 import { visitService } from '../services/visitService';
 import { handleApiCall, showSuccessAlert } from '../utils/errorHandler';
 import { storage, STORAGE_KEYS } from '../utils/storage';
 
+import { dialog } from '../utils/dialog';
 const hasWrittenRecord = (item) => (
     !!(item?.card_review && item.card_review.trim()) || !!item?.card_image
 );
@@ -174,7 +174,7 @@ export const useHistoryLogic = (navigation) => {
             }
 
             if (!itemToDelete) {
-                Alert.alert('오류', '삭제할 기록을 찾을 수 없습니다.');
+                dialog.alert('오류', '삭제할 기록을 찾을 수 없습니다.');
                 return;
             }
 
@@ -188,17 +188,17 @@ export const useHistoryLogic = (navigation) => {
                 await refreshCustomer();
             }
 
-            showSuccessAlert('DELETE', Alert);
+            showSuccessAlert('DELETE');
             setIsModalVisible(false);
         } catch (error) {
-            Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
+            dialog.alert('오류', '삭제 중 문제가 발생했습니다.');
             console.error(error);
         }
     }, [selectedItem, displayDataById, loadLocalData, deleteVisit, refreshCustomer]);
 
     const handleUpdateVisitReview = useCallback(async (visit, nextReview) => {
         if (!visit?.id) {
-            Alert.alert('오류', '수정할 기록을 찾을 수 없습니다.');
+            dialog.alert('오류', '수정할 기록을 찾을 수 없습니다.');
             return;
         }
 
@@ -220,20 +220,20 @@ export const useHistoryLogic = (navigation) => {
             }
 
             setSelectedItem((prev) => (prev?.id === visit.id ? { ...prev, card_review: nextReview } : prev));
-            showSuccessAlert('UPDATE', Alert, '기록이 반영되었습니다.');
+            showSuccessAlert('UPDATE', '기록이 반영되었습니다.');
         } catch (error) {
             console.error('기록 저장 오류:', error);
-            Alert.alert('오류', '기록을 저장하는 중 문제가 발생했습니다.');
+            dialog.alert('오류', '기록을 저장하는 중 문제가 발생했습니다.');
         }
     }, [loadLocalData, refetch]);
 
     const handleMultiDelete = useCallback(async () => {
         if (selectedIds.size === 0) {
-            Alert.alert('선택 없음', '삭제할 기록을 선택해주세요.');
+            dialog.alert('선택 없음', '삭제할 기록을 선택해주세요.');
             return;
         }
 
-        Alert.alert(
+        dialog.alert(
             '여러 기록 삭제',
             `선택한 기록 ${selectedIds.size}개를 정말 삭제하시겠습니까?`,
             [
@@ -264,13 +264,13 @@ export const useHistoryLogic = (navigation) => {
                                 await loadLocalData();
                             }
 
-                            showSuccessAlert('DELETE', Alert);
+                            showSuccessAlert('DELETE');
                             setSelectedIds(new Set());
                             setSelectionMode(false);
                             if (serverIds.length > 0) await refreshCustomer();
                         } catch (error) {
                             console.error('여러 기록 삭제 오류:', error);
-                            Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
+                            dialog.alert('오류', '삭제 중 문제가 발생했습니다.');
                         }
                     }
                 }

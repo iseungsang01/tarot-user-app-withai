@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
-import { Alert, BackHandler } from 'react-native';
+import { BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from './useAuth';
 import { voteService } from '../services/voteService';
 import { handleApiCall } from '../utils/errorHandler';
 
+import { dialog } from '../utils/dialog';
 export const useVoteLogic = () => {
     const { customer } = useAuth();
 
@@ -147,14 +148,14 @@ export const useVoteLogic = () => {
         try {
             // 종료된 투표인지 확인
             if (isVoteEnded(selectedVote)) {
-                Alert.alert('알림', '이미 종료된 투표입니다.', [{ text: '확인' }]);
+                dialog.alert('알림', '이미 종료된 투표입니다.', [{ text: '확인' }]);
                 return;
             }
 
             // Validation
             if (selectedVote.allow_multiple && selectedVote.max_selections) {
                 if (selectedOptions.length > selectedVote.max_selections) {
-                    Alert.alert('선택 초과', `최대 ${selectedVote.max_selections}개까지만 선택 가능합니다.`, [{ text: '확인' }]);
+                    dialog.alert('선택 초과', `최대 ${selectedVote.max_selections}개까지만 선택 가능합니다.`, [{ text: '확인' }]);
                     return;
                 }
             }
@@ -190,7 +191,7 @@ export const useVoteLogic = () => {
 
             // New vote Validation
             if (selectedOptions.length === 0 && !myVote) {
-                Alert.alert('알림', '최소 1개 이상 선택해주세요.', [{ text: '확인' }]);
+                dialog.alert('알림', '최소 1개 이상 선택해주세요.', [{ text: '확인' }]);
                 return;
             }
 

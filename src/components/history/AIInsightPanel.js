@@ -50,21 +50,21 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                     <Text style={styles.drawerCode}>AI</Text>
                     <View style={styles.aiHandle} />
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.historyTriggerText}>\uAE30\uB85D \uBAA8\uC544\uBCF4\uAE30</Text>
+                        <Text style={styles.historyTriggerText}>기록 모아보기</Text>
                         <Text style={styles.historyTriggerSubtext}>
                             {remaining == null
-                                ? `\uAE30\uB85D ${validCount}\uAC1C\uC5D0\uC11C \uBC18\uBCF5\uB418\uB294 \uC8FC\uC81C\uB97C \uCC3E\uC2B5\uB2C8\uB2E4`
-                                : `\uAE30\uB85D ${validCount}\uAC1C\uC5D0\uC11C \uBC18\uBCF5\uB418\uB294 \uC8FC\uC81C\uB97C \uCC3E\uC2B5\uB2C8\uB2E4 \u00B7 \uC774\uBC88 \uB2EC ${remaining}\uD68C \uB0A8\uC74C`}
+                                ? `기록 ${validCount}개에서 반복되는 주제를 찾습니다`
+                                : `기록 ${validCount}개에서 반복되는 주제를 찾습니다 · 이번 달 ${remaining}회 남음`}
                         </Text>
                     </View>
-                    <Text style={styles.historyTriggerArrow}>\uC5F4\uAE30</Text>
+                    <Text style={styles.historyTriggerArrow}>열기</Text>
                 </TouchableOpacity>
             ) : (
                 <View style={styles.historyPanel}>
                     <View style={styles.panelHeader}>
-                        <Text style={styles.panelTitle}>\uAE30\uB85D \uBAA8\uC544\uBCF4\uAE30</Text>
+                        <Text style={styles.panelTitle}>기록 모아보기</Text>
                         <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <Text style={styles.historyCloseText}>\uB2EB\uAE30</Text>
+                            <Text style={styles.historyCloseText}>닫기</Text>
                         </TouchableOpacity>
                     </View>
 

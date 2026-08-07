@@ -1,6 +1,7 @@
 import { ERROR_TYPES, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants/ErrorMessages';
 import { errorEmitter } from './errorEmitter';
 
+import { dialog } from './dialog';
 /**
  * 에러 핸들러 유틸리티
  * 통일된 에러 처리 및 사용자 친화적 메시지 제공
@@ -173,12 +174,11 @@ export const createPermissionError = (permission) => {
 
 
 /**
- * 에러를 Alert로 표시
+ * 에러를 앱 다이얼로그로 표시
  * @param {object} errorInfo - 에러 정보 객체
- * @param {import('react-native').Alert} Alert - React Native Alert
  */
-export const showErrorAlert = (errorInfo, Alert) => {
-  Alert.alert(
+export const showErrorAlert = (errorInfo) => {
+  dialog.alert(
     errorInfo.title || '오류',
     errorInfo.message || '알 수 없는 오류가 발생했습니다.',
     [{ text: '확인', style: 'default' }]
@@ -188,18 +188,17 @@ export const showErrorAlert = (errorInfo, Alert) => {
 /**
  * 성공 메시지 표시
  * @param {string} successType - SUCCESS_MESSAGES의 키
- * @param {import('react-native').Alert} Alert - React Native Alert
  * @param {string} customMessage - 커스텀 메시지 (선택)
  */
-export const showSuccessAlert = (successType, Alert, customMessage = null) => {
+export const showSuccessAlert = (successType, customMessage = null) => {
   const successData = SUCCESS_MESSAGES[successType];
 
   if (!successData) {
-    Alert.alert('완료', customMessage || '작업이 완료되었습니다.');
+    dialog.alert('완료', customMessage || '작업이 완료되었습니다.');
     return;
   }
 
-  Alert.alert(
+  dialog.alert(
     successData.title,
     customMessage || successData.message,
     [{ text: '확인', style: 'default' }]

@@ -4,7 +4,6 @@ import {
     Text,
     TextInput,
     StyleSheet,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     Image,
@@ -37,6 +36,7 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 import { TextColors } from '../../constants/Colors';
 import { handleApiCall, showErrorAlert, showSuccessAlert, createPermissionError } from '../../utils/errorHandler';
 
+import { dialog } from '../../utils/dialog';
 const ACTION_VARIANT = {
     PRIMARY: 'primary',
     SECONDARY: 'secondary',
@@ -62,7 +62,23 @@ const VisitDetailScreen = ({ route, navigation }) => {
     });
 
     const reviewInputRef = useRef(null);
+    const scrollRef = useRef(null);
+    const memoTopRef = useRef(0);
     const up = (next) => setS((p) => ({ ...p, ...next }));
+
+    /**
+     * 메모 칸을 화면 맨 위로 끌어올린다.
+     *
+     * Android 는 KeyboardAvoidingView 가 동작하지 않고(behavior=undefined),
+     * windowSoftInputMode=adjustResize 는 창만 줄일 뿐 포커스된 입력창까지
+     * 스크롤해주지 않는다. 그대로 두면 서너 줄만 넘어가도 커서가 키보드에 가려
+     * 자기가 뭘 쓰는지 볼 수 없다. 키보드가 올라온 뒤 스크롤해야 해서 지연을 준다.
+     */
+    const scrollMemoIntoView = () => {
+        setTimeout(() => {
+            scrollRef.current?.scrollTo({ y: Math.max(memoTopRef.current - 8, 0), animated: true });
+        }, 260);
+    };
     const [voiceInputAvailable, setVoiceInputAvailable] = useState(true);
     const [recognizing, setRecognizing] = useState(false);
     const voiceBaseRef = useRef('');
@@ -91,7 +107,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 const list = (await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY)) || [];
                 const item = list.find((v) => v.id === visitId);
                 if (!item) {
-                    Alert.alert('기록 없음', '로컬 개인 기록을 찾을 수 없습니다.', [
+                    dialog.alert('기록 없음', '로컬 개인 기록을 찾을 수 없습니다.', [
                         { text: '돌아가기', onPress: () => navigation.goBack() },
                     ]);
                     return;
@@ -111,7 +127,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
             const { data, error } = await handleApiCall('VisitDetail.load', () => visitService.getVisit(visitId));
             if (error || !data) {
-                Alert.alert('기록을 불러올 수 없습니다', '상담 기록을 찾을 수 없거나 다시 로그인이 필요합니다.', [
+                dialog.alert('기록을 불러올 수 없습니다', '상담 기록을 찾을 수 없거나 다시 로그인이 필요합니다.', [
                     { text: '돌아가기', onPress: () => navigation.goBack() },
                 ]);
                 return;
@@ -127,7 +143,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
             setSelectedReviewVersion('original');
             resetPolish();
         } catch {
-            Alert.alert('기록을 불러올 수 없습니다', '잠시 후 다시 시도해 주세요.', [
+            dialog.alert('기록을 불러올 수 없습니다', '잠시 후 다시 시도해 주세요.', [
                 { text: '돌아가기', onPress: () => navigation.goBack() },
             ]);
         } finally {
@@ -139,7 +155,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         const perm = type === 'cam'
             ? await ImagePicker.requestCameraPermissionsAsync()
             : await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()), Alert);
+        if (perm.status !== 'granted') return showErrorAlert(createPermissionError(type.toUpperCase()));
 
         const res = await (type === 'cam' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)(PICKER_OPTIONS);
 
@@ -148,14 +164,14 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 const comp = await compressImage(res.assets[0].uri, COMPRESS_OPTIONS);
                 up({ uri: comp.base64 || comp.uri });
             } catch {
-                Alert.alert('오류', '이미지 처리에 실패했습니다.');
+                dialog.alert('오류', '이미지 처리에 실패했습니다.');
             }
         }
     };
 
     const pickImage = () => {
         if (isBusy) return;
-        Alert.alert('사진 첨부', '이미지 가져오기 방식을 선택하세요.', [
+        dialog.alert('사진 첨부', '이미지 가져오기 방식을 선택하세요.', [
             { text: '취소', style: 'cancel' },
             { text: '카메라 촬영', onPress: () => onPick('cam') },
             { text: '앨범에서 선택', onPress: () => onPick('lib') },
@@ -169,7 +185,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const runPolish = async () => {
         if (polishing) return;
         if (!hasReview) {
-            Alert.alert('메모가 필요합니다', '먼저 메모를 입력해 주세요.');
+            dialog.alert('메모가 필요합니다', '먼저 메모를 입력해 주세요.');
             return;
         }
         const { data } = await polish(s.review);
@@ -194,7 +210,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const onSave = async () => {
         if (s.saving) return;
         if (!s.uri && !s.review.trim() && !s.title.trim()) {
-            Alert.alert('알림', '제목 또는 기록 내용을 입력해 주세요.');
+            dialog.alert('알림', '제목 또는 기록 내용을 입력해 주세요.');
             return;
         }
         up({ saving: true });
@@ -234,7 +250,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 if (error) throw error;
             }
 
-            showSuccessAlert(s.isEdit ? 'UPDATE' : 'SAVE', Alert);
+            showSuccessAlert(s.isEdit ? 'UPDATE' : 'SAVE');
             setTimeout(() => navigation.goBack(), 1000);
         } catch {
             up({ saving: false });
@@ -254,7 +270,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     useSpeechRecognitionEvent('error', (event) => {
         setRecognizing(false);
         if (event.error === 'no-speech' || event.error === 'aborted') return;
-        Alert.alert('음성 인식을 마치지 못했습니다', event.message || '잠시 후 다시 시도해 주세요.');
+        dialog.alert('음성 인식을 마치지 못했습니다', event.message || '잠시 후 다시 시도해 주세요.');
     });
 
     useEffect(() => () => {
@@ -264,7 +280,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const startVoiceInput = async () => {
         if (Platform.OS === 'web') {
             setVoiceInputAvailable(false);
-            Alert.alert('음성 입력을 사용할 수 없습니다', '미리보기에서는 음성 입력을 사용할 수 없습니다. Android 앱에서 이용해 주세요.');
+            dialog.alert('음성 입력을 사용할 수 없습니다', '미리보기에서는 음성 입력을 사용할 수 없습니다. Android 앱에서 이용해 주세요.');
             return;
         }
 
@@ -276,7 +292,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
         const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
         if (!perm.granted) {
             setVoiceInputAvailable(false);
-            Alert.alert('마이크 권한이 필요합니다', '설정 > 앱 > 권한에서 마이크를 허용하면 음성으로 기록할 수 있습니다.');
+            dialog.alert('마이크 권한이 필요합니다', '설정 > 앱 > 권한에서 마이크를 허용하면 음성으로 기록할 수 있습니다.');
             return;
         }
 
@@ -294,7 +310,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
             });
         } catch {
             setRecognizing(false);
-            Alert.alert('음성 인식을 시작할 수 없습니다', '기기의 음성 인식 서비스를 사용할 수 없습니다.');
+            dialog.alert('음성 인식을 시작할 수 없습니다', '기기의 음성 인식 서비스를 사용할 수 없습니다.');
         }
     };
 
@@ -307,7 +323,11 @@ const VisitDetailScreen = ({ route, navigation }) => {
     return (
         <ScreenContainer safeTop={false} safeBottom={false}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-                <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 50 }]}>
+                <ScrollView
+                    ref={scrollRef}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 50 }]}
+                >
                     <ArchiveTitleHeader
                         eyebrow={isOffMode ? 'Private Drawer' : 'Drawer Note'}
                         title={isOffMode ? 'PRIVATE NOTE' : 'VISIT RECORD'}
@@ -328,6 +348,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                             />
                         </PremiumCard>
 
+                        <View onLayout={(e) => { memoTopRef.current = e.nativeEvent.layout.y; }}>
                         <PremiumCard style={styles.formCard}>
                             <Text style={styles.sectionLabel}>상담/개인 메모</Text>
                             <Text style={styles.helperText}>
@@ -345,6 +366,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 placeholderTextColor={theme.placeholder}
                                 accessibilityLabel="상담 또는 개인 메모 입력"
                                 textAlignVertical="top"
+                                onFocus={scrollMemoIntoView}
                             />
 
                             <View style={[styles.buttonRow, styles.voiceRow]}>
@@ -429,6 +451,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                 )}
                             </View>
                         </PremiumCard>
+                        </View>
 
                         <PremiumCard style={styles.formCard}>
                             <Text style={styles.sectionLabel}>카드 사진</Text>

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Alert,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +16,7 @@ import { ArchiveTitleHeader, GoldActionButton } from '../common/PremiumUI';
 import { toDisplayImageUri } from '../../utils/imageUri';
 import { useCondenseVoiceMemo } from '../../hooks/useAI';
 
+import { dialog } from '../../utils/dialog';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
@@ -46,7 +46,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete, on
   const handleCondense = async () => {
     if (condensing) return;
     if (!hasReview) {
-      Alert.alert('메모가 필요합니다', '축약할 기록 내용이 없습니다.');
+      dialog.alert('메모가 필요합니다', '축약할 기록 내용이 없습니다.');
       return;
     }
 
@@ -68,7 +68,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete, on
     };
 
     if (mode === 'replace') {
-      Alert.alert('현재 기록을 축약본으로 교체할까요?', '기존 메모 내용은 축약본으로 바뀝니다.', [
+      dialog.alert('현재 기록을 축약본으로 교체할까요?', '기존 메모 내용은 축약본으로 바뀝니다.', [
         { text: '취소', style: 'cancel' },
         { text: '교체', style: 'destructive', onPress: apply },
       ]);
@@ -79,7 +79,7 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete, on
   };
 
   const handleDeletePress = () => {
-    Alert.alert(
+    dialog.alert(
       '기록 삭제',
       isManual
         ? '이 개인 서랍 기록을 정말 삭제하시겠습니까?'

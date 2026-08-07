@@ -1,5 +1,5 @@
 ﻿import { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Alert, Keyboard, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Keyboard, TextInput, Modal } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -10,6 +10,7 @@ import { useTarotCardImage } from '../../hooks/useTarotCardImage';
 import { couponService } from '../../services/couponService';
 import { createValidationError, handleApiCall, showErrorAlert, showSuccessAlert } from '../../utils/errorHandler';
 
+import { dialog } from '../../utils/dialog';
 const MAX_STAMPS = 10;
 
 // 스탬프 10칸은 메이저 아르카나 앞 10장을 그대로 쓴다
@@ -121,13 +122,13 @@ const TicketScreen = () => {
 
   const handleUseCoupon = async (coupon) => {
     if (!password.trim()) {
-      showErrorAlert(createValidationError('PASSWORD_EMPTY'), Alert);
+      showErrorAlert(createValidationError('PASSWORD_EMPTY'));
       return;
     }
 
     Keyboard.dismiss();
 
-    Alert.alert('쿠폰 사용', '이 쿠폰을 사용 처리하시겠습니까?', [
+    dialog.alert('쿠폰 사용', '이 쿠폰을 사용 처리하시겠습니까?', [
       {
         text: '취소',
         style: 'cancel',
@@ -142,12 +143,12 @@ const TicketScreen = () => {
             { silentErrorCodes: ['invalid_admin_password', 'ADMIN_PASSWORD_REQUIRED'] }
           );
           if (!error) {
-            showSuccessAlert('COUPON_USED', Alert, '쿠폰이 사용 처리되었습니다.');
+            showSuccessAlert('COUPON_USED', '쿠폰이 사용 처리되었습니다.');
             resetCouponUse();
             await Promise.all([loadTickets(), refreshCustomer?.()]);
           } else {
             const redeemMessage = COUPON_REDEEM_MESSAGES[error.code] || error.message || '쿠폰 사용 처리 중 문제가 발생했습니다.';
-            Alert.alert('쿠폰 사용 실패', redeemMessage);
+            dialog.alert('쿠폰 사용 실패', redeemMessage);
           }
           setProcessingCouponId(null);
         },
