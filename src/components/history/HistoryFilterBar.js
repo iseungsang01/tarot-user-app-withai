@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -9,7 +9,7 @@ import {
     RECORD_STATUS_LABELS,
 } from '../../constants/historyFilters';
 
-const RECORD_TYPE_OPTIONS = ['visit', 'personal', 'all'];
+const RECORD_TYPE_OPTIONS = ['all', 'visit', 'personal'];
 const VIEW_MODE_OPTIONS = ['all', 'year', 'month'];
 const SORT_MODE_OPTIONS = ['latest', 'oldest'];
 const RECORD_STATUS_OPTIONS = ['all', 'hasRecord', 'empty'];
@@ -107,12 +107,12 @@ export const HistoryFilterBar = ({
                 <View style={styles.chipRow} pointerEvents="box-none">
                     <FilterChip label={`${VIEW_MODE_LABELS[viewMode]} ▼`} onPress={() => setActiveSheet('viewMode')} />
                     <FilterChip label={`${SORT_MODE_LABELS[sortMode]} ▼`} onPress={() => setActiveSheet('sortMode')} />
-                    <FilterChip label="기록 상태 ▼" onPress={() => setActiveSheet('recordStatus')} />
+                    <FilterChip
+                        label={`${recordStatus === 'all' ? '기록 상태' : RECORD_STATUS_LABELS[recordStatus]} ▼`}
+                        active={recordStatus !== 'all'}
+                        onPress={() => setActiveSheet('recordStatus')}
+                    />
                 </View>
-
-                <Text style={styles.currentSummary} numberOfLines={1}>
-                    {RECORD_TYPE_LABELS[recordType]} · {VIEW_MODE_LABELS[viewMode]}
-                </Text>
 
                 {selectionMode ? (
                     <View style={styles.selectionActions} pointerEvents="box-none">
@@ -148,7 +148,7 @@ export const HistoryFilterBar = ({
                 ) : (
                     <View style={styles.hintContainer} pointerEvents="none">
                         <View style={styles.hintStar} />
-                        <Text style={styles.hintText}>서랍을 길게 누르면 여러 기록을 한 번에 정리할 수 있어요.</Text>
+                        <Text style={styles.hintText}>길게 누르면 여러 개를 한 번에 정리할 수 있어요.</Text>
                         <View style={styles.hintStar} />
                     </View>
                 )}
@@ -190,28 +190,28 @@ export const HistoryFilterBar = ({
     );
 };
 
-const FilterChip = ({ label, onPress }) => (
+const FilterChip = ({ label, onPress, active }) => (
     <TouchableOpacity
         accessibilityRole="button"
-        style={styles.filterChip}
+        style={[styles.filterChip, active && styles.filterChipActive]}
         onPress={onPress}
         activeOpacity={0.84}
         hitSlop={{ top: 7, bottom: 7, left: 3, right: 3 }}
     >
-        <Text style={styles.filterChipText}>{label}</Text>
+        <Text numberOfLines={1} style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
     </TouchableOpacity>
 );
 
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const styles = StyleSheet.create({
-    wrap: { width: '100%', alignItems: 'center', marginTop: 0, marginBottom: 6 },
+    wrap: { width: '100%', alignItems: 'center', marginTop: 0, marginBottom: 5 },
     filterShell: {
         width: '100%',
         borderRadius: 13,
-        paddingHorizontal: 9,
-        paddingTop: 9,
-        paddingBottom: 7,
+        paddingHorizontal: 8,
+        paddingTop: 7,
+        paddingBottom: 6,
         borderWidth: 1,
         borderColor: 'rgba(224,184,90,0.34)',
         shadowColor: '#000',
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     primaryTabs: { width: '100%', flexDirection: 'row', gap: 5 },
     primaryTab: {
         flex: 1,
-        minHeight: 35,
+        minHeight: 32,
         borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
@@ -249,17 +249,21 @@ const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     primaryTabTextActive: { color: DrawerTheme.bgBlackCherry },
-    chipRow: { width: '100%', flexDirection: 'row', gap: 5, marginTop: 7 },
+    chipRow: { width: '100%', flexDirection: 'row', gap: 5, marginTop: 6 },
     filterChip: {
         flex: 1,
-        minHeight: 27,
-        borderRadius: 14,
+        minHeight: 26,
+        borderRadius: 13,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 7,
+        paddingHorizontal: 6,
         borderWidth: 1,
         borderColor: 'rgba(224,184,90,0.22)',
         backgroundColor: 'rgba(244,232,208,0.055)',
+    },
+    filterChipActive: {
+        borderColor: 'rgba(224,184,90,0.62)',
+        backgroundColor: 'rgba(184,135,53,0.2)',
     },
     filterChipText: {
         fontSize: 10,
@@ -267,19 +271,12 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         letterSpacing: 0.1,
     },
-    currentSummary: {
-        alignSelf: 'flex-start',
-        marginTop: 7,
-        color: DrawerTheme.brightGold,
-        fontSize: 11,
-        fontWeight: '900',
-        letterSpacing: 0.25,
-    },
-    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 5 },
+    filterChipTextActive: { color: DrawerTheme.brightGold },
+    hintContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 6 },
     hintStar: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: 'rgba(224,184,90,0.44)' },
-    hintText: { flex: 1, fontSize: 10, lineHeight: 13, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
+    hintText: { flex: 1, fontSize: 9.5, lineHeight: 12, color: DrawerTheme.mutedIvory, textAlign: 'center', opacity: 0.76 },
     selectionActions: {
-        marginTop: 7,
+        marginTop: 6,
         borderRadius: 10,
         padding: 8,
         borderWidth: 1,

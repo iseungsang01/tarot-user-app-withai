@@ -68,14 +68,16 @@ const HistoryScreen = () => {
     );
 
     const sideTint = recordType === 'personal' ? 'rgba(42,6,44,0.72)' : 'rgba(31,18,12,0.84)';
-    const emptyTitle = viewMode !== 'all' ? '선택한 묶음에 표시할 서랍이 없어요' : '아직 보관된 기록이 없습니다';
-    const emptySubtitle = viewMode !== 'all'
-        ? '다른 보기 방식이나 기록 상태를 선택해보세요.'
-        : '오늘의 기록을 첫 번째 서랍에 넣어보세요.';
+    // 기록이 아예 없는 것과 필터에 가려진 것은 안내가 달라야 한다
+    const isFilteredOut = visits.length > 0;
+    const emptyTitle = isFilteredOut ? '조건에 맞는 서랍이 없어요' : '아직 보관된 기록이 없습니다';
+    const emptySubtitle = isFilteredOut
+        ? '위의 필터를 바꾸면 나머지 기록이 보입니다.'
+        : '매장에서 상담을 받으면 서랍이 생깁니다. 개인 기록은 직접 추가할 수 있어요.';
 
     const renderHeader = () => (
         <View style={styles.headerContainer}>
-            <HistoryHeader />
+            <HistoryHeader customer={customer} />
             <HistoryFilterBar
                 recordType={recordType}
                 setRecordType={setRecordType}
@@ -123,7 +125,7 @@ const HistoryScreen = () => {
                         <AIHistoryAnalysisPanel visits={visits} />
                     </View>
 
-                    {recordType === 'personal' && (
+                    {recordType !== 'visit' && (
                         <TouchableOpacity
                             activeOpacity={0.8}
                             style={styles.manualAddDrawer}
@@ -196,19 +198,15 @@ const HistoryScreen = () => {
                         <Text style={styles.emptyTitle}>{emptyTitle}</Text>
                         <Text style={styles.emptySubtitle}>{emptySubtitle}</Text>
                     </View>
-                    {Array.from({ length: 4 }).map((_, index) => (
-                        <DrawerUnit
-                            key={`sealed-placeholder-${index}`}
-                            visit={{
-                                id: `sealed-placeholder-${index}`,
-                                visit_date: '',
-                                drawer_title: index === 0 ? emptyTitle : '닫힌 빈 서랍',
-                                drawer_subtitle: index === 0 ? emptySubtitle : '',
-                                isPlaceholder: true,
-                            }}
-                            onSelectCard={() => {}}
-                        />
-                    ))}
+                    <DrawerUnit
+                        visit={{
+                            id: 'sealed-placeholder',
+                            visit_date: '',
+                            drawer_title: '닫힌 빈 서랍',
+                            isPlaceholder: true,
+                        }}
+                        onSelectCard={() => {}}
+                    />
                 </View>
             </LinearGradient>
         </View>
@@ -503,12 +501,11 @@ const styles = StyleSheet.create({
     list: {
         flex: 1,
         width: '100%',
-        marginBottom: 64,
         overflow: 'hidden',
     },
     scrollContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 156,
+        paddingHorizontal: 14,
+        paddingBottom: 16,
         width: '100%',
         maxWidth: 393,
         alignSelf: 'center',
@@ -544,10 +541,10 @@ const styles = StyleSheet.create({
         letterSpacing: 0.6,
     },
     manualAddDrawer: {
-        minHeight: 82,
+        minHeight: 64,
         marginHorizontal: 5,
-        marginTop: 4,
-        marginBottom: 12,
+        marginTop: 2,
+        marginBottom: 8,
         borderWidth: 1,
         borderStyle: 'solid',
         borderColor: DrawerTheme.archiveBorderStrong,
@@ -653,11 +650,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(224,184,90,0.1)',
     },
     drawerContent: {
-        paddingVertical: 5,
+        paddingVertical: 4,
         paddingHorizontal: 5,
     },
     drawerContentHeader: {
-        paddingTop: 8,
+        paddingTop: 6,
         paddingHorizontal: 4,
     },
     aiPanelSlot: {
@@ -668,10 +665,10 @@ const styles = StyleSheet.create({
     },
     emptyCopyPanel: {
         marginHorizontal: 4,
-        marginTop: 4,
-        marginBottom: 10,
-        paddingVertical: 14,
-        paddingHorizontal: 14,
+        marginTop: 2,
+        marginBottom: 8,
+        paddingVertical: 11,
+        paddingHorizontal: 13,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: DrawerTheme.archiveBorder,
@@ -680,16 +677,16 @@ const styles = StyleSheet.create({
     },
     emptyTitle: {
         color: DrawerTheme.ivory,
-        fontSize: 15,
-        lineHeight: 20,
+        fontSize: 14,
+        lineHeight: 19,
         fontWeight: '900',
         textAlign: 'center',
     },
     emptySubtitle: {
-        marginTop: 5,
+        marginTop: 4,
         color: DrawerTheme.mutedIvory,
-        fontSize: 12,
-        lineHeight: 17,
+        fontSize: 11.5,
+        lineHeight: 16,
         textAlign: 'center',
         opacity: 0.82,
     },
@@ -706,11 +703,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 34,
         marginTop: -2,
-        marginBottom: 10,
+        marginBottom: 6,
     },
     leg: {
         width: 22,
-        height: 18,
+        height: 14,
         borderBottomLeftRadius: 8,
         borderBottomRightRadius: 8,
         backgroundColor: DrawerTheme.walnutDark,
@@ -720,15 +717,15 @@ const styles = StyleSheet.create({
     },
     drawerWrapper: {
         width: '100%',
-        marginBottom: 10,
+        marginBottom: 7,
         borderBottomWidth: 2,
         borderBottomColor: 'rgba(5,2,1,0.58)',
     },
     drawer: {
         width: '100%',
-        minHeight: 104,
+        minHeight: 96,
         borderRadius: 12,
-        padding: 8,
+        padding: 6,
         borderTopWidth: 1,
         borderBottomWidth: 2,
         borderTopColor: 'rgba(244,232,208,0.08)',
@@ -759,12 +756,11 @@ const styles = StyleSheet.create({
         elevation: 7,
     },
     drawerInnerFrame: {
-        flex: 1,
         borderWidth: 1,
         borderColor: DrawerTheme.archiveBorderStrong,
         backgroundColor: 'rgba(0,0,0,0.08)',
-        paddingHorizontal: 9,
-        paddingVertical: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 6,
         borderRadius: 7,
         overflow: 'hidden',
     },
@@ -774,7 +770,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(224,184,90,0.10)',
     },
     drawerTopRail: {
-        minHeight: 18,
+        minHeight: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -792,7 +788,7 @@ const styles = StyleSheet.create({
     drawerMainRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        minHeight: 46,
+        minHeight: 36,
         minWidth: 0,
     },
     drawerLeft: {
@@ -820,7 +816,7 @@ const styles = StyleSheet.create({
     },
     sealedPlaque: {
         maxWidth: 96,
-        minHeight: 32,
+        minHeight: 26,
         paddingHorizontal: 9,
         borderRadius: 9,
         borderWidth: 1,
@@ -854,8 +850,8 @@ const styles = StyleSheet.create({
     },
     drawerTitle: {
         color: DrawerTheme.ivory,
-        fontSize: 14,
-        lineHeight: 19,
+        fontSize: 13,
+        lineHeight: 17,
         fontWeight: '900',
         textAlign: 'center',
         letterSpacing: 0.2,
@@ -864,10 +860,10 @@ const styles = StyleSheet.create({
         textShadowRadius: 2,
     },
     drawerTitlePlate: {
-        marginTop: 4,
-        minHeight: 26,
+        marginTop: 3,
+        minHeight: 23,
         paddingHorizontal: 10,
-        paddingVertical: 4,
+        paddingVertical: 3,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: 'rgba(244,232,208,0.08)',

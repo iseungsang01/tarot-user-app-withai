@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -14,6 +14,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import {
+    ExpoSpeechRecognitionModule,
+    useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 
 import {
     ArchiveTitleHeader,
@@ -60,6 +64,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
     const reviewInputRef = useRef(null);
     const up = (next) => setS((p) => ({ ...p, ...next }));
     const [voiceInputAvailable, setVoiceInputAvailable] = useState(true);
+    const [recognizing, setRecognizing] = useState(false);
+    const voiceBaseRef = useRef('');
     const [aiInsight, setAiInsight] = useState(null);
     const [selectedReviewVersion, setSelectedReviewVersion] = useState('original');
     const {
@@ -235,18 +241,61 @@ const VisitDetailScreen = ({ route, navigation }) => {
         }
     };
 
-    const startVoiceInput = () => {
+    useSpeechRecognitionEvent('start', () => setRecognizing(true));
+    useSpeechRecognitionEvent('end', () => setRecognizing(false));
+
+    useSpeechRecognitionEvent('result', (event) => {
+        const transcript = event.results?.[0]?.transcript?.trim();
+        if (!transcript) return;
+        const base = voiceBaseRef.current;
+        handleReviewChange(base ? `${base} ${transcript}` : transcript);
+    });
+
+    useSpeechRecognitionEvent('error', (event) => {
+        setRecognizing(false);
+        if (event.error === 'no-speech' || event.error === 'aborted') return;
+        Alert.alert('음성 인식을 마치지 못했습니다', event.message || '잠시 후 다시 시도해 주세요.');
+    });
+
+    useEffect(() => () => {
+        if (Platform.OS !== 'web') ExpoSpeechRecognitionModule.abort();
+    }, []);
+
+    const startVoiceInput = async () => {
         if (Platform.OS === 'web') {
             setVoiceInputAvailable(false);
             Alert.alert('음성 입력을 사용할 수 없습니다', '미리보기에서는 음성 입력을 사용할 수 없습니다. Android 앱에서 이용해 주세요.');
             return;
         }
 
+        if (recognizing) {
+            ExpoSpeechRecognitionModule.stop();
+            return;
+        }
+
+        const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (!perm.granted) {
+            setVoiceInputAvailable(false);
+            Alert.alert('마이크 권한이 필요합니다', '설정 > 앱 > 권한에서 마이크를 허용하면 음성으로 기록할 수 있습니다.');
+            return;
+        }
+
         setVoiceInputAvailable(true);
-        reviewInputRef.current?.focus();
         Keyboard.dismiss();
-        setTimeout(() => reviewInputRef.current?.focus(), 100);
-        Alert.alert('음성 입력 안내', '키보드가 열리면 키보드의 마이크 버튼을 눌러 말해 주세요. 인식된 문장은 메모 칸에 바로 입력됩니다.');
+        voiceBaseRef.current = s.review.trim();
+
+        try {
+            ExpoSpeechRecognitionModule.start({
+                lang: 'ko-KR',
+                interimResults: true,
+                continuous: false,
+                requiresOnDeviceRecognition: false,
+                addsPunctuation: false,
+            });
+        } catch {
+            setRecognizing(false);
+            Alert.alert('음성 인식을 시작할 수 없습니다', '기기의 음성 인식 서비스를 사용할 수 없습니다.');
+        }
     };
 
     if (s.loading) return <ScreenContainer><LoadingSpinner /></ScreenContainer>;
@@ -260,9 +309,9 @@ const VisitDetailScreen = ({ route, navigation }) => {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
                 <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 50 }]}>
                     <ArchiveTitleHeader
-                        eyebrow={isOffMode ? 'PRIVATE DRAWER' : 'DRAWER NOTE'}
-                        title={isOffMode ? '\uAC1C\uC778 \uC11C\uB78D \uC791\uC131' : '\uC11C\uB78D \uAE30\uB85D \uC815\uB9AC'}
-                        subtitle={isOffMode ? '\uB098\uB9CC\uC758 \uBA54\uBAA8\uB97C \uC11C\uB78D\uC5D0 \uBCF4\uAD00\uD569\uB2C8\uB2E4' : '\uD0C0\uB85C \uC0C1\uB2F4 \uAE30\uB85D\uC744 \uC815\uB9AC\uD569\uB2C8\uB2E4'}
+                        eyebrow={isOffMode ? 'Private Drawer' : 'Drawer Note'}
+                        title={isOffMode ? 'PRIVATE NOTE' : 'VISIT RECORD'}
+                        subtitle={isOffMode ? '\uAC1C\uC778 \uC11C\uB78D \uC791\uC131' : '\uC11C\uB78D \uAE30\uB85D \uC815\uB9AC'}
                         style={styles.header}
                     />
 
@@ -281,7 +330,11 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
                         <PremiumCard style={styles.formCard}>
                             <Text style={styles.sectionLabel}>상담/개인 메모</Text>
-                            <Text style={styles.helperText}>음성 입력이나 직접 입력으로 기억하고 싶은 내용을 남겨두세요.</Text>
+                            <Text style={styles.helperText}>
+                                {recognizing
+                                    ? '말씀하시면 바로 적힙니다. 버튼을 다시 누르면 멈춥니다.'
+                                    : '기억하고 싶은 내용을 남겨두세요. 말로 입력할 수도 있습니다.'}
+                            </Text>
                             <TextInput
                                 ref={reviewInputRef}
                                 style={[styles.input, { borderColor: `${theme.c}66` }]}
@@ -296,21 +349,21 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
                             <View style={[styles.buttonRow, styles.voiceRow]}>
                                 <CustomButton
-                                    title={voiceInputAvailable ? '음성 입력 하기' : '음성 입력 불가'}
+                                    title={recognizing ? '● 듣는 중' : (voiceInputAvailable ? '음성 입력 하기' : '음성 입력 불가')}
                                     onPress={startVoiceInput}
                                     variant={ACTION_VARIANT.SECONDARY}
                                     style={styles.rowButton}
-                                    textStyle={styles.compactButtonText}
+                                    textStyle={[styles.compactButtonText, recognizing && styles.voiceActiveText]}
                                     numberOfLines={1}
                                     allowFontScaling={false}
                                     disabled={isBusy}
-                                    accessibilityLabel="음성 입력 하기"
+                                    accessibilityLabel={recognizing ? '음성 입력 중지' : '음성 입력 시작'}
                                 />
                                 <CustomButton
                                     title={polishing ? '다듬는 중...' : 'AI로 다듬기'}
                                     onPress={runPolish}
                                     loading={polishing}
-                                    disabled={!hasReview || s.saving || polishing}
+                                    disabled={!hasReview || s.saving || polishing || recognizing}
                                     variant={ACTION_VARIANT.SECONDARY}
                                     style={styles.rowButton}
                                     textStyle={styles.compactButtonText}
@@ -319,9 +372,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                     accessibilityLabel="AI로 문장 다듬기"
                                 />
                             </View>
-                            <Text style={styles.helperText}>AI로 다듬기는 메모 의미를 유지하고 문장만 자연스럽게 정리합니다.</Text>
                             <Text style={styles.voiceUsageText}>
-                                {polishRemaining == null ? '이번 달 AI 문장 다듬기 30회 남음' : `이번 달 AI 문장 다듬기 ${polishRemaining}회 남음`}
+                                내용은 그대로 두고 문장만 정리합니다 · 이번 달 {polishRemaining ?? 30}회 남음
                             </Text>
 
                             <View style={[styles.polishPanel, { borderColor: `${theme.c}55` }]}>
@@ -349,8 +401,8 @@ const VisitDetailScreen = ({ route, navigation }) => {
                                         </View>
                                         <Text style={styles.polishSaveHint}>
                                             {selectedReviewVersion === 'polished'
-                                                ? '이 상태로 저장하면 AI 다듬은 본이 기록에 저장됩니다.'
-                                                : '기존 메모를 유지하려면 직접 작성본을 선택한 채 저장하세요.'}
+                                                ? '지금 저장하면 AI 다듬은 본이 저장됩니다.'
+                                                : '지금 저장하면 직접 작성본이 저장됩니다.'}
                                         </Text>
                                         <View style={styles.polishActionRow}>
                                             <TouchableOpacity
@@ -435,7 +487,7 @@ const VisitDetailScreen = ({ route, navigation }) => {
 
 const styles = StyleSheet.create({
     flex: { flex: 1 },
-    scrollContent: { padding: 18, gap: 14 },
+    scrollContent: { padding: 14, gap: 10 },
     header: { marginBottom: 2 },
     formCard: { borderColor: 'rgba(224,184,90,0.24)' },
     sectionLabel: { color: DrawerTheme.brightGold, fontSize: 13, fontWeight: '900', marginBottom: 8, marginLeft: 2, letterSpacing: 0.8 },
@@ -449,9 +501,10 @@ const styles = StyleSheet.create({
     buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', minHeight: 50 },
     rowButton: { flex: 1, minWidth: 130, minHeight: 50, alignSelf: 'stretch' },
     compactButtonText: { fontSize: 13, fontWeight: '700' },
-    titleInput: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, color: DrawerTheme.ivory, fontSize: 14, borderWidth: 1, marginBottom: 16 },
-    input: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 14, padding: 14, color: DrawerTheme.ivory, minHeight: 150, fontSize: 14, lineHeight: 21, borderWidth: 1 },
+    titleInput: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 12, paddingHorizontal: 13, paddingVertical: 10, color: DrawerTheme.ivory, fontSize: 14, borderWidth: 1, marginBottom: 10 },
+    input: { backgroundColor: 'rgba(244,232,208,0.07)', borderRadius: 14, padding: 12, color: DrawerTheme.ivory, minHeight: 128, fontSize: 14, lineHeight: 21, borderWidth: 1 },
     voiceRow: { marginTop: 10, marginBottom: 8 },
+    voiceActiveText: { color: DrawerTheme.goldBright, fontWeight: '900' },
     voiceUsageText: { color: DrawerTheme.mutedIvory, fontSize: 12, marginTop: 2, marginLeft: 2, opacity: 0.82 },
     saveBtn: { marginTop: 4, minHeight: 54 },
     polishPanel: { marginTop: 12, borderWidth: 1, borderRadius: 14, padding: 12, backgroundColor: 'rgba(9,0,13,0.32)' },

@@ -65,12 +65,8 @@ export const useHistoryLogic = (navigation) => {
 
     const [personalNotes, setPersonalNotes] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [stats, setStats] = useState({
-        current_stamps: customer?.current_stamps || 0,
-        visit_count: customer?.visit_count || 0
-    });
 
-    const [recordType, setRecordType] = useState('visit');
+    const [recordType, setRecordType] = useState('all');
     const [viewMode, setViewMode] = useState('all');
     const [sortMode, setSortMode] = useState('latest');
     const [recordStatus, setRecordStatus] = useState('all');
@@ -90,34 +86,14 @@ export const useHistoryLogic = (navigation) => {
         }
     }, []);
 
-    const loadStats = useCallback(async (signal) => {
-        if (!customer?.id) return;
-        const { data: latestStats } = await handleApiCall(
-            'HistoryScreen.loadStats',
-            () => visitService.getCustomerStats(customer.id, signal),
-            { showAlert: false }
-        );
-        if (signal && signal.aborted) return;
-        if (latestStats) {
-            setStats({
-                current_stamps: latestStats.current_stamps,
-                visit_count: latestStats.visit_count
-            });
-        }
-    }, [customer?.id]);
-
     const refreshAllData = useCallback(async (signal) => {
         try {
-            await Promise.all([
-                refetch(),
-                loadLocalData(),
-                loadStats(signal)
-            ]);
+            await Promise.all([refetch(), loadLocalData()]);
         } catch (e) {
             if (signal && signal.aborted) return;
             console.error(e);
         }
-    }, [refetch, loadLocalData, loadStats]);
+    }, [refetch, loadLocalData]);
 
     const handleRefresh = async () => {
         if (abortControllerRef.current) {
@@ -307,13 +283,8 @@ export const useHistoryLogic = (navigation) => {
             customer,
             isVisitsLoading,
             refreshing,
-            stats: {
-                current_stamps: stats.current_stamps || customer?.current_stamps || 0,
-                visit_count: stats.visit_count || customer?.visit_count || 0
-            },
             visits: allVisits,
             displayData,
-            filteredVisits,
             recordType,
             viewMode,
             sortMode,
