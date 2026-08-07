@@ -42,6 +42,10 @@ export const AppDialog = () => {
   const { title, message, actions } = request;
   // 버튼이 3개 이상이면 가로로 좁아져 글자가 깨진다
   const stacked = actions.length > 2;
+  // 세로로 쌓을 때는 취소가 맨 아래여야 한다 (가로일 때는 왼쪽이라 그대로 둔다)
+  const ordered = stacked
+    ? [...actions.filter((a) => a.style !== 'cancel'), ...actions.filter((a) => a.style === 'cancel')]
+    : actions;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onRequestClose} statusBarTranslucent>
@@ -58,11 +62,12 @@ export const AppDialog = () => {
           {!!message && <Text style={styles.message}>{message}</Text>}
 
           <View style={[styles.actionRow, stacked && styles.actionColumn]}>
-            {actions.map((action, index) => {
+            {ordered.map((action, index) => {
               const isDestructive = action.style === 'destructive';
               const isCancel = action.style === 'cancel';
-              // 취소가 아닌 마지막 버튼을 기본 동작으로 강조한다
-              const isPrimary = !isCancel && !isDestructive && index === actions.length - 1;
+              // 확인/취소 형태일 때만 기본 동작을 강조한다. 3개 이상은 대등한
+              // 선택지 나열(예: 카메라 / 앨범)이라 하나를 강조하면 오해를 준다.
+              const isPrimary = !stacked && !isCancel && !isDestructive && index === ordered.length - 1;
 
               return (
                 <TouchableOpacity
