@@ -2,24 +2,26 @@ import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
-import { DrawerMark, GradientBackground, LoadingSpinner, NoticeCard, PremiumCard } from '../../../components';
+import { DrawerMark, LoadingSpinner, NoticeCard, PremiumCard } from '../../../components';
 import { useAuth } from '../../../hooks/useAuth';
 import { noticeService } from '../../../services/noticeService';
 import { DrawerTheme } from '../../../constants/DrawerTheme';
-import { CommonStyles } from '../../../styles/CommonStyles';
 
-const NoticePanel = ({ showHeader = false, contentTopPadding = 10 }) => {
+const NoticePanel = () => {
   const navigation = useNavigation();
   const { customer } = useAuth();
   const [notices, setNotices] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
-    const { data, error } = await noticeService.getNotices();
-    if (!error) setNotices(data);
-    if (customer) await noticeService.markAllNoticesAsRead();
-    setLoading(false);
+    try {
+      const { data, error } = await noticeService.getNotices();
+      if (!error) setNotices(data);
+      if (customer) await noticeService.markAllNoticesAsRead();
+    } finally {
+      setLoading(false);
+    }
   };
 
   useFocusEffect(
@@ -34,23 +36,7 @@ const NoticePanel = ({ showHeader = false, contentTopPadding = 10 }) => {
     setRefreshing(false);
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>NOTICE BOARD</Text>
-      </View>
-      <View style={styles.headerDivider} />
-      <Text style={styles.subtitle}>매장의 새로운 소식을 확인하세요</Text>
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <GradientBackground>
-        <LoadingSpinner />
-      </GradientBackground>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <View style={styles.container}>
@@ -60,7 +46,6 @@ const NoticePanel = ({ showHeader = false, contentTopPadding = 10 }) => {
         renderItem={({ item }) => (
           <NoticeCard notice={item} onPress={(notice) => navigation.navigate('NoticeDetail', { notice })} />
         )}
-        ListHeaderComponent={showHeader ? renderHeader : null}
         ListEmptyComponent={
           <PremiumCard style={styles.emptyBox} contentStyle={styles.emptyContent}>
             <View style={styles.boardIllustration}>
@@ -74,7 +59,7 @@ const NoticePanel = ({ showHeader = false, contentTopPadding = 10 }) => {
             <Text style={styles.emptySupport}>새로운 공지가 올라오면 이곳에서 확인할 수 있습니다.</Text>
           </PremiumCard>
         }
-        contentContainerStyle={[styles.listArea, { paddingTop: contentTopPadding }]}
+        contentContainerStyle={styles.listArea}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -93,13 +78,9 @@ const styles = StyleSheet.create({
   },
   listArea: {
     padding: 20,
+    paddingTop: 10,
     paddingBottom: 100,
   },
-  header: CommonStyles.headerBoard,
-  titleRow: CommonStyles.titleRow,
-  title: CommonStyles.title,
-  headerDivider: CommonStyles.headerDivider,
-  subtitle: CommonStyles.subtitle,
   emptyBox: {
     padding: 16,
   },

@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GradientBackground } from '../../components';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { formatPhoneNumber } from '../../utils/formatters';
 import { getPasswordValidationMessage, validatePassword, validatePhoneNumber } from '../../utils/validators';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-import { Gradients } from '../../constants/Colors';
 import { createValidationError } from '../../utils/errorHandler';
 
 const RegisterScreen = ({ navigation }) => {
+    const insets = useSafeAreaInsets();
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,37 +52,38 @@ const RegisterScreen = ({ navigation }) => {
         try {
             const { data, error } = await register(phone, password, nickname);
 
-            if (data) {
-                // 가입 성공 시 AuthContext에서 상태가 업데이트되며 MainNavigator로 자동 전환됩니다.
-            } else {
+            if (!data) {
                 setMessage({ text: error?.message || '회원가입에 실패했습니다.', type: 'error' });
-                setLoading(false); // 에러 발생 시에만 로딩 해제
+                setLoading(false); // 성공 시에는 AuthContext가 MainNavigator로 전환하므로 해제하지 않는다
             }
         } catch (error) {
             console.error('Register Error:', error);
             setMessage({ text: '오류가 발생했습니다. 다시 시도해주세요.', type: 'error' });
-            setLoading(false); // 에러 발생 시에만 로딩 해제
+            setLoading(false);
         }
     };
 
     return (
-        <GradientBackground>
+        <ScreenContainer safeTop={false} safeBottom={false}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.container}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+                <ScrollView
+                    contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
+                    bounces={false}
+                >
+                    <ArchiveTitleHeader
+                        eyebrow="Member Drawer"
+                        title="JOIN"
+                        subtitle="새로운 기록의 시작을 함께하세요"
+                        style={styles.headerArea}
+                    />
 
-                    <View style={styles.headerArea}>
-                        <Text style={styles.mainTitle}>MEMBERSHIP JOIN</Text>
-                        <View style={styles.headerDivider} />
-                        <Text style={styles.mainSubtitle}>새로운 기록의 시작을 함께하세요</Text>
-                    </View>
-
-                    <View style={styles.mainCard}>
+                    <PremiumCard variant="walnut" style={styles.mainCard}>
                         <View style={styles.inputSection}>
                             <View style={styles.inputWrapper}>
-                                <Text style={styles.inputLabel}>전화번호</Text>
+                                <Text style={styles.inputLabel}>PHONE NUMBER</Text>
                                 <TextInput
                                     style={styles.textInput}
                                     value={phone}
@@ -96,19 +97,19 @@ const RegisterScreen = ({ navigation }) => {
                             </View>
 
                             <View style={styles.inputWrapper}>
-                                <Text style={styles.inputLabel}>닉네임 (선택)</Text>
+                                <Text style={styles.inputLabel}>NICKNAME (선택)</Text>
                                 <TextInput
                                     style={styles.textInput}
                                     value={nickname}
                                     onChangeText={handleTextChange(setNickname)}
-                                    placeholder="사용하실 이름을 입력하세요"
+                                    placeholder="사용하실 이름"
                                     placeholderTextColor="rgba(244, 232, 208, 0.62)"
                                     editable={!loading}
                                 />
                             </View>
 
                             <View style={styles.inputWrapper}>
-                                <Text style={styles.inputLabel}>비밀번호</Text>
+                                <Text style={styles.inputLabel}>PASSWORD</Text>
                                 <TextInput
                                     style={styles.textInput}
                                     value={password}
@@ -121,7 +122,7 @@ const RegisterScreen = ({ navigation }) => {
                             </View>
 
                             <View style={styles.inputWrapper}>
-                                <Text style={styles.inputLabel}>비밀번호 확인</Text>
+                                <Text style={styles.inputLabel}>PASSWORD 확인</Text>
                                 <TextInput
                                     style={styles.textInput}
                                     value={confirmPassword}
@@ -130,27 +131,18 @@ const RegisterScreen = ({ navigation }) => {
                                     placeholderTextColor="rgba(244, 232, 208, 0.62)"
                                     secureTextEntry
                                     editable={!loading}
+                                    onSubmitEditing={handleRegister}
                                 />
                             </View>
                         </View>
 
-                        <TouchableOpacity
+                        <GoldActionButton
                             onPress={handleRegister}
                             disabled={loading}
-                            activeOpacity={0.8}
                             style={styles.registerButtonWrapper}
                         >
-                            <LinearGradient
-                                colors={Gradients.goldBrown}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-                            >
-                                <Text style={styles.registerButtonText}>
-                                    {loading ? '처리 중...' : '회원가입 완료'}
-                                </Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
+                            {loading ? '처리 중...' : '회원가입 완료'}
+                        </GoldActionButton>
 
                         <TouchableOpacity
                             onPress={() => navigation.goBack()}
@@ -166,18 +158,17 @@ const RegisterScreen = ({ navigation }) => {
                                 <Text style={styles.statusText}>{message.text}</Text>
                             </View>
                         )}
-                    </View>
+                    </PremiumCard>
 
                     <View style={styles.footerArea}>
                         <View style={styles.titleLine} />
                         <Text style={styles.footerHelp}>
-                            가입 시 입력하신 번호가 아이디가 됩니다.{"\n"}비밀번호는 소중히 관리해주시기 바랍니다.
+                            입력하신 번호가 아이디가 됩니다.{"\n"}매장에 등록된 번호로 가입해 주세요.
                         </Text>
                     </View>
-
                 </ScrollView>
             </KeyboardAvoidingView>
-        </GradientBackground>
+        </ScreenContainer>
     );
 };
 
@@ -185,104 +176,43 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
-        justifyContent: 'center',
         padding: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 40,
     },
     headerArea: {
-        backgroundColor: DrawerTheme.woodDark,
-        borderRadius: 12,
-        paddingVertical: 30,
-        paddingHorizontal: 20,
-        marginBottom: 25,
-        borderWidth: 1.5,
-        borderColor: DrawerTheme.woodFrame,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 8
-    },
-    mainTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: DrawerTheme.goldBright,
-        letterSpacing: 4,
-        fontFamily: Platform.OS === 'ios' ? 'Cochin' : 'serif'
-    },
-    headerDivider: {
-        width: 40,
-        height: 2,
-        backgroundColor: DrawerTheme.goldBrass,
-        marginVertical: 12,
-        opacity: 0.7
-    },
-    mainSubtitle: {
-        fontSize: 12,
-        color: DrawerTheme.textMain,
-        opacity: 1,
-        letterSpacing: 0.5,
-        fontWeight: '600'
+        marginBottom: 16,
     },
     mainCard: {
-        backgroundColor: '#2A1B12',
-        borderRadius: 16,
         padding: 24,
         width: '100%',
-        borderWidth: 1.5,
-        borderColor: '#5D4037',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
-        elevation: 15
     },
     inputSection: { marginBottom: 10 },
     inputWrapper: { marginBottom: 20 },
     inputLabel: {
         fontSize: 11,
         fontWeight: 'bold',
-        color: DrawerTheme.goldBright,
+        color: DrawerTheme.brightGold,
         marginBottom: 8,
         paddingLeft: 4,
-        letterSpacing: 1.5
+        letterSpacing: 1.5,
     },
     textInput: {
-        backgroundColor: '#1A110B',
-        borderRadius: 8,
+        backgroundColor: 'rgba(7,0,9,0.72)',
+        borderRadius: 10,
         padding: 16,
         fontSize: 16,
-        color: '#E0C9A6',
+        color: DrawerTheme.ivory,
         textAlign: 'center',
-        fontWeight: '500',
+        fontWeight: '600',
         borderWidth: 1,
-        borderColor: '#423229',
+        borderColor: 'rgba(184,135,53,0.52)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.28,
+        shadowRadius: 4,
     },
     registerButtonWrapper: {
         marginTop: 10,
-    },
-    registerButton: {
-        height: 56,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: DrawerTheme.goldBrass,
-        shadowColor: DrawerTheme.goldBrass,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-    },
-    registerButtonDisabled: {
-        opacity: 0.5,
-    },
-    registerButtonText: {
-        color: '#1A0F0A',
-        fontSize: 17,
-        fontWeight: 'bold',
-        letterSpacing: 2,
     },
     backButtonWrapper: {
         marginTop: 15,
@@ -290,25 +220,24 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     backButtonText: {
-        color: DrawerTheme.textMain,
-        fontSize: 14,
-        textDecorationLine: 'underline',
-        opacity: 1,
+        color: DrawerTheme.mutedIvory,
+        fontSize: 13,
         fontWeight: '600',
+        opacity: 0.86,
     },
     statusMsg: { padding: 12, borderRadius: 8, marginTop: 20, borderWidth: 1 },
-    statusError: { backgroundColor: 'rgba(255, 82, 82, 0.05)', borderColor: 'rgba(255, 82, 82, 0.3)' },
-    statusSuccess: { backgroundColor: 'rgba(76, 175, 80, 0.05)', borderColor: 'rgba(76, 175, 80, 0.3)' },
-    statusInfo: { backgroundColor: 'rgba(212, 175, 55, 0.05)', borderColor: 'rgba(212, 175, 55, 0.3)' },
+    statusError: { backgroundColor: 'rgba(96, 21, 34, 0.28)', borderColor: 'rgba(164, 64, 76, 0.5)' },
+    statusSuccess: { backgroundColor: 'rgba(76, 95, 52, 0.12)', borderColor: 'rgba(160, 150, 86, 0.38)' },
+    statusInfo: { backgroundColor: 'rgba(200, 163, 64, 0.08)', borderColor: 'rgba(200, 163, 64, 0.3)' },
     statusText: { textAlign: 'center', fontSize: 13, color: DrawerTheme.textMain, fontWeight: '600' },
     footerArea: { alignItems: 'center', marginTop: 30 },
-    titleLine: { width: 20, height: 1, backgroundColor: DrawerTheme.woodFrame, marginBottom: 15 },
+    titleLine: { width: 24, height: 1, backgroundColor: DrawerTheme.antiqueGold, marginBottom: 15, opacity: 0.72 },
     footerHelp: {
         fontSize: 12,
         color: DrawerTheme.textMuted,
         textAlign: 'center',
         lineHeight: 18,
-        opacity: 0.95
+        opacity: 0.96,
     },
 });
 

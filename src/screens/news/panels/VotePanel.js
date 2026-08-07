@@ -1,10 +1,10 @@
 import { StyleSheet, FlatList, RefreshControl, View } from 'react-native';
 
-import { GradientBackground, LoadingSpinner, VoteList, VoteDetail } from '../../../components';
+import { LoadingSpinner, VoteList, VoteDetail } from '../../../components';
 import { DrawerTheme } from '../../../constants/DrawerTheme';
 import { useVoteLogic } from '../../../hooks/useVoteLogic';
 
-const VotePanel = ({ contentTopPadding = 10 }) => {
+const VotePanel = () => {
   const { state, actions, helpers } = useVoteLogic();
 
   const {
@@ -79,13 +79,7 @@ const VotePanel = ({ contentTopPadding = 10 }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <GradientBackground>
-        <LoadingSpinner />
-      </GradientBackground>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <View style={styles.container}>
@@ -93,7 +87,7 @@ const VotePanel = ({ contentTopPadding = 10 }) => {
         data={[{ id: 'vote-panel-content' }]}
         renderItem={renderContent}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listArea, { paddingTop: contentTopPadding }]}
+        contentContainerStyle={styles.listArea}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -112,6 +106,7 @@ const styles = StyleSheet.create({
   },
   listArea: {
     padding: 20,
+    paddingTop: 10,
     paddingBottom: 100,
   },
   inlineLoading: {
