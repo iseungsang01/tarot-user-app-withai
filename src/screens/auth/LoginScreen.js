@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer, StoreContactCard } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { formatPhoneNumber } from '../../utils/formatters';
 import { validatePhoneNumber } from '../../utils/validators';
@@ -151,7 +151,7 @@ const LoginScreen = ({ navigation }) => {
 
                             <View style={styles.subButtonRow}>
                                 <TouchableOpacity
-                                    onPress={() => setMessage({ text: '비밀번호 재설정은 매장 문의를 통해 진행해주세요.', type: 'info' })}
+                                    onPress={() => setMessage({ text: '비밀번호 재설정은 매장에 문의해 주세요. 아래 매장 정보로 연락할 수 있습니다.', type: 'info' })}
                                     disabled={loading || guestLoading}
                                     activeOpacity={0.7}
                                     style={styles.subButton}
@@ -182,9 +182,11 @@ const LoginScreen = ({ navigation }) => {
                     <View style={styles.footerArea}>
                         <View style={styles.titleLine} />
                         <Text style={styles.footerHelp}>
-                            매장에 등록하신 번호로 이용 가능합니다.{"\n"}정보가 기억나지 않으면 매장에 문의해주세요.
+                            매장에 등록하신 번호로 이용 가능합니다.
                         </Text>
                     </View>
+
+                    <StoreContactCard style={styles.storeCard} />
                 </ScrollView>
             </KeyboardAvoidingView>
         </ScreenContainer>
@@ -265,6 +267,7 @@ const styles = StyleSheet.create({
     statusSuccess: { backgroundColor: 'rgba(76, 95, 52, 0.12)', borderColor: 'rgba(160, 150, 86, 0.38)' },
     statusInfo: { backgroundColor: 'rgba(200, 163, 64, 0.08)', borderColor: 'rgba(200, 163, 64, 0.3)' },
     statusText: { textAlign: 'center', fontSize: 13, color: DrawerTheme.textMain, fontWeight: '600' },
+    storeCard: { marginTop: 16 },
     footerArea: { alignItems: 'center', marginTop: 30 },
     titleLine: { width: 24, height: 1, backgroundColor: DrawerTheme.goldBrass, marginBottom: 15, opacity: 0.72 },
     footerHelp: {

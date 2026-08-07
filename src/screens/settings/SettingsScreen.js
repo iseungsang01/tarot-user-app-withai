@@ -7,6 +7,7 @@ import {
   GoldActionButton,
   PremiumCard,
   ScreenContainer,
+  StoreContactCard,
 } from '../../components';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -55,6 +56,8 @@ const SettingsScreen = ({ navigation }) => {
         <View style={styles.section}>
           <MenuRow label={MENU_ITEMS.guide} onPress={() => navigation.navigate('AppGuide')} />
         </View>
+
+        <StoreContactCard style={styles.storeCard} />
 
         {customer?.isGuest && (
           <PremiumCard variant="walnut" style={styles.guestCard}>
@@ -184,6 +187,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  storeCard: {
+    marginTop: 14,
   },
   guestCard: {
     marginTop: 14,

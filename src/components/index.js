@@ -7,6 +7,7 @@ export {
   SegmentControl,
   DrawerMark,
 } from './common/PremiumUI';
+export { StoreContactCard } from './common/StoreContactCard';
 export { LoadingSpinner } from './common/LoadingSpinner';
 export { CustomButton } from './common/CustomButton';
 export { ErrorBoundary } from './common/ErrorBoundary';

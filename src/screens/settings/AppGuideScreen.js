@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArchiveTitleHeader, PremiumCard, ScreenContainer } from '../../components';
+import { ArchiveTitleHeader, PremiumCard, ScreenContainer, StoreContactCard } from '../../components';
 import { CommonStyles } from '../../styles/CommonStyles';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
@@ -36,6 +36,8 @@ const GUIDE_SECTIONS = [
     lines: ['매장 공지와 진행 중인 투표를 확인합니다. 새 소식이 있으면 탭에 점이 표시됩니다.'],
   },
 ];
+
+const CONTACT_LINE = '비밀번호 재설정, 스탬프 문의처럼 앱에서 처리되지 않는 일은 매장에 문의해 주세요.';
 
 const AI_LINES = [
   'AI로 다듬기 — 적어둔 메모의 문장만 자연스럽게 정리합니다.',
@@ -90,6 +92,9 @@ const AppGuideScreen = ({ navigation }) => {
           ))}
           <Text style={styles.footnote}>각 기능은 한 달에 30회까지 쓸 수 있습니다.</Text>
         </PremiumCard>
+
+        <Text style={styles.contactLine}>{CONTACT_LINE}</Text>
+        <StoreContactCard style={styles.card} />
 
         <TouchableOpacity
           accessibilityRole="button"
@@ -165,6 +170,12 @@ const styles = StyleSheet.create({
     color: DrawerTheme.brightGold,
     fontSize: 12,
     fontWeight: '800',
+  },
+  contactLine: {
+    marginBottom: 10,
+    color: DrawerTheme.mutedIvory,
+    fontSize: 13,
+    lineHeight: 20,
   },
 });
 
