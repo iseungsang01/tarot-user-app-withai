@@ -20,18 +20,12 @@ const { execSync } = require('node:child_process');
  *  - reviewBy: 이 날짜가 지나면 CI 가 다시 실패한다. 재확인 강제용.
  */
 const ALLOWLIST = {
-  'GHSA-mh99-v99m-4gvg': {
-    package: 'brace-expansion',
-    why:
-      '취약 범위가 <=5.0.7 이라 1.x/2.x 라인 전체가 해당되고 그 라인에는 패치판이 없다. ' +
-      '유일한 안전 버전 5.0.8 은 CJS 진입점이 함수가 아니라 { expand } 객체라 ' +
-      'require("brace-expansion")(pattern) 으로 호출하는 minimatch 3.x/glob 을 깨뜨린다. ' +
-      'npm 이 제시하는 fixAvailable 은 react-native 0.86.2 major 업그레이드다.',
-    risk:
-      '빌드 타임 도구 체인(glob/minimatch/jest/codegen)에서만 쓰이고 앱 번들에 포함되지 않는다. ' +
-      '공격자가 제어하는 glob 패턴을 처리하는 경로가 없어 DoS 트리거 조건이 성립하지 않는다.',
-    reviewBy: '2026-10-31',
-  },
+  // 비어 있는 것이 정상 상태다. high/critical 은 원칙적으로 고쳐서 없앤다.
+  //
+  // 2026-08-07: brace-expansion(GHSA-mh99-v99m-4gvg) 이 여기 있었으나 제거했다.
+  // "1.x/2.x 라인에 패치판이 없다"는 당시 근거가 무효가 됐다 — 1.1.18 / 2.1.4 /
+  // 5.0.9 가 나와서 major 업그레이드 없이 `npm audit fix` 로 해결된다.
+  // 허용 항목을 넣기 전에 반드시 패치판이 정말 없는지 다시 확인할 것.
 };
 
 function runAudit() {
