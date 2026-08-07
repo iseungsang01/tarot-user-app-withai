@@ -47,32 +47,31 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                         end={{ x: 1, y: 1 }}
                         style={StyleSheet.absoluteFill}
                     />
-                    <Text style={styles.drawerCode}>TOP</Text>
+                    <Text style={styles.drawerCode}>AI</Text>
                     <View style={styles.aiHandle} />
                     <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.historyTriggerText}>ARCHIVE AI LEDGER</Text>
-                            <View style={styles.proBadgeMin}>
-                                <Text style={styles.proBadgeMinText}>PRO</Text>
-                            </View>
-                        </View>
-                        <Text style={styles.historyTriggerSubtext}>{remaining == null ? `${validCount}\uAC1C\uC758 \uBD09\uC778\uB41C \uAE30\uB85D\uC744 \uB300\uC870\uD569\uB2C8\uB2E4` : `\uC774\uBC88 \uB2EC \uC804\uCCB4 \uC694\uC57D ${remaining}\uD68C \uB0A8\uC74C`}</Text>
+                        <Text style={styles.historyTriggerText}>\uAE30\uB85D \uBAA8\uC544\uBCF4\uAE30</Text>
+                        <Text style={styles.historyTriggerSubtext}>
+                            {remaining == null
+                                ? `\uAE30\uB85D ${validCount}\uAC1C\uC5D0\uC11C \uBC18\uBCF5\uB418\uB294 \uC8FC\uC81C\uB97C \uCC3E\uC2B5\uB2C8\uB2E4`
+                                : `\uAE30\uB85D ${validCount}\uAC1C\uC5D0\uC11C \uBC18\uBCF5\uB418\uB294 \uC8FC\uC81C\uB97C \uCC3E\uC2B5\uB2C8\uB2E4 \u00B7 \uC774\uBC88 \uB2EC ${remaining}\uD68C \uB0A8\uC74C`}
+                        </Text>
                     </View>
-                    <Text style={styles.historyTriggerArrow}>OPEN</Text>
+                    <Text style={styles.historyTriggerArrow}>\uC5F4\uAE30</Text>
                 </TouchableOpacity>
             ) : (
                 <View style={styles.historyPanel}>
                     <View style={styles.panelHeader}>
-                        <Text style={styles.panelTitle}>ARCHIVE AI LEDGER</Text>
+                        <Text style={styles.panelTitle}>\uAE30\uB85D \uBAA8\uC544\uBCF4\uAE30</Text>
                         <TouchableOpacity onPress={handleReset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <Text style={styles.historyCloseText}>SEAL</Text>
+                            <Text style={styles.historyCloseText}>\uB2EB\uAE30</Text>
                         </TouchableOpacity>
                     </View>
 
                     {loading && (
                         <View style={styles.loadingArea}>
                             <ActivityIndicator size="small" color={DrawerTheme.goldBright} />
-                            <Text style={styles.loadingText}>{validCount}개의 기록을 대조하는 중...</Text>
+                            <Text style={styles.loadingText}>기록 {validCount}개를 살펴보는 중...</Text>
                         </View>
                     )}
 
@@ -80,7 +79,7 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
                         <View style={styles.errorArea}>
                             <Text style={styles.errorText}>! {error}</Text>
                             <TouchableOpacity style={styles.retryButton} onPress={handleAnalyze}>
-                                <Text style={styles.retryText}>다시 열기</Text>
+                                <Text style={styles.retryText}>다시 시도</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -127,17 +126,6 @@ export const AIHistoryAnalysisPanel = React.memo(({ visits }) => {
 
 const styles = StyleSheet.create({
     container: { marginVertical: 8 },
-    proBadgeMin: {
-        backgroundColor: DrawerTheme.goldBright,
-        paddingHorizontal: 4,
-        paddingVertical: 1,
-        borderRadius: 4,
-    },
-    proBadgeMinText: {
-        color: '#000',
-        fontSize: 9,
-        fontWeight: '900',
-    },
     historyTriggerButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -176,8 +164,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(244,232,208,0.52)',
         backgroundColor: 'rgba(184,135,53,0.72)',
     },
-    historyTriggerText: { flex: 1, color: DrawerTheme.goldBright, fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
-    historyTriggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, marginTop: 2 },
+    historyTriggerText: { color: DrawerTheme.goldBright, fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
+    historyTriggerSubtext: { color: TextColors.subTextMuted, fontSize: 11, lineHeight: 15, marginTop: 2 },
     historyTriggerArrow: { color: DrawerTheme.mutedIvory, fontSize: 10, fontWeight: '900', letterSpacing: 0.8, opacity: 0.8 },
     historyPanel: {
         backgroundColor: 'rgba(18,0,8,0.92)',

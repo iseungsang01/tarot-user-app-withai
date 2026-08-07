@@ -79,7 +79,6 @@ const TicketScreen = () => {
   const passwordInputRef = useRef(null);
 
   const currentStamps = Math.max(0, Math.min(Number(customer?.current_stamps) || 0, MAX_STAMPS));
-  const stampCoupons = useMemo(() => coupons.filter((coupon) => getCouponType(coupon.coupon_code) === 'stamp'), [coupons]);
   const birthdayCoupons = useMemo(() => coupons.filter((coupon) => getCouponType(coupon.coupon_code) === 'birthday'), [coupons]);
 
   const loadTickets = useCallback(async () => {
@@ -185,7 +184,7 @@ const TicketScreen = () => {
       <PremiumCard variant="walnut" style={styles.panel}>
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>스탬프 카드</Text>
-          <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `다음 보상까지 ${MAX_STAMPS - currentStamps}개 남았습니다` : '쿠폰을 받을 수 있습니다'}</Text>
+          <Text style={styles.panelMeta}>{MAX_STAMPS - currentStamps > 0 ? `쿠폰까지 ${MAX_STAMPS - currentStamps}개` : '쿠폰을 받을 수 있습니다'}</Text>
         </View>
         <View style={styles.stampGrid}>
           {tarotCards.map((card, index) => (
@@ -226,7 +225,7 @@ const TicketScreen = () => {
                 />
                 {isSelected && (
                   <View style={styles.inlineUseForm}>
-                    <Text style={styles.inlineUseTitle}>관리자 비밀번호를 입력하면 바로 사용할 수 있습니다.</Text>
+                    <Text style={styles.inlineUseTitle}>직원에게 휴대폰을 건네주세요.{'\n'}직원이 비밀번호를 입력하면 사용 처리됩니다.</Text>
                     <TextInput
                       ref={passwordInputRef}
                       style={styles.passwordInput}
@@ -265,9 +264,6 @@ const TicketScreen = () => {
         )}
       </PremiumCard>
 
-      {stampCoupons.length > 0 && (
-        <Text style={styles.footerHint}>스탬프 쿠폰 {stampCoupons.length}개를 사용할 수 있습니다.</Text>
-      )}
       </ScrollView>
       <Modal
         visible={Boolean(selectedStampCard)}
@@ -455,13 +451,6 @@ const styles = StyleSheet.create({
     color: DrawerTheme.ivory,
     fontSize: 13,
     fontWeight: '700',
-  },
-  footerHint: {
-    color: DrawerTheme.ivory,
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-    opacity: 0.95,
   },
   couponUseBlock: {
     marginBottom: 10,
