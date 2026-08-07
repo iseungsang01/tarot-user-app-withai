@@ -39,7 +39,7 @@ AI_PROXY_REQUIRE_AUTH=true
 - Detailed tarot note data remains local-first/local-only for now: card images, review text, note titles, and AI insights should not be uploaded to server visit rows. Server visit rows stay lightweight.
 - Guest data is persistent and migrates into the member local namespace after signup/login. Legacy global local-storage keys are still readable for existing users.
 - Coupon redemption intentionally prompts for an admin password and sends it to the existing RPC. Do not redesign this flow casually.
-- Daily fortune draw limit is intentionally high for bug-fix/testing and should remain 30 until the product decision changes.
+- Daily fortune has no per-day draw cap. The first draw of the day is free; every redraw requires a completed rewarded ad (`needsRewardedAdForDailyFortune`). The `30` cap applies to the three drawer AI features (`voiceCondense`, `polishReview`, `historySummary`) and is monthly, not daily.
 
 ## Local card assets
 
