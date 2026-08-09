@@ -39,7 +39,7 @@ const BugReportScreen = ({ navigation }) => {
 
     return (
         <ScreenContainer safeTop={false} safeBottom={false}>
-            <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 30 }]}>
+            <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 30 }]} keyboardShouldPersistTaps="handled">
                 <ArchiveTitleHeader
                     eyebrow="Bug Report"
                     title="BUG REPORT"

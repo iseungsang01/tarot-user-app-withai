@@ -90,6 +90,7 @@ const LoginScreen = ({ navigation }) => {
                 <ScrollView
                     contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
                     bounces={false}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <ArchiveTitleHeader
                         eyebrow="Member Drawer"
