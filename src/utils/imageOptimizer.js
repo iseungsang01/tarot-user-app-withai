@@ -1,12 +1,13 @@
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import { Image } from 'react-native';
 
 /**
- * 이미지 최적화 유틸리티
- * 이미지 압축, 리사이징, Base64 변환
+ * 첨부 사진을 화면 표시·서버 전송용으로 줄인다.
+ *
+ * 호출처가 쓰는 것은 리사이즈된 파일 `uri` 와 그 `base64` data URI 둘뿐이다.
+ * 실패하면 원본 uri 를 그대로 돌려주고 `base64` 는 null 이 된다.
  */
 
-// 기본 설정
 const DEFAULT_CONFIG = {
   maxWidth: 1200,
   maxHeight: 1200,
@@ -15,93 +16,36 @@ const DEFAULT_CONFIG = {
 };
 
 /**
- * 이미지를 압축하고 최적화
- * @param {string} uri - 이미지 URI
- * @param {object} options - 압축 옵션
- * @returns {Promise<object>} { uri, base64, width, height, size }
+ * 원본 치수를 읽는다. 헤더만 보므로 픽셀을 디코딩하지 않는다.
+ * (`manipulateAsync(uri, [])` 로 알아내면 12MP 사진이 48MB 비트맵으로 통째로
+ * 펼쳐졌다가 임시 파일로 저장되고 곧바로 버려진다.)
  */
-export const compressImage = async (uri, options = {}) => {
-  try {
-    console.log('📸 [ImageOptimizer] 이미지 압축 시작:', uri);
-    
-    const config = { ...DEFAULT_CONFIG, ...options };
-    
-    // 1. 원본 이미지 정보 가져오기
-    const imageInfo = await FileSystem.getInfoAsync(uri);
-    console.log('📊 [ImageOptimizer] 원본 크기:', imageInfo.size, 'bytes');
-    
-    // 2. Get original dimensions for aspect ratio preserving resize
-    const originalDimensions = await ImageManipulator.manipulateAsync(uri, []);
-    const { width: origWidth, height: origHeight } = originalDimensions;
-    
-    const actions = [];
-    if (origWidth > config.maxWidth || origHeight > config.maxHeight) {
-      const widthRatio = config.maxWidth / origWidth;
-      const heightRatio = config.maxHeight / origHeight;
-      const ratio = Math.min(widthRatio, heightRatio);
-      
-      actions.push({
-        resize: {
-          width: Math.round(origWidth * ratio),
-          height: Math.round(origHeight * ratio),
-        },
-      });
-    }
-    
-    // 3. Resize and compress image
-    const manipResult = await ImageManipulator.manipulateAsync(
-      uri,
-      actions,
-      {
-        compress: config.quality,
-        format: config.format,
-        base64: true,
-      }
-    );
-    
-    console.log('✅ [ImageOptimizer] 압축 완료');
-    console.log('📊 [ImageOptimizer] 압축 후:', {
-      width: manipResult.width,
-      height: manipResult.height,
-    });
-    
-    // 4. Check compressed image size
-    const compressedInfo = await FileSystem.getInfoAsync(manipResult.uri);
-    const compressionRatio = imageInfo.size ? ((1 - compressedInfo.size / imageInfo.size) * 100).toFixed(2) : '0';
-    
-    console.log('📊 [ImageOptimizer] 압축률:', compressionRatio, '%');
-    console.log('📊 [ImageOptimizer] 압축 후 크기:', compressedInfo.size, 'bytes');
-    
-    return {
-      uri: manipResult.uri,
-      base64: `data:image/jpeg;base64,${manipResult.base64}`,
-      width: manipResult.width,
-      height: manipResult.height,
-      size: compressedInfo.size,
-      originalSize: imageInfo.size || 0,
-      compressionRatio,
-    };
-  } catch (error) {
-    console.error('❌ [ImageOptimizer] 압축 오류 (원본 폴백):', error);
-    
-    // Gracefully obtain original file size if possible
-    let originalSize = 0;
-    try {
-      const originalInfo = await FileSystem.getInfoAsync(uri);
-      originalSize = originalInfo.size || 0;
-    } catch {
-      // Ignored
-    }
+const getImageSize = (uri) =>
+  new Promise((resolve, reject) => {
+    Image.getSize(uri, (width, height) => resolve({ width, height }), reject);
+  });
 
-    return {
-      uri,
-      base64: null,
-      width: 0,
-      height: 0,
-      size: originalSize,
-      originalSize,
-      compressionRatio: '0.00',
-      error: error instanceof Error ? error.message : String(error),
-    };
+export const compressImage = async (uri, options = {}) => {
+  const config = { ...DEFAULT_CONFIG, ...options };
+
+  try {
+    const { width, height } = await getImageSize(uri);
+    // 한도보다 작은 원본을 늘리지는 않는다
+    const ratio = Math.min(config.maxWidth / width, config.maxHeight / height, 1);
+    const actions =
+      ratio < 1
+        ? [{ resize: { width: Math.round(width * ratio), height: Math.round(height * ratio) } }]
+        : [];
+
+    const result = await ImageManipulator.manipulateAsync(uri, actions, {
+      compress: config.quality,
+      format: config.format,
+      base64: true,
+    });
+
+    return { uri: result.uri, base64: `data:image/jpeg;base64,${result.base64}` };
+  } catch (error) {
+    console.error('이미지 압축 실패 (원본 사용):', error);
+    return { uri, base64: null };
   }
 };

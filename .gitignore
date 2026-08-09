@@ -93,4 +93,8 @@ SupabaseSQL.md
 # Supabase local CLI state
 supabase/.temp/
 
+# 카드 아트 원본/파생물 (용량이 커서 저장소에 넣지 않는다)
+# card-original 은 최적화 전 1024x1536 PNG 원본. scripts/optimize-card-assets.py 의 입력이다.
 assets/card
+assets/card-thumb
+assets/card-original

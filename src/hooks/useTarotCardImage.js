@@ -2,20 +2,27 @@ import { useEffect, useState } from 'react';
 
 const imageCache = new Map();
 
-export const useTarotCardImage = (cardId) => {
-  const [source, setSource] = useState(() => (cardId ? imageCache.get(cardId) || null : null));
+/**
+ * 카드 아트를 지연 로드한다.
+ *
+ * @param {string} cardId 카드 id (`m00` ~ `m21`). falsy 면 로드하지 않는다
+ * @param {'full'|'thumb'} [variant] 스탬프 슬롯처럼 작게 그리는 자리는 `thumb` 을 쓴다
+ */
+export const useTarotCardImage = (cardId, variant = 'full') => {
+  const cacheKey = cardId ? `${variant}:${cardId}` : null;
+  const [source, setSource] = useState(() => (cacheKey ? imageCache.get(cacheKey) || null : null));
 
   useEffect(() => {
     let isActive = true;
 
-    if (!cardId) {
+    if (!cacheKey) {
       setSource(null);
       return () => {
         isActive = false;
       };
     }
 
-    const cachedSource = imageCache.get(cardId);
+    const cachedSource = imageCache.get(cacheKey);
     if (cachedSource) {
       setSource(cachedSource);
       return () => {
@@ -28,8 +35,8 @@ export const useTarotCardImage = (cardId) => {
     import('../constants/TarotCardImages')
       .then(({ getTarotCardImage }) => {
         if (!isActive) return;
-        const nextSource = getTarotCardImage(cardId);
-        if (nextSource) imageCache.set(cardId, nextSource);
+        const nextSource = getTarotCardImage(cardId, variant);
+        if (nextSource) imageCache.set(cacheKey, nextSource);
         setSource(nextSource);
       })
       .catch((error) => {
@@ -40,8 +47,7 @@ export const useTarotCardImage = (cardId) => {
     return () => {
       isActive = false;
     };
-  }, [cardId]);
+  }, [cardId, variant, cacheKey]);
 
   return source;
 };
-

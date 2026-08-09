@@ -16,8 +16,8 @@ import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useHistoryLogic } from '../../hooks/useHistoryLogic';
 
 const brassHandleAsset = require('../../../assets/tarot-cellar/brass-handle-b.svg');
-const drawerTextureAsset = require('../../../assets/tarot-cellar/drawer-walnut.png');
-const cellarBackgroundAsset = require('../../../assets/tarot-cellar/bg-cellar.png');
+const drawerTextureAsset = require('../../../assets/tarot-cellar/drawer-walnut.webp');
+const cellarBackgroundAsset = require('../../../assets/tarot-cellar/bg-cellar.webp');
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const HistoryScreen = () => {

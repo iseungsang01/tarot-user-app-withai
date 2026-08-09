@@ -26,7 +26,8 @@ const COUPON_REDEEM_MESSAGES = {
 };
 
 const StampSlot = ({ card, filled, index, onPress }) => {
-  const cardSource = useTarotCardImage(card.id);
+  // 슬롯은 약 66x97dp 짜리 10칸이 한 화면에 깔린다. 확대본은 눌렀을 때만 받는다
+  const cardSource = useTarotCardImage(card.id, 'thumb');
   const slotContent = (
     <>
       {cardSource && (
@@ -48,7 +49,7 @@ const StampSlot = ({ card, filled, index, onPress }) => {
       <TouchableOpacity
         style={[styles.stampSlot, styles.stampSlotFilled]}
         activeOpacity={0.82}
-        onPress={() => onPress({ ...card, source: cardSource })}
+        onPress={() => onPress(card)}
         disabled={!cardSource}
         accessibilityRole="button"
         accessibilityLabel={`${card.name} 스탬프 카드 크게 보기`}
@@ -78,6 +79,7 @@ const TicketScreen = () => {
   const [password, setPassword] = useState('');
   const [processingCouponId, setProcessingCouponId] = useState(null);
   const passwordInputRef = useRef(null);
+  const selectedStampSource = useTarotCardImage(selectedStampCard?.id);
 
   const currentStamps = Math.max(0, Math.min(Number(customer?.current_stamps) || 0, MAX_STAMPS));
   const birthdayCoupons = useMemo(() => coupons.filter((coupon) => getCouponType(coupon.coupon_code) === 'birthday'), [coupons]);
@@ -282,10 +284,10 @@ const TicketScreen = () => {
         >
           <View style={styles.modalCardWrap}>
             <TouchableOpacity activeOpacity={1}>
-              {selectedStampCard?.source && (
+              {selectedStampSource && (
                 <>
                   <Image
-                    source={selectedStampCard.source}
+                    source={selectedStampSource}
                     style={styles.modalStampImage}
                     resizeMode="contain"
                   />
