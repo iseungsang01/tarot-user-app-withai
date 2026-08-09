@@ -54,8 +54,8 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
   };
 
   const handleSubmit = async () => {
-    await onSubmit(reportData);
-    setReportData(INITIAL_REPORT_DATA);
+    const submitted = await onSubmit(reportData);
+    if (submitted) setReportData(INITIAL_REPORT_DATA);
   };
 
   return (

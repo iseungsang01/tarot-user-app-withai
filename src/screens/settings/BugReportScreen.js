@@ -26,15 +26,18 @@ const BugReportScreen = ({ navigation }) => {
     const handleSubmitReport = async (reportData) => {
         if (!reportData.title.trim() || !reportData.description.trim()) {
             dialog.alert('안내', '제목과 내용을 입력해주세요.');
-            return;
+            return false;
         }
         setProcessing(true);
         const { error } = await noticeService.submitReport({ ...reportData, customer_id: customer.id, report_type: '어플 버그' });
-        if (!error) {
-            dialog.alert('완료', '버그가 접수되었습니다.');
-            loadMyReports();
-        }
         setProcessing(false);
+        if (error) {
+            dialog.alert('오류', '버그 접수에 실패했습니다. 잠시 후 다시 시도해주세요.');
+            return false;
+        }
+        dialog.alert('완료', '버그가 접수되었습니다.');
+        loadMyReports();
+        return true;
     };
 
     return (
