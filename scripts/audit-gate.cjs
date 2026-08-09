@@ -26,6 +26,26 @@ const ALLOWLIST = {
   // "1.x/2.x 라인에 패치판이 없다"는 당시 근거가 무효가 됐다 — 1.1.18 / 2.1.4 /
   // 5.0.9 가 나와서 major 업그레이드 없이 `npm audit fix` 로 해결된다.
   // 허용 항목을 넣기 전에 반드시 패치판이 정말 없는지 다시 확인할 것.
+
+  // image-size 두 건은 같은 처지라 근거가 같다. 의존 경로도 하나뿐이다:
+  //   expo@54 → @expo/metro@54 → metro@0.83.3 → image-size@1.2.1
+  'GHSA-w3rx-r6r6-pgpr': {
+    package: 'image-size',
+    why: '패치판이 없다. 권고의 취약 범위가 <=2.0.2 인데 2.0.2 가 레지스트리 최신이다. '
+      + 'metro 가 image-size 를 물고 있고 react-native 0.81.5 가 그 metro 를 고정한다. '
+      + 'npm audit 이 제안하는 "수정"은 react-native 0.72.17 로의 다운그레이드(semver major)라 채택할 수 없다.',
+    risk: 'image-size 는 Metro 번들러의 빌드타임 의존성이라 앱 번들에 들어가지 않는다. '
+      + '빌드 중 읽는 것은 저장소 안의 우리 이미지(WebP/PNG/SVG)뿐이고, 외부에서 들어온 이미지가 '
+      + '이 파서에 닿는 경로가 없다. 사용자가 첨부하는 사진은 런타임에 expo-image-manipulator 가 '
+      + '처리하며 image-size 와 무관하다. 문제의 ICNS·JXL·HEIF 는 이 프로젝트가 쓰지도 않는 포맷이다.',
+    reviewBy: '2026-10-09',
+  },
+  'GHSA-5p2g-fcmc-qvqq': {
+    package: 'image-size',
+    why: 'GHSA-w3rx-r6r6-pgpr 와 동일 (같은 패키지·같은 미해결 상태).',
+    risk: 'GHSA-w3rx-r6r6-pgpr 와 동일 (빌드타임 전용, 외부 입력이 닿지 않음).',
+    reviewBy: '2026-10-09',
+  },
 };
 
 function runAudit() {
