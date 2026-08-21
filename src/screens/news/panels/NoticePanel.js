@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { DrawerMark, LoadingSpinner, NoticeCard, PremiumCard } from '../../../components';
 import { useAuth } from '../../../hooks/useAuth';
+import { notifyNoticesRead } from '../../../hooks/useNotifications';
 import { noticeService } from '../../../services/noticeService';
 import { DrawerTheme } from '../../../constants/DrawerTheme';
 
@@ -18,7 +19,11 @@ const NoticePanel = () => {
     try {
       const { data, error } = await noticeService.getNotices();
       if (!error) setNotices(data);
-      if (customer) await noticeService.markAllNoticesAsRead();
+      if (customer) {
+        await noticeService.markAllNoticesAsRead();
+        // 탭바의 빨간 점도 같이 꺼야 한다.
+        notifyNoticesRead();
+      }
     } finally {
       setLoading(false);
     }

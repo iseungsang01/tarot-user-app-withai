@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { setDialogHost } from '../../utils/dialog';
 
-const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+// 다이얼로그가 사라지는 fade 길이. 이 시간이 지난 뒤에 후속 동작을 돌려야
+// 다이얼로그가 먼저 걷히고 화면 전환·시트 닫힘이 이어진다.
+const CLOSE_ANIMATION_MS = 200;
 
 /**
  * dialog.alert() 의 렌더링 호스트. App.js 에 한 번만 마운트한다.
@@ -12,25 +14,52 @@ const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
  */
 export const AppDialog = () => {
   const [request, setRequest] = useState(null);
+  const [visible, setVisible] = useState(false);
   const resolveRef = useRef(null);
+  // 닫힘 애니메이션이 끝난 뒤에 돌릴 마무리(누른 버튼의 onPress + resolve)
+  const finishRef = useRef(null);
+  const closeTimerRef = useRef(null);
+
+  const runFinish = useCallback(() => {
+    clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+    const finish = finishRef.current;
+    finishRef.current = null;
+    finish?.();
+  }, []);
 
   useEffect(() => {
     setDialogHost((next, resolve) => {
+      // 앞선 다이얼로그가 닫히는 중이면 그 마무리를 먼저 끝낸다.
+      // 건너뛰면 사용자가 누른 버튼의 동작이 사라지고,
+      // 그 요청을 await 하던 호출부도 영원히 깨어나지 못한다.
+      runFinish();
       resolveRef.current = resolve;
       setRequest(next);
+      setVisible(true);
     });
-    return () => setDialogHost(null);
-  }, []);
+    return () => {
+      setDialogHost(null);
+      clearTimeout(closeTimerRef.current);
+    };
+  }, [runFinish]);
 
   const close = useCallback((action) => {
-    setRequest(null);
+    // 이미 닫히는 중이면 두 번째 입력은 무시한다
+    if (finishRef.current) return;
+
+    setVisible(false);
+
+    const resolve = resolveRef.current;
+    resolveRef.current = null;
     // 화면 전환을 부르는 onPress 가 많아 닫힘 애니메이션 뒤에 실행한다
-    setTimeout(() => {
+    finishRef.current = () => {
+      setRequest(null);
       action?.onPress?.();
-      resolveRef.current?.();
-      resolveRef.current = null;
-    }, 0);
-  }, []);
+      resolve?.();
+    };
+    closeTimerRef.current = setTimeout(runFinish, CLOSE_ANIMATION_MS);
+  }, [runFinish]);
 
   const onRequestClose = useCallback(() => {
     const cancel = request?.actions.find((a) => a.style === 'cancel');
@@ -48,7 +77,7 @@ export const AppDialog = () => {
     : actions;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onRequestClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose} statusBarTranslucent>
       <View style={styles.backdrop}>
         <LinearGradient
           colors={[DrawerTheme.bgDeepPurple, DrawerTheme.bgBlackCherry]}
@@ -141,7 +170,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     fontWeight: '900',
-    fontFamily: serif,
     letterSpacing: 0.3,
   },
   message: {

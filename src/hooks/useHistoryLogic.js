@@ -10,6 +10,16 @@ const hasWrittenRecord = (item) => (
     !!(item?.card_review && item.card_review.trim()) || !!item?.card_image
 );
 
+/**
+ * 모달·다이얼로그가 닫히는 애니메이션 길이. 삭제가 끝나도 이만큼은 기다렸다가
+ * 완료 안내를 띄운다. 서랍이 사라지는 것과 안내가 뜨는 것이 겹치면
+ * 화면이 따로 노는 것처럼 보이고, iOS 에서는 닫히는 중인 모달 위로
+ * 새 모달을 띄우려다 안내가 아예 안 뜨기도 한다.
+ */
+const UI_SETTLE_MS = 320;
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, UI_SETTLE_MS));
+
 const getVisitTime = (item) => {
     const time = new Date(item?.visit_date || 0).getTime();
     return Number.isNaN(time) ? 0 : time;
@@ -58,6 +68,7 @@ export const useHistoryLogic = (navigation) => {
     const {
         visits: serverVisits,
         isLoading: isVisitsLoading,
+        isDeleting,
         refetch,
         deleteVisit,
         deleteMultipleVisits
@@ -143,10 +154,41 @@ export const useHistoryLogic = (navigation) => {
         [filteredVisits, viewMode]
     );
 
+    // 화면에 보이는 기록만. 선택 상태를 정리할 때 쓴다.
     const displayDataById = useMemo(
         () => new Map(filteredVisits.map((visit) => [visit.id, visit])),
         [filteredVisits]
     );
+
+    // 필터와 무관한 전체 목록. 삭제·수정 대상을 찾을 때는 이쪽을 봐야
+    // 필터에 가려진 기록도 놓치지 않는다.
+    const visitsById = useMemo(
+        () => new Map(allVisits.map((visit) => [visit.id, visit])),
+        [allVisits]
+    );
+
+    // 모달이 열려 있는 동안 목록이 갱신되면 모달 내용도 같이 따라가야 한다.
+    // (기록이 삭제돼 사라진 경우에는 닫히는 중이므로 마지막 내용을 유지한다)
+    useEffect(() => {
+        setSelectedItem((prev) => {
+            if (!prev) return prev;
+            const live = visitsById.get(prev.id);
+            return live && live !== prev ? live : prev;
+        });
+    }, [visitsById]);
+
+    // 필터를 바꿔 화면에서 사라진 기록이 "N개 선택됨" 에 남아 있으면
+    // 보이지도 않는 것을 지우게 된다.
+    useEffect(() => {
+        if (!selectionMode) return;
+        setSelectedIds((prev) => {
+            const next = new Set();
+            prev.forEach((id) => {
+                if (displayDataById.has(id)) next.add(id);
+            });
+            return next.size === prev.size ? prev : next;
+        });
+    }, [selectionMode, displayDataById]);
 
     const toggleSelection = useCallback((id) => {
         setSelectedIds((prev) => {
@@ -167,34 +209,38 @@ export const useHistoryLogic = (navigation) => {
     }, [selectionMode, toggleSelection]);
 
     const handleDeleteVisit = useCallback(async (visitId) => {
-        try {
-            let itemToDelete = selectedItem;
-            if (!itemToDelete) {
-                itemToDelete = displayDataById.get(visitId);
-            }
+        // 넘겨받은 id 로 찾는다. 열려 있던 모달을 믿고 지우면 다른 기록이
+        // 지워질 수 있고, 필터에 가려진 기록은 전체 목록에서 찾아야 한다.
+        const itemToDelete = visitsById.get(visitId);
 
-            if (!itemToDelete) {
-                dialog.alert('오류', '삭제할 기록을 찾을 수 없습니다.');
-                return;
-            }
-
-            if (itemToDelete.is_manual) {
-                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
-                const filtered = list.filter(v => v.id !== visitId);
-                await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, filtered);
-                await loadLocalData();
-            } else {
-                await deleteVisit(visitId);
-                await refreshCustomer();
-            }
-
-            showSuccessAlert('DELETE');
-            setIsModalVisible(false);
-        } catch (error) {
-            dialog.alert('오류', '삭제 중 문제가 발생했습니다.');
-            console.error(error);
+        if (!itemToDelete) {
+            dialog.alert('오류', '삭제할 기록을 찾을 수 없습니다.');
+            return;
         }
-    }, [selectedItem, displayDataById, loadLocalData, deleteVisit, refreshCustomer]);
+
+        // 상세 모달을 먼저 닫고, 목록에서 서랍이 실제로 빠지고 닫힘
+        // 애니메이션이 끝난 뒤에 완료 안내를 띄운다.
+        setIsModalVisible(false);
+
+        try {
+            const removal = itemToDelete.is_manual
+                ? (async () => {
+                    const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
+                    await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, list.filter(v => v.id !== visitId));
+                    await loadLocalData();
+                })()
+                : (async () => {
+                    await deleteVisit(visitId);
+                    await refreshCustomer();
+                })();
+
+            await Promise.all([removal, settle()]);
+            showSuccessAlert('DELETE');
+        } catch (error) {
+            console.error('기록 삭제 오류:', error);
+            dialog.alert('오류', '삭제 중 문제가 발생했습니다.');
+        }
+    }, [visitsById, loadLocalData, deleteVisit, refreshCustomer]);
 
     const handleUpdateVisitReview = useCallback(async (visit, nextReview) => {
         if (!visit?.id) {
@@ -219,7 +265,7 @@ export const useHistoryLogic = (navigation) => {
                 await refetch();
             }
 
-            setSelectedItem((prev) => (prev?.id === visit.id ? { ...prev, card_review: nextReview } : prev));
+            // 모달 내용은 visitsById 동기화 effect 가 목록과 함께 맞춰준다.
             showSuccessAlert('UPDATE', '기록이 반영되었습니다.');
         } catch (error) {
             console.error('기록 저장 오류:', error);
@@ -242,32 +288,39 @@ export const useHistoryLogic = (navigation) => {
                     text: '삭제',
                     style: 'destructive',
                     onPress: async () => {
+                        const serverIds = [];
+                        const localIds = [];
+
+                        selectedIds.forEach((id) => {
+                            const item = visitsById.get(id);
+                            if (item) {
+                                item.is_manual ? localIds.push(id) : serverIds.push(id);
+                            }
+                        });
+
+                        // 선택 UI 는 바로 걷는다. 남겨두면 이미 지워진 서랍이
+                        // "N개 선택됨" 으로 계속 세어진다.
+                        setSelectedIds(new Set());
+                        setSelectionMode(false);
+
                         try {
-                            const serverIds = [];
-                            const localIds = [];
+                            const removal = (async () => {
+                                if (serverIds.length > 0) await deleteMultipleVisits(serverIds);
 
-                            selectedIds.forEach((id) => {
-                                const item = displayDataById.get(id);
-                                if (item) {
-                                    item.is_manual ? localIds.push(id) : serverIds.push(id);
+                                if (localIds.length > 0) {
+                                    const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
+                                    await storage.save(
+                                        STORAGE_KEYS.OFFLINE_VISIT_HISTORY,
+                                        list.filter(v => !localIds.includes(v.id)),
+                                    );
+                                    await loadLocalData();
                                 }
-                            });
 
-                            if (serverIds.length > 0) {
-                                await deleteMultipleVisits(serverIds);
-                            }
+                                if (serverIds.length > 0) await refreshCustomer();
+                            })();
 
-                            if (localIds.length > 0) {
-                                const list = await storage.get(STORAGE_KEYS.OFFLINE_VISIT_HISTORY) || [];
-                                const filtered = list.filter(v => !localIds.includes(v.id));
-                                await storage.save(STORAGE_KEYS.OFFLINE_VISIT_HISTORY, filtered);
-                                await loadLocalData();
-                            }
-
+                            await Promise.all([removal, settle()]);
                             showSuccessAlert('DELETE');
-                            setSelectedIds(new Set());
-                            setSelectionMode(false);
-                            if (serverIds.length > 0) await refreshCustomer();
                         } catch (error) {
                             console.error('여러 기록 삭제 오류:', error);
                             dialog.alert('오류', '삭제 중 문제가 발생했습니다.');
@@ -276,12 +329,13 @@ export const useHistoryLogic = (navigation) => {
                 }
             ]
         );
-    }, [selectedIds, displayDataById, deleteMultipleVisits, loadLocalData, refreshCustomer]);
+    }, [selectedIds, visitsById, deleteMultipleVisits, loadLocalData, refreshCustomer]);
 
     return {
         state: {
             customer,
             isVisitsLoading,
+            isDeleting,
             refreshing,
             visits: allVisits,
             displayData,

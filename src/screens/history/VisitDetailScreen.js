@@ -250,8 +250,10 @@ const VisitDetailScreen = ({ route, navigation }) => {
                 if (error) throw error;
             }
 
-            showSuccessAlert(s.isEdit ? 'UPDATE' : 'SAVE');
-            setTimeout(() => navigation.goBack(), 1000);
+            // 안내를 사용자가 닫은 뒤에 돌아간다. 타이머로 넘겨버리면
+            // 다이얼로그만 목록 화면 위에 덩그러니 남는다.
+            await showSuccessAlert(s.isEdit ? 'UPDATE' : 'SAVE');
+            navigation.goBack();
         } catch {
             up({ saving: false });
         }

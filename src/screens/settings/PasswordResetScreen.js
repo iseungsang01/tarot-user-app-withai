@@ -33,7 +33,8 @@ const PasswordResetScreen = ({ navigation }) => {
         return;
       }
 
-      showSuccessAlert('UPDATE', '비밀번호가 변경되었습니다.');
+      // 안내를 닫은 뒤에 돌아가야 다이얼로그가 설정 화면 위에 남지 않는다.
+      await showSuccessAlert('UPDATE', '비밀번호가 변경되었습니다.');
       navigation.goBack();
     } finally {
       setProcessing(false);

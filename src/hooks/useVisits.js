@@ -41,6 +41,17 @@ export const useVisits = (customerId) => {
         staleTime: 1000 * 60 * 5, // 5분간 Fresh 유지
     });
 
+    /**
+     * 삭제 뒤 서랍 목록을 다시 읽어온다.
+     *
+     * - onSuccess 가 아니라 onSettled 에서 부른다. 일부만 지워지고 실패한
+     *   경우에도 화면과 서버가 어긋난 채 남으면 안 된다.
+     * - Promise 를 돌려주면 react-query 가 이걸 기다렸다가 mutateAsync 를
+     *   resolve 한다. 덕분에 호출부에서 "삭제됐습니다" 를 띄우는 시점에는
+     *   이미 목록에서 서랍이 빠져 있다.
+     */
+    const refreshVisits = () => queryClient.invalidateQueries({ queryKey: [...VISITS_KEY, customerId] });
+
     // 2. 삭제 (Mutation)
     const deleteMutation = useMutation({
         mutationFn: async (visitId) => {
@@ -49,10 +60,7 @@ export const useVisits = (customerId) => {
             if (error) throw error;
             return visitId;
         },
-        onSuccess: () => {
-            // Refresh the drawer list after clearing local annotations.
-            queryClient.invalidateQueries([...VISITS_KEY, customerId]);
-        }
+        onSettled: refreshVisits,
     });
 
     // 2-2. 다중 삭제 (Batch Mutation)
@@ -66,10 +74,7 @@ export const useVisits = (customerId) => {
 
             return visitIds;
         },
-        onSuccess: () => {
-            // Refresh the drawer list after clearing local annotations.
-            queryClient.invalidateQueries([...VISITS_KEY, customerId]);
-        }
+        onSettled: refreshVisits,
     });
 
     return {

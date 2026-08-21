@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ImageBackground, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ImageBackground } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +18,6 @@ import { useHistoryLogic } from '../../hooks/useHistoryLogic';
 const brassHandleAsset = require('../../../assets/tarot-cellar/brass-handle-b.svg');
 const drawerTextureAsset = require('../../../assets/tarot-cellar/drawer-walnut.webp');
 const cellarBackgroundAsset = require('../../../assets/tarot-cellar/bg-cellar.webp');
-const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 const HistoryScreen = () => {
     const navigation = useNavigation();
@@ -28,6 +27,7 @@ const HistoryScreen = () => {
     const {
         customer,
         isVisitsLoading,
+        isDeleting,
         refreshing,
         visits,
         recordType,
@@ -285,6 +285,15 @@ const HistoryScreen = () => {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={DrawerTheme.goldBrass} />}
             />
 
+            {isDeleting && (
+                <View style={styles.busyOverlay}>
+                    <View style={styles.busyCard}>
+                        <ActivityIndicator size="small" color={DrawerTheme.brightGold} />
+                        <Text style={styles.busyText}>서랍을 정리하는 중…</Text>
+                    </View>
+                </View>
+            )}
+
             <TarotCardModal
                 isVisible={isModalVisible}
                 visit={selectedItem}
@@ -537,7 +546,6 @@ const styles = StyleSheet.create({
         color: DrawerTheme.brightGold,
         fontSize: 12,
         fontWeight: '900',
-        fontFamily: serif,
         letterSpacing: 0.6,
     },
     manualAddDrawer: {
@@ -828,7 +836,6 @@ const styles = StyleSheet.create({
     sealedText: {
         color: DrawerTheme.brightGold,
         fontSize: 10,
-        fontFamily: serif,
         fontWeight: '900',
         letterSpacing: 0.4,
     },
@@ -842,7 +849,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         lineHeight: 16,
         fontWeight: '700',
-        fontFamily: serif,
         letterSpacing: 0.3,
         textShadowColor: 'rgba(0,0,0,0.72)',
         textShadowOffset: { width: 1, height: 1 },
@@ -911,6 +917,31 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: DrawerTheme.bgBlackCherry,
         fontWeight: '900',
+    },
+    // 서버 삭제는 왕복이 있어 누른 직후 아무 일도 없는 것처럼 보인다.
+    // 그동안 목록을 잠가 두 번 지우는 것도 막는다.
+    busyOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(5,0,8,0.52)',
+    },
+    busyCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: DrawerTheme.archiveBorderStrong,
+        backgroundColor: DrawerTheme.bgDeepPurple,
+    },
+    busyText: {
+        color: DrawerTheme.ivory,
+        fontSize: 13,
+        fontWeight: '800',
+        letterSpacing: 0.2,
     },
 });
 

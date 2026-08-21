@@ -145,9 +145,11 @@ const TicketScreen = () => {
             { silentErrorCodes: ['invalid_admin_password', 'ADMIN_PASSWORD_REQUIRED'] }
           );
           if (!error) {
-            showSuccessAlert('COUPON_USED', '쿠폰이 사용 처리되었습니다.');
+            // 쿠폰 목록·스탬프가 갱신된 뒤에 안내를 띄운다. 순서가 반대면
+            // "사용 처리되었습니다" 뒤에 아직 안 쓴 쿠폰이 그대로 보인다.
             resetCouponUse();
             await Promise.all([loadTickets(), refreshCustomer?.()]);
+            showSuccessAlert('COUPON_USED', '쿠폰이 사용 처리되었습니다.');
           } else {
             const redeemMessage = COUPON_REDEEM_MESSAGES[error.code] || error.message || '쿠폰 사용 처리 중 문제가 발생했습니다.';
             dialog.alert('쿠폰 사용 실패', redeemMessage);

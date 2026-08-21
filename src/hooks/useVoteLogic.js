@@ -196,10 +196,11 @@ export const useVoteLogic = () => {
             }
 
             // Submit
+            // handleApiCall 에는 successMessage 옵션이 없다. 완료 안내는
+            // 아래에서 결과 화면으로 바뀌는 것으로 대신한다.
             const res = await handleApiCall(
                 'VotePanel.submitVote',
-                () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id),
-                { successMessage: isEditMode ? '투표가 수정되었습니다.' : '투표가 완료되었습니다.' }
+                () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id)
             );
 
             if (res.data) {

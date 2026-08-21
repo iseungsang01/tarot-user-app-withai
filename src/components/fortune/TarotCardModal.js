@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
@@ -18,7 +17,6 @@ import { useCondenseVoiceMemo } from '../../hooks/useAI';
 
 import { dialog } from '../../utils/dialog';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete, onApplyCondensedMemo }) => {
   const [condensedMemo, setCondensedMemo] = useState('');
@@ -89,10 +87,9 @@ export const TarotCardModal = ({ isVisible, visit, onClose, onEdit, onDelete, on
         {
           text: '삭제',
           style: 'destructive',
-          onPress: () => {
-            onClose();
-            setTimeout(() => onDelete(visit.id), 300);
-          },
+          // 모달을 닫는 것도, 완료 안내를 띄우는 시점도 목록 화면이 잡는다.
+          // 여기서 임의의 지연을 두면 삭제와 화면이 따로 논다.
+          onPress: () => onDelete(visit.id),
         },
       ],
     );
@@ -334,7 +331,6 @@ const styles = StyleSheet.create({
     color: DrawerTheme.brightGold,
     marginBottom: 10,
     fontWeight: '900',
-    fontFamily: serif,
     letterSpacing: 0.8,
   },
   reviewContent: {

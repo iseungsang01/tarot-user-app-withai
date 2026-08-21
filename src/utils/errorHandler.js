@@ -150,9 +150,10 @@ export const createPermissionError = (permission) => {
 /**
  * 에러를 앱 다이얼로그로 표시
  * @param {object} errorInfo - 에러 정보 객체
+ * @returns {Promise<void>} 사용자가 닫으면 resolve
  */
 export const showErrorAlert = (errorInfo) => {
-  dialog.alert(
+  return dialog.alert(
     errorInfo.title || '오류',
     errorInfo.message || '알 수 없는 오류가 발생했습니다.',
     [{ text: '확인', style: 'default' }]
@@ -163,16 +164,17 @@ export const showErrorAlert = (errorInfo) => {
  * 성공 메시지 표시
  * @param {string} successType - SUCCESS_MESSAGES의 키
  * @param {string} customMessage - 커스텀 메시지 (선택)
+ * @returns {Promise<void>} 사용자가 닫으면 resolve.
+ *   화면 전환은 이걸 await 한 뒤에 해야 안내와 화면이 따로 놀지 않는다.
  */
 export const showSuccessAlert = (successType, customMessage = null) => {
   const successData = SUCCESS_MESSAGES[successType];
 
   if (!successData) {
-    dialog.alert('완료', customMessage || '작업이 완료되었습니다.');
-    return;
+    return dialog.alert('완료', customMessage || '작업이 완료되었습니다.');
   }
 
-  dialog.alert(
+  return dialog.alert(
     successData.title,
     customMessage || successData.message,
     [{ text: '확인', style: 'default' }]
