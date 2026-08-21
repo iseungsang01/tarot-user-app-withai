@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { errorEmitter } from '../../utils/errorEmitter';
-import { Colors } from '../../constants/Colors';
+import { DrawerTheme } from '../../constants/DrawerTheme';
 
 const AUTO_HIDE_MS = 3000;
 
@@ -14,6 +16,7 @@ const AUTO_HIDE_MS = 3000;
  *   → GlobalErrorDisplay(구독) → 렌더링
  */
 export const GlobalErrorDisplay = () => {
+  const insets = useSafeAreaInsets();
   const [error, setError] = useState(null);
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const hideTimerRef = useRef(null);
@@ -58,26 +61,32 @@ export const GlobalErrorDisplay = () => {
     <Animated.View
       style={[
         styles.container,
-        {
-          transform: [{ translateY: slideAnim }],
-        },
+        { top: insets.top + 12 },
+        { transform: [{ translateY: slideAnim }] },
       ]}
     >
       <TouchableOpacity
-        style={styles.errorCard}
         onPress={hideError}
         activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel="알림 닫기"
       >
-        <View style={styles.content}>
-          {error.icon && <Text style={styles.icon}>{error.icon}</Text>}
-          <View style={styles.textContainer}>
-            <Text style={styles.title}>{error.title}</Text>
-            <Text style={styles.message}>{error.message}</Text>
-          </View>
-          <TouchableOpacity onPress={hideError} style={styles.closeButton}>
+        <LinearGradient
+          colors={[DrawerTheme.bgDeepPurple, DrawerTheme.bgBlackCherry]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.errorCard}
+        >
+          <View style={styles.brassLip} />
+          <View style={styles.content}>
+            {error.icon && <Text style={styles.icon}>{error.icon}</Text>}
+            <View style={styles.textContainer}>
+              <Text style={styles.title}>{error.title}</Text>
+              <Text style={styles.message}>{error.message}</Text>
+            </View>
             <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -86,22 +95,31 @@ export const GlobalErrorDisplay = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
+    left: 16,
+    right: 16,
     zIndex: 9999,
   },
   errorCard: {
-    backgroundColor: Colors.purpleMid,
-    borderRadius: 15,
-    padding: 20,
-    borderWidth: 3,
-    borderColor: Colors.redSoft,
-    shadowColor: Colors.redSoft,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 10,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: DrawerTheme.archiveBorderStrong,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  brassLip: {
+    position: 'absolute',
+    top: 0,
+    left: 24,
+    right: 24,
+    height: 2,
+    opacity: 0.7,
+    backgroundColor: DrawerTheme.brassHighlight,
   },
   content: {
     flexDirection: 'row',
@@ -109,28 +127,31 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   icon: {
-    fontSize: 28,
+    fontSize: 22,
   },
   textContainer: {
     flex: 1,
+    minWidth: 0,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.gold,
-    marginBottom: 4,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    color: DrawerTheme.brightGold,
+    marginBottom: 3,
   },
   message: {
-    fontSize: 14,
-    color: Colors.lavender,
-    lineHeight: 20,
-  },
-  closeButton: {
-    padding: 4,
+    fontSize: 13,
+    lineHeight: 19,
+    color: DrawerTheme.ivory,
+    opacity: 0.9,
   },
   closeButtonText: {
-    fontSize: 20,
-    color: Colors.lavender,
-    fontWeight: '700',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+    color: DrawerTheme.mutedIvory,
+    paddingHorizontal: 4,
   },
 });

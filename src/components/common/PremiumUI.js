@@ -1,9 +1,8 @@
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerTheme } from '../../constants/DrawerTheme';
-
-const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+import { Fonts, hasHangul } from '../../constants/Typography';
 
 const PremiumGradients = {
   screen: ['#070009', '#130014', '#24051F', '#100006'],
@@ -42,7 +41,10 @@ export const ArchiveTitleHeader = ({ eyebrow, title, subtitle, children, style, 
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.72}
-        style={styles.archiveTitle}
+        // 화면 제목은 대부분 라틴 대문자라 장식 서체에 넓은 자간이 어울리지만,
+        // 기록 제목처럼 한글이 들어오는 자리에서는 본문 서체·좁은 자간으로
+        // 돌려 화면의 나머지 한글과 맞춘다.
+        style={[styles.archiveTitle, hasHangul(title) ? styles.archiveTitleHangul : styles.archiveTitleLatin]}
       >
         {title}
       </Text>
@@ -202,12 +204,18 @@ const styles = StyleSheet.create({
     fontSize: 23,
     lineHeight: 29,
     fontWeight: '900',
-    fontFamily: serif,
-    letterSpacing: 3.2,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.86)',
     textShadowOffset: { width: 0, height: 3 },
     textShadowRadius: 3,
+  },
+  archiveTitleLatin: {
+    fontFamily: Fonts.display,
+    letterSpacing: 3.2,
+  },
+  archiveTitleHangul: {
+    fontSize: 21,
+    letterSpacing: 0.4,
   },
   archiveSubtitle: {
     position: 'absolute',

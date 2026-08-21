@@ -11,7 +11,6 @@ import {
     StyleSheet,
     TouchableOpacity,
     ActivityIndicator,
-    Platform,
 } from 'react-native';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -190,7 +189,7 @@ const styles = StyleSheet.create({
         color: DrawerTheme.goldBright,
         fontSize: 14,
         fontWeight: '700',
-        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+        letterSpacing: 0.3,
     },
     historyCloseText: { color: TextColors.subTextMuted, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
     loadingArea: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },

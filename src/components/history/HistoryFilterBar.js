@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import {
@@ -202,8 +202,6 @@ const FilterChip = ({ label, onPress, active }) => (
     </TouchableOpacity>
 );
 
-const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif';
-
 const styles = StyleSheet.create({
     wrap: { width: '100%', alignItems: 'center', marginTop: 0, marginBottom: 5 },
     filterShell: {
@@ -245,7 +243,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: DrawerTheme.ivory,
         fontWeight: '900',
-        fontFamily: serif,
         letterSpacing: 0.2,
     },
     primaryTabTextActive: { color: DrawerTheme.bgBlackCherry },
@@ -283,7 +280,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(224,184,90,0.28)',
         backgroundColor: 'rgba(18,0,8,0.62)',
     },
-    selectedCount: { fontSize: 12, color: DrawerTheme.brightGold, fontWeight: '900', fontFamily: serif, marginBottom: 7 },
+    selectedCount: { fontSize: 12, color: DrawerTheme.brightGold, fontWeight: '900', marginBottom: 7 },
     actionButtons: { flexDirection: 'row', gap: 7 },
     cancelButton: { flex: 1, minHeight: 34, borderRadius: 9, backgroundColor: 'rgba(244,232,208,0.08)', borderWidth: 1, borderColor: 'rgba(244,232,208,0.16)', alignItems: 'center', justifyContent: 'center' },
     cancelButtonText: { fontSize: 12, color: DrawerTheme.ivory, fontWeight: '800' },
@@ -318,7 +315,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         backgroundColor: 'rgba(224,184,90,0.36)',
     },
-    sheetTitle: { color: DrawerTheme.brightGold, fontSize: 15, fontWeight: '900', fontFamily: serif, marginBottom: 9 },
+    sheetTitle: { color: DrawerTheme.brightGold, fontSize: 15, fontWeight: '900', marginBottom: 9 },
     sheetOption: {
         minHeight: 44,
         borderRadius: 12,

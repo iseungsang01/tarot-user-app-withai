@@ -60,7 +60,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
 
   return (
     <View style={styles.formCard}>
-      <Text style={styles.innerTitle}> 앱 버그 접수</Text>
+      <Text style={styles.innerTitle}>앱 버그 접수</Text>
       <TextInput
         style={styles.input}
         value={reportData.title}
@@ -78,7 +78,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
       />
 
       <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-        <Text style={styles.uploadButtonText}> 스크린샷 첨부 (카메라/앨범)</Text>
+        <Text style={styles.uploadButtonText}>스크린샷 첨부 (카메라/앨범)</Text>
       </TouchableOpacity>
       {!!reportData.screenshot && (
         <Image
