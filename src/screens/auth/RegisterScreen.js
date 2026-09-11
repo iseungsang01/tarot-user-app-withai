@@ -8,6 +8,8 @@ import { formatPhoneNumber } from '../../utils/formatters';
 import { getPasswordValidationMessage, validatePassword, validatePhoneNumber } from '../../utils/validators';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { createValidationError } from '../../utils/errorHandler';
+import { ConsentCheckList, hasAllRequiredConsents } from '../../components/common/ConsentCheckList';
+import { storage } from '../../utils/storage';
 
 const RegisterScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
@@ -17,9 +19,16 @@ const RegisterScreen = ({ navigation }) => {
     const [nickname, setNickname] = useState('');
     const [message, setMessage] = useState({ text: '', type: '' });
     const [loading, setLoading] = useState(false);
+    const [consents, setConsents] = useState({});
     const { register } = useAuth();
 
     const resetMsg = () => message.text && setMessage({ text: '', type: '' });
+
+    const handleConsentChange = (next) => {
+        setConsents(next);
+        resetMsg();
+    };
+
     const handleTextChange = (setter) => (text) => {
         setter(text);
         resetMsg();
@@ -47,11 +56,21 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
+        if (!hasAllRequiredConsents(consents)) {
+            setMessage({ text: '필수 약관에 모두 동의해야 가입할 수 있습니다.', type: 'error' });
+            return;
+        }
+
         setLoading(true);
         setMessage({ text: '가입 정보를 처리하고 있습니다...', type: 'info' });
 
         try {
             const { data, error } = await register(phone, password, nickname);
+
+            if (data) {
+                // 동의 기록은 가입이 확정된 뒤에만 남긴다.
+                await storage.saveConsent(consents);
+            }
 
             if (!data) {
                 setMessage({ text: error?.message || '회원가입에 실패했습니다.', type: 'error' });
@@ -137,6 +156,13 @@ const RegisterScreen = ({ navigation }) => {
                                 />
                             </View>
                         </View>
+
+                        <ConsentCheckList
+                            value={consents}
+                            onChange={handleConsentChange}
+                            onOpenDocument={(documentId) => navigation.navigate('LegalDocument', { documentId })}
+                            disabled={loading}
+                        />
 
                         <GoldActionButton
                             onPress={handleRegister}

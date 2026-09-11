@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { APP_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';
+import { PRIVACY_POLICY, TERMS_OF_SERVICE } from '../../constants/legal';
 
 import { dialog } from '../../utils/dialog';
 const MENU_ITEMS = {
@@ -21,6 +22,8 @@ const MENU_ITEMS = {
   guide: '앱 이용 가이드',
   password: '비밀번호 재설정',
   reports: '버그 접수 · 내역',
+  terms: '서비스 이용약관',
+  privacy: '개인정보 처리방침',
   delete: '회원 탈퇴',
 };
 
@@ -57,6 +60,20 @@ const SettingsScreen = ({ navigation }) => {
 
         <View style={styles.section}>
           <MenuRow label={MENU_ITEMS.guide} onPress={() => navigation.navigate('AppGuide')} />
+        </View>
+
+        <View style={styles.section}>
+          <MenuRow
+            label={MENU_ITEMS.terms}
+            onPress={() => navigation.navigate('LegalDocument', { documentId: TERMS_OF_SERVICE.id })}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <MenuRow
+            label={MENU_ITEMS.privacy}
+            onPress={() => navigation.navigate('LegalDocument', { documentId: PRIVACY_POLICY.id })}
+          />
         </View>
 
         <StoreContactCard style={styles.storeCard} />

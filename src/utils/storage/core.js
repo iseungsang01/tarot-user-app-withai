@@ -12,6 +12,9 @@ export const STORAGE_KEYS = {
   ATTENDANCE: 'attendance_history',
   OFFLINE_VISIT_HISTORY: 'offline_visit_history',
   DRAWER_AI_USAGE: 'drawer_ai_usage',
+  // 계정별이 아니라 기기별로 둔다. 가입 직후에 저장하는데 그 시점엔 스코프가
+  // 게스트에서 회원으로 막 넘어가는 중이라, 스코프를 태우면 어느 쪽에 떨어질지 불안정하다.
+  TERMS_CONSENT: 'terms_consent',
 };
 
 const LOCAL_SCOPE_PREFIX = 'tarot_local';
