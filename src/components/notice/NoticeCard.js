@@ -1,4 +1,5 @@
-﻿import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+﻿import { View, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { Text } from '../common/AppText';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { PremiumCard } from '../common/PremiumUI';
 import { formatDateDot } from '../../utils/formatters';

@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '../common/AppText';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 export const VoteResultBar = ({ optionText, percentage, isMyChoice }) => {

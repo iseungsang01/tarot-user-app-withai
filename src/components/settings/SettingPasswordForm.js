@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { View } from 'react-native';
+import { Text, TextInput } from '../common/AppText';
 import { CustomButton } from '../common/CustomButton';
 import { styles } from '../../styles/SettingsStyles';
 

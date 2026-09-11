@@ -15,6 +15,7 @@
     "assetBundlePatterns": [
       "assets/card/*",
       "assets/card-thumb/*",
+      "assets/fonts/*",
       "assets/tarot-cellar/*",
       "assets/icon.png",
       "assets/adaptive-icon.png",

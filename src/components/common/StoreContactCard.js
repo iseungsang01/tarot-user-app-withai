@@ -1,4 +1,5 @@
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from './AppText';
 import { PremiumCard } from './PremiumUI';
 import { STORE_INFO } from '../../constants/Config';
 import { DrawerTheme } from '../../constants/DrawerTheme';

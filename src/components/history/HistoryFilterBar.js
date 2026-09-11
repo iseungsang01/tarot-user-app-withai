@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import { Text } from '../common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import {

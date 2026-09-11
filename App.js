@@ -1,17 +1,23 @@
 import { useEffect } from 'react';
-import { Platform, StatusBar } from 'react-native';
+import { Platform, StatusBar, View } from 'react-native';
+import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { AppDialog, ErrorBoundary, GlobalErrorDisplay } from './src/components';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initializeAdMob } from './src/services/rewardedAdService';
+import { DrawerTheme } from './src/constants/DrawerTheme';
+import { FONT_ASSETS } from './src/constants/Typography';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
 
 export default function App() {
+  // 본문 서체가 올라오기 전에 그리면 시스템 서체로 한 번 찍혔다가 바뀌어 글자가 튄다.
+  const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
+
   useEffect(() => {
     initializeAdMob();
   }, []);
@@ -49,6 +55,10 @@ export default function App() {
     `;
     document.head.appendChild(style);
   }, []);
+
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: DrawerTheme.bgBlackPurple }} />;
+  }
 
   return (
     <ErrorBoundary>

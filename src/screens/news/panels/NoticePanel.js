@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { Text } from '../../../components/common/AppText';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { DrawerMark, LoadingSpinner, NoticeCard, PremiumCard } from '../../../components';

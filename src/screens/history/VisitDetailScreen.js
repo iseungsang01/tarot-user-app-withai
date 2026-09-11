@@ -1,16 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    Image,
-    TouchableOpacity,
-    ScrollView,
-    Keyboard,
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Keyboard,
 } from 'react-native';
+import { Text, TextInput } from '../../components/common/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {

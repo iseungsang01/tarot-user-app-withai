@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { Text } from '../common/AppText';
 import { formatDateShort } from '../../utils/formatters';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 

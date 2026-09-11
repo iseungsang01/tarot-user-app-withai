@@ -6,12 +6,12 @@
 
 import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    ActivityIndicator,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
+import { Text } from '../common/AppText';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TextColors } from '../../constants/Colors';

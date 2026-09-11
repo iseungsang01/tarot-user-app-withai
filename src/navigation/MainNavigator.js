@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { DrawerTheme } from '../constants/DrawerTheme';
+import { Fonts } from '../constants/Typography';
 import { useNotifications } from '../hooks/useNotifications';
 
 import DailyFortuneDrawScreen from '../screens/fortune/DailyFortuneDrawScreen';
@@ -80,7 +81,7 @@ const TabNavigator = () => {
           tabBarInactiveTintColor: 'rgba(142,122,154,0.58)',
           tabBarLabelStyle: {
             fontSize: 9.5,
-            fontWeight: '600',
+            fontFamily: Fonts.bodyBold,
             marginBottom: insets.bottom > 0 ? 0 : 3,
             letterSpacing: 0.2,
           },

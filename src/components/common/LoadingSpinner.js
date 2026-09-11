@@ -1,4 +1,5 @@
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text } from './AppText';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 /**

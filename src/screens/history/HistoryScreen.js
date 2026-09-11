@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useRef } from 'react';
-import { ActivityIndicator, View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ImageBackground } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ImageBackground } from 'react-native';
+import { Text } from '../../components/common/AppText';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';

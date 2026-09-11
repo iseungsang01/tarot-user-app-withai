@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Text } from './AppText';
 import { GradientBackground } from './GradientBackground';
 import { Colors } from '../../constants/Colors';
 import { logError } from '../../utils/errorHandler';

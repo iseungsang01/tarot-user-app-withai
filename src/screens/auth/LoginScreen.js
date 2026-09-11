@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, TextInput } from '../../components/common/AppText';
 import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer, StoreContactCard } from '../../components';
 import { useAuth } from '../../hooks/useAuth';
 import { formatPhoneNumber } from '../../utils/formatters';

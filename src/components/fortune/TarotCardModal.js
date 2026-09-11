@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   Image,
@@ -9,6 +8,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
+import { Text } from '../common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { ArchiveTitleHeader, GoldActionButton } from '../common/PremiumUI';
