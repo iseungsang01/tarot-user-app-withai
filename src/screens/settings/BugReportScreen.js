@@ -34,7 +34,7 @@ const BugReportScreen = ({ navigation }) => {
         // submit_bug_report 의 p_device_info 는 원래 있었는데 계속 null 이 들어가고
         // 있었다. 개인정보 처리방침 제1조 2항이 고지하는 "기기 정보"가 이것이다.
         const device_info = await buildDeviceInfo();
-        const { error } = await noticeService.submitReport({ ...reportData, customer_id: customer.id, report_type: '어플 버그', device_info });
+        const { error } = await noticeService.submitReport({ ...reportData, customer_id: customer.id, device_info });
         setProcessing(false);
         if (error) {
             dialog.alert('오류', '버그 접수에 실패했습니다. 잠시 후 다시 시도해주세요.');

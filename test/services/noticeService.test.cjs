@@ -16,6 +16,28 @@ const createNoticeTableMock = () => ({
   }),
 });
 
+test('noticeService: leaves report_type to the server default when the caller omits it', async () => {
+  const calls = [];
+  const supabaseClient = {
+    submitBugReport: async (payload) => {
+      calls.push(payload);
+      return { data: { id: 3 }, error: null };
+    },
+  };
+
+  const { noticeService } = loadModule('src/services/noticeService.js', {
+    './supabase': { supabase: createNoticeTableMock() },
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage: createStorageMock() },
+  });
+
+  await noticeService.submitReport({ title: '제목', description: '내용' });
+
+  // 매니저가 report_type 을 ASCII 코드로 정규화했다. 한글 문자열을 다시 보내기
+  // 시작하면 CHECK 가 걸린 환경에서 접수가 거부된다.
+  assert.equal(calls[0].p_report_type, null);
+});
+
 test('noticeService: loads my bug reports through customer-session RPC', async () => {
   const calls = [];
   const reports = [{ id: 1, customer_id: 'customer-1', title: 'bug' }];

@@ -11,9 +11,17 @@ import { dialog } from '../../utils/dialog';
 const INITIAL_REPORT_DATA = {
   title: '',
   description: '',
-  report_type: '어플 버그',
   screenshot: null,
 };
+
+// 서버가 돌려주는 report_type 은 ASCII 코드다. 아는 코드만 한국어로 바꾸고
+// 모르는 값은 원문 그대로 둔다 — 매니저가 정규화한 4종 중 유저앱이 확인한 것은
+// submit_bug_report 의 기본값 하나뿐이라, 나머지는 확인되는 대로 여기에 더한다.
+const REPORT_TYPE_LABELS = {
+  app_bug: '앱 버그',
+};
+
+const reportTypeLabel = (value) => REPORT_TYPE_LABELS[value] || value || '앱 버그';
 
 const PICKER_OPTIONS = { allowsEditing: true, quality: 0.7 };
 const COMPRESS_OPTIONS = { maxWidth: 1000, quality: 0.6 };
@@ -104,7 +112,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         myReports.map(item => (
           <TouchableOpacity key={item.id} style={styles.historyCard} activeOpacity={0.8} onPress={() => onOpenDetail?.(item)}>
             <View style={styles.historyHeader}>
-              <Text style={styles.historyType}>{item.report_type || '어플 버그'}</Text>
+              <Text style={styles.historyType}>{reportTypeLabel(item.report_type)}</Text>
               <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
               </View>

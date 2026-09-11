@@ -110,7 +110,11 @@ export const noticeService = {
         p_session_token: token,
         p_title: reportData.title,
         p_description: reportData.description,
-        p_report_type: reportData.report_type || '어플 버그',
+        // 분류값은 클라이언트가 정하지 않는다. 매니저가 report_type 을 ASCII 코드로
+        // 정규화했고(2026-09-11 적용), 유저앱이 한글 문자열을 계속 보내면 CHECK 가
+        // 걸려 있을 경우 접수 자체가 거부된다. null 을 넘겨 submit_bug_report 의
+        // 기본값을 그대로 쓴다.
+        p_report_type: reportData.report_type || null,
         p_screenshot: reportData.screenshot || null,
         p_device_info: reportData.device_info || null,
       });
