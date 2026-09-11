@@ -15,6 +15,9 @@ export const STORAGE_KEYS = {
   // 계정별이 아니라 기기별로 둔다. 가입 직후에 저장하는데 그 시점엔 스코프가
   // 게스트에서 회원으로 막 넘어가는 중이라, 스코프를 태우면 어느 쪽에 떨어질지 불안정하다.
   TERMS_CONSENT: 'terms_consent',
+  // 진단 로그도 기기별이다. 로그인 이전이나 로그인 실패 자체가 남아야 하는데
+  // 스코프를 태우면 그 구간이 게스트 쪽으로 흩어진다.
+  DIAGNOSTIC_LOG: 'diagnostic_log',
 };
 
 const LOCAL_SCOPE_PREFIX = 'tarot_local';

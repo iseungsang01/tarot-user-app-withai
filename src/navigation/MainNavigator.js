@@ -17,6 +17,7 @@ import NoticeDetailScreen from '../screens/notice/NoticeDetailScreen';
 import AppGuideScreen from '../screens/settings/AppGuideScreen';
 import BugReportDetailScreen from '../screens/settings/BugReportDetailScreen';
 import BugReportScreen from '../screens/settings/BugReportScreen';
+import DiagnosticLogScreen from '../screens/settings/DiagnosticLogScreen';
 import DeleteAccountScreen from '../screens/settings/DeleteAccountScreen';
 import ForcedPasswordChangeScreen from '../screens/settings/ForcedPasswordChangeScreen';
 import LegalDocumentScreen from '../screens/settings/LegalDocumentScreen';
@@ -154,6 +155,7 @@ const MainNavigator = () => {
       <Stack.Screen name="AppGuide" component={AppGuideScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReport" component={BugReportScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="BugReportDetail" component={BugReportDetailScreen} options={{ presentation: 'card' }} />
+      <Stack.Screen name="DiagnosticLog" component={DiagnosticLogScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="PasswordReset" component={PasswordResetScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} options={{ presentation: 'card' }} />

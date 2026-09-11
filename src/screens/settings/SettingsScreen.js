@@ -22,6 +22,7 @@ const MENU_ITEMS = {
   guide: '앱 이용 가이드',
   password: '비밀번호 재설정',
   reports: '버그 접수 · 내역',
+  diagnostics: '진단 기록',
   terms: '서비스 이용약관',
   privacy: '개인정보 처리방침',
   delete: '회원 탈퇴',
@@ -104,6 +105,7 @@ const SettingsScreen = ({ navigation }) => {
 
             <View style={styles.section}>
               <MenuRow label={MENU_ITEMS.reports} onPress={() => navigation.navigate('BugReport')} />
+              <MenuRow label={MENU_ITEMS.diagnostics} onPress={() => navigation.navigate('DiagnosticLog')} />
             </View>
 
             <View style={styles.section}>

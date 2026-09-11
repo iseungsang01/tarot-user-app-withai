@@ -1,5 +1,6 @@
 import { ERROR_TYPES, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants/ErrorMessages';
 import { errorEmitter } from './errorEmitter';
+import { recordDiagnostic } from './diagnostics';
 
 import { dialog } from './dialog';
 /**
@@ -57,16 +58,20 @@ const parseSupabaseError = (error) => {
 };
 
 /**
- * 에러 로깅 (개발/프로덕션 분리)
+ * 에러 로깅
+ *
+ * 기기 진단 로그에는 개발·프로덕션 모두 남긴다. 예전엔 프로덕션에서 그냥
+ * return 해서 출시된 앱의 에러가 아무 데도 남지 않았다 — 매장에서 무슨 일이
+ * 있었는지 확인할 근거가 없었다. 콘솔 출력만 개발 빌드로 유지한다.
+ *
  * @param {string} context - 에러 발생 위치 (예: 'LoginScreen', 'visitService')
  * @param {Error} error - 에러 객체
  * @param {object} additionalInfo - 추가 정보
  */
 export const logError = (context, error, additionalInfo = {}) => {
-  if (!__DEV__) {
-    // 프로덕션: 에러 추적 서비스로 전송 (예: Sentry, Firebase Crashlytics)
-    return;
-  }
+  recordDiagnostic(context, error, additionalInfo);
+
+  if (!__DEV__) return;
 
   // 한 건의 에러는 한 줄로 남긴다. 나눠 찍으면 LogBox 에 그만큼 쌓인다
   console.error(`[${context}] ${error?.message || '알 수 없는 오류'}`, {
@@ -95,7 +100,11 @@ export const handleApiCall = async (context, apiCall, options = {}) => {
   const report = (error) => {
     const errorInfo = parseSupabaseError(error);
 
-    if (!silentErrorCodes.includes(error?.code)) logError(context, error, additionalInfo);
+    // silent 는 "콘솔을 더럽히지 않는다"는 뜻이지 "없던 일로 한다"가 아니다.
+    // 관리자 비밀번호 오답처럼 조용히 넘기는 코드야말로 나중에 쿠폰이 왜 안 됐는지
+    // 되짚을 때 필요한 신호라, 진단 로그에는 남긴다.
+    if (silentErrorCodes.includes(error?.code)) recordDiagnostic(context, error, additionalInfo);
+    else logError(context, error, additionalInfo);
     if (showAlert) errorEmitter.emit(errorInfo);
     if (onError) onError(errorInfo);
 
