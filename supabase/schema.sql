@@ -877,11 +877,17 @@ BEGIN
     RETURN false;
   END IF;
 
-  -- phone_number 는 건드리지 않는다. '_deleted_' 접미사를 붙이면 varchar(13) 초과(22001)
-  -- 또는 chk_customers_phone_format 위반(23514)으로 탈퇴가 항상 실패한다.
-  -- 중복 회피는 idx_customers_phone_active(WHERE deleted_at IS NULL)가 이미 처리한다.
+  -- 식별정보를 지우고 비활성화한다. '_deleted_' 접미사를 붙이던 옛 방식은
+  -- varchar(13) 초과(22001)로 탈퇴가 항상 실패했다. 000-0000-0000 은 12자라
+  -- 길이에 맞고 chk_customers_phone_format('^\d{3}-\d{3,4}-\d{4}$')도 통과한다.
+  -- 탈퇴 행이 여럿 같은 값이어도 idx_customers_phone_active 가
+  -- WHERE deleted_at IS NULL 부분 인덱스라 충돌하지 않고, 원래 번호는 풀려서
+  -- 같은 번호로 재가입도 된다.
   UPDATE public.customers
-  SET deleted_at = now()
+  SET deleted_at = now(),
+      phone_number = '000-0000-0000',
+      nickname = NULL,
+      birthday = NULL
   WHERE id = v_customer_id AND deleted_at IS NULL;
 
   IF NOT FOUND THEN RETURN false; END IF;

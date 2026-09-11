@@ -224,20 +224,33 @@ test('account schema: sensitive operations resolve customer from session token',
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.delete_my_account\(text, text\) TO anon, authenticated;/);
 });
 
-test('account schema: soft delete does not rewrite phone_number', () => {
+test('account schema: account deletion anonymizes identity without breaking the constraints', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
   const deleteAccount = schema.match(
     /CREATE OR REPLACE FUNCTION public\.delete_my_account\(p_session_token text, input_password text\)[\s\S]*?\n\$\$;/,
   )[0];
 
-  // phone_number 는 varchar(13) + chk_customers_phone_format 이라
-  // '_deleted_' 접미사를 붙이면 22001/23514 로 탈퇴가 항상 실패한다.
-  // 중복 회피는 idx_customers_phone_active 부분 인덱스가 처리한다.
+  // 1차 협의 §3 에서 승인받은 익명화. 셋 다 빠지면 탈퇴자의 식별정보가 남는다.
+  assert.match(deleteAccount, /phone_number = '000-0000-0000'/);
+  assert.match(deleteAccount, /nickname = NULL/);
+  assert.match(deleteAccount, /birthday = NULL/);
+  assert.match(deleteAccount, /SET deleted_at = now\(\)/);
+
+  // '_deleted_' 접미사는 varchar(13) 초과로 탈퇴를 100% 실패시켰던 방식이다.
+  // 되살아나면 여기서 깨진다. 주석은 그 방식을 설명하느라 문자열을 담고 있어 걷어낸다.
   const statements = deleteAccount.replace(/^\s*--.*$/gm, '');
-  assert.doesNotMatch(statements, /phone_number/);
   assert.doesNotMatch(statements, /_deleted_/);
-  assert.match(deleteAccount, /SET deleted_at = now\(\)\s+WHERE id = v_customer_id AND deleted_at IS NULL/);
+
+  // 익명화가 성립하려면 이 두 가지가 같이 있어야 한다 — 12자가 들어갈 폭과,
+  // 탈퇴 행끼리 같은 번호로 충돌하지 않게 해 주는 부분 유니크 인덱스.
+  assert.match(schema, /phone_number varchar\(13\)/);
   assert.match(schema, /CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_phone_active[\s\S]*?WHERE deleted_at IS NULL/);
+
+  // 000-0000-0000 이 CHECK 를 통과하는지 정규식으로 직접 확인한다.
+  const check = schema.match(/CONSTRAINT chk_customers_phone_format CHECK \(phone_number ~ '([^']+)'\)/);
+  assert.ok(check, 'phone format CHECK 가 있어야 한다');
+  assert.match('000-0000-0000', new RegExp(check[1]));
+  assert.ok('000-0000-0000'.length <= 13);
 });
 
 test('guest session schema: expired AI guest sessions are purgeable', () => {
