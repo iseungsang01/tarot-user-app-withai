@@ -324,8 +324,6 @@ DROP FUNCTION IF EXISTS public.verify_admin_password(text);
 DROP FUNCTION IF EXISTS public.verify_admin_login(text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.update_admin_settings(text, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.increment_visit_count(uuid) CASCADE;
-DROP FUNCTION IF EXISTS public.use_my_coupon(text, integer) CASCADE;
-DROP FUNCTION IF EXISTS public.use_my_coupon_with_admin_password(text, integer, text) CASCADE;
 DROP FUNCTION IF EXISTS public.register_customer(uuid, text, text, text) CASCADE;
 
 
@@ -697,68 +695,6 @@ END;
 $$;
 
 
-CREATE OR REPLACE FUNCTION public.redeem_coupon(
-  p_coupon_id integer,
-  p_admin_password text,
-  p_session_token text
-)
-RETURNS TABLE(success boolean, message text)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE
-  v_customer_id uuid;
-  v_config_hash text;
-  v_legacy_password text;
-  v_coupon public.coupon_history%ROWTYPE;
-BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN
-    RETURN QUERY SELECT false, 'invalid_session'::text;
-    RETURN;
-  END IF;
-
-  IF p_admin_password IS NULL OR btrim(p_admin_password) = '' THEN
-    RETURN QUERY SELECT false, 'invalid_admin_password'::text;
-    RETURN;
-  END IF;
-
-  v_config_hash := current_setting('app.admin_password_hash', true);
-  v_legacy_password := current_setting('app.admin_password', true);
-
-  IF NOT (
-    (v_config_hash IS NOT NULL AND v_config_hash = extensions.crypt(p_admin_password, v_config_hash))
-    OR (v_legacy_password IS NOT NULL AND v_legacy_password = p_admin_password)
-  ) THEN
-    RETURN QUERY SELECT false, 'invalid_admin_password'::text;
-    RETURN;
-  END IF;
-
-  SELECT * INTO v_coupon
-  FROM public.coupon_history
-  WHERE id = p_coupon_id
-    AND customer_id = v_customer_id
-  FOR UPDATE;
-
-  IF NOT FOUND THEN
-    RETURN QUERY SELECT false, 'coupon_not_found'::text;
-    RETURN;
-  END IF;
-
-  IF v_coupon.is_used THEN
-    RETURN QUERY SELECT false, 'coupon_already_used'::text;
-    RETURN;
-  END IF;
-
-  UPDATE public.coupon_history
-  SET is_used = true,
-      used_at = now()
-  WHERE id = v_coupon.id;
-
-  RETURN QUERY SELECT true, 'ok'::text;
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION public.get_my_vote_responses(p_session_token text)
 RETURNS SETOF public.vote_responses LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -987,7 +923,6 @@ REVOKE ALL ON FUNCTION public.cleanup_ai_guest_sessions(interval) FROM PUBLIC, a
 
 GRANT EXECUTE ON FUNCTION public.get_my_coupons(text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_coupon_count(text, boolean) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.redeem_coupon(integer, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_vote_responses(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_vote_response(text, integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_vote_response(text, integer, integer[], integer) TO anon, authenticated;

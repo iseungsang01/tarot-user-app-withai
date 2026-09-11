@@ -56,7 +56,7 @@ test('couponService: counts valid coupons through customer-session RPC', async (
   assert.deepEqual(result, { count: 3, error: null });
 });
 
-test('couponService: uses coupons through customer-session and admin-password RPC', async () => {
+test('couponService: uses coupons through the redeem-coupon edge function', async () => {
   const calls = [];
   const supabaseClient = {
     redeemCoupon: async (payload) => {
@@ -73,11 +73,11 @@ test('couponService: uses coupons through customer-session and admin-password RP
 
   const result = await couponService.useCoupon(10, 'admin-secret');
 
-  assert.deepEqual(calls, [{ p_coupon_id: 10, p_admin_password: 'admin-secret', p_session_token: 'session-token' }]);
+  assert.deepEqual(calls, [{ couponId: 10, adminPassword: 'admin-secret', sessionToken: 'session-token' }]);
   assert.deepEqual(result, { error: null, message: 'ok' });
 });
 
-test('couponService: rejects coupon use without admin password before RPC', async () => {
+test('couponService: rejects coupon use without admin password before calling the edge function', async () => {
   const calls = [];
   const supabaseClient = {
     redeemCoupon: async (payload) => {

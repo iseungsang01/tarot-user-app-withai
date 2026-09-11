@@ -72,9 +72,9 @@ export const couponService = {
 
       const token = await requireCustomerSessionToken();
       const { data, error } = await supabaseClient.redeemCoupon({
-        p_coupon_id: couponId,
-        p_admin_password: adminPassword,
-        p_session_token: token,
+        couponId,
+        adminPassword,
+        sessionToken: token,
       });
 
       if (error) throw error;

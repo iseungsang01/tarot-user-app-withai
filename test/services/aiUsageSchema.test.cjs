@@ -4,6 +4,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const schemaPath = path.join(__dirname, '../../supabase/schema.sql');
+const migrationsDir = path.join(__dirname, '../../supabase/migrations');
+
+function readMigrations() {
+  return new Map(
+    fs
+      .readdirSync(migrationsDir)
+      .filter((name) => name.endsWith('.sql'))
+      .map((name) => [name, fs.readFileSync(path.join(migrationsDir, name), 'utf8')]),
+  );
+}
 
 function getFunctionBody(functionName) {
   const schema = fs.readFileSync(schemaPath, 'utf8');
@@ -16,32 +26,37 @@ function getFunctionBody(functionName) {
   return match[0];
 }
 
-test('coupon schema: redeem_coupon validates session and admin password before atomic redemption', () => {
-  const functionBody = getFunctionBody('redeem_coupon');
+test('coupon schema: redeem_coupon is retired and never re-exposed to clients', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
+  const migrations = readMigrations();
 
-  assert.match(functionBody, /p_coupon_id integer/);
-  assert.match(functionBody, /p_admin_password text/);
-  assert.match(functionBody, /p_session_token text/);
-  assert.match(functionBody, /RETURNS TABLE\(success boolean, message text\)/);
-  assert.match(functionBody, /RETURN QUERY SELECT false, 'invalid_session'::text/);
-  assert.match(functionBody, /extensions\.crypt\(p_admin_password,\s*v_config_hash\)/);
-  assert.match(functionBody, /current_setting\('app\.admin_password_hash', true\)/);
-  assert.match(functionBody, /current_setting\('app\.admin_password', true\)/);
-  assert.match(functionBody, /FOR UPDATE/);
-  assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_not_found'::text/);
-  assert.match(functionBody, /RETURN QUERY SELECT false, 'coupon_already_used'::text/);
-  assert.match(functionBody, /RETURN QUERY SELECT true, 'ok'::text/);
-  assert.match(functionBody, /UPDATE public\.coupon_history/);
-  assert.match(functionBody, /SET search_path = public, extensions/);
-  assert.ok(
-    functionBody.indexOf('public.resolve_customer_session(p_session_token)') <
-      functionBody.indexOf("current_setting('app.admin_password_hash', true)"),
-    'customer session should be resolved before admin password verification',
-  );
+  // 관리자 비밀번호 검증은 redeem-coupon Edge Function 시크릿으로 옮겼다.
+  // DB 에 관리자 비밀번호를 읽는 RPC 가 다시 생기면 여기서 깨진다.
+  // 근거: docs/manager-app-db-issues-round2.md §2 [확정3]
+  assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.redeem_coupon/);
+  assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.redeem_coupon/);
+  assert.doesNotMatch(schema, /current_setting\('app\.admin_password/);
   assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.use_my_coupon_with_admin_password/);
   assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.use_my_coupon_with_admin_password/);
-  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.redeem_coupon\(integer, text, text\) TO anon, authenticated;/);
+
+  // use_my_coupon 은 매니저 소유다. 유저앱 schema.sql 이 DROP 하면
+  // 매니저 재적용 전까지 운영에서 404 PGRST202 가 난다.
+  assert.doesNotMatch(schema, /DROP FUNCTION IF EXISTS public\.use_my_coupon\(/);
+
+  // 되살리는 마이그레이션이 새로 들어오면 막는다. 과거 두 벌은
+  // 20260911150000 이 뒤에서 정리하므로 예외로 둔다.
+  const legacy = new Set(['20260601051045_baseline_app_schema.sql', '20260604042031_apply_integrated_schema.sql']);
+  for (const [name, body] of migrations) {
+    if (legacy.has(name)) continue;
+    assert.doesNotMatch(body, /CREATE OR REPLACE FUNCTION public\.redeem_coupon/, `${name} must not recreate redeem_coupon`);
+    assert.doesNotMatch(body, /GRANT EXECUTE ON FUNCTION public\.redeem_coupon/, `${name} must not re-grant redeem_coupon`);
+  }
+
+  // 정리 마이그레이션 자체가 사라지면 db reset 때 GUC 판이 되살아난다.
+  const cleanup = migrations.get('20260911150000_retire_user_app_redeem_coupon.sql');
+  assert.ok(cleanup, 'redeem_coupon 정리 마이그레이션이 있어야 한다');
+  assert.match(cleanup, /DROP FUNCTION/);
+  assert.match(cleanup, /REVOKE ALL ON FUNCTION/);
 });
 
 test('coupon schema: customer coupon lookup RPCs use session token ownership', () => {

@@ -24,6 +24,9 @@ const COUPON_REDEEM_MESSAGES = {
   invalid_admin_password: '관리자 비밀번호가 일치하지 않습니다.',
   coupon_not_found: '쿠폰을 찾을 수 없습니다.',
   coupon_already_used: '이미 사용된 쿠폰입니다.',
+  // 아래 둘은 redeem-coupon Edge Function 이 직접 내는 코드다
+  invalid_request: '쿠폰 사용 요청이 올바르지 않습니다. 앱을 최신 버전으로 업데이트해 주세요.',
+  coupon_redemption_failed: '쿠폰 사용 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.',
 };
 
 const StampSlot = ({ card, filled, index, onPress }) => {
