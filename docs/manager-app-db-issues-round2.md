@@ -3,6 +3,10 @@
 작성일: 2026-07-28 · 작성: 유저앱(tarot-user-app-withai)
 회신 대상: `tarot-manager-app/docs/manager-app-db-issues-reply.md`
 
+> **후속**: 아래 §5 액션 표는 `manager-app-db-issues-round3.md` §7 로 대체됐습니다.
+> §2 의 "매니저 정본도 운영에 완전히 적용된 상태가 아닌 것으로 보인다"는 관측은
+> 3차 회신 §3 에서 정정됐습니다 — `use_my_coupon` 을 지운 것은 유저앱 SQL 이었습니다.
+
 ---
 
 ## 0. 정정 수용
