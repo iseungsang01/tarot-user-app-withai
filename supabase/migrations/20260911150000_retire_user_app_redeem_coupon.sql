@@ -22,10 +22,15 @@
 --   존재하지 않아 배포본은 GUC 판이 확정적이다.
 --   재현: node supabase/tests/probe_rpc_surface.mjs
 --
--- 같이 남기는 메모 — use_my_coupon(text, integer) 은 매니저 소유다.
+-- 같이 남기는 메모 — use_my_coupon(text, integer) 은 매니저 소유였다.
 --   위 두 마이그레이션과 schema.sql 이 이 함수를 DROP 하고 있었고, 그래서 운영에서
---   404 PGRST202 가 났다. schema.sql 에서는 DROP 을 걷어냈다. 여기서 다시 만들지는
---   않는다 — 매니저 정본(SupabaseSQL.sql:543)을 매니저가 재적용해야 한다.
+--   404 PGRST202 가 났다. schema.sql 에서는 DROP 을 걷어냈다.
+--   2026-09-11 매니저 회신으로 이 함수는 재적용하지 않기로 확정됐다 — 쿠폰 사용이
+--   redeem-coupon Edge Function 으로 넘어갔으므로 부를 곳이 없다. 즉 이 함수는
+--   앞으로 존재하지 않는다. 여기서 만들지 않는 이유가 "매니저가 만들 것이라서"에서
+--   "아무도 만들지 않기로 해서"로 바뀐 것이고, 결론은 같다.
+--   DROP 을 걷어낸 채로 두는 것은 남의 네임스페이스를 지우는 문장을 다시 들이지
+--   않기 위해서다.
 
 DO $$
 DECLARE

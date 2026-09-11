@@ -39,8 +39,9 @@ test('coupon schema: redeem_coupon is retired and never re-exposed to clients', 
   assert.doesNotMatch(schema, /CREATE OR REPLACE FUNCTION public\.use_my_coupon_with_admin_password/);
   assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.use_my_coupon_with_admin_password/);
 
-  // use_my_coupon 은 매니저 소유다. 유저앱 schema.sql 이 DROP 하면
-  // 매니저 재적용 전까지 운영에서 404 PGRST202 가 난다.
+  // use_my_coupon 은 매니저 소유였고, 유저앱 schema.sql 의 이 DROP 이 운영에서
+  // 404 PGRST202 를 만들었다. 2026-09-11 회신으로 재적용하지 않기로 확정돼 함수는
+  // 앞으로 존재하지 않지만, 남의 네임스페이스를 지우는 문장을 다시 들이지 않는다.
   assert.doesNotMatch(schema, /DROP FUNCTION IF EXISTS public\.use_my_coupon\(/);
 
   // 되살리는 마이그레이션이 새로 들어오면 막는다. 과거 두 벌은
