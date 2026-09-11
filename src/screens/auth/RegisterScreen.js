@@ -119,12 +119,17 @@ const RegisterScreen = ({ navigation }) => {
 
                             <View style={styles.inputWrapper}>
                                 <Text style={styles.inputLabel}>NICKNAME (선택)</Text>
+                                {/* customers.nickname 이 varchar(20) 인데 register_customer 가
+                                    절단하지 않는다. 21자를 넘기면 22001 로 가입 자체가 실패한다.
+                                    서버 쪽 left(trim(...), 20) 은 register_customer 가 매니저 앱과
+                                    공유하는 함수라 협의가 필요해서, 입력에서 먼저 막는다. */}
                                 <TextInput
                                     style={styles.textInput}
                                     value={nickname}
                                     onChangeText={handleTextChange(setNickname)}
                                     placeholder="사용하실 이름"
                                     placeholderTextColor="rgba(244, 232, 208, 0.62)"
+                                    maxLength={20}
                                     editable={!loading}
                                 />
                             </View>
