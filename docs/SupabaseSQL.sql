@@ -1,3 +1,9 @@
+-- ⚠️ 이 파일은 2026-07-28 에 받은 사본이고 그 뒤로 갱신되지 않았다.
+-- 정본은 매니저 저장소 루트의 SupabaseSQL.sql 이며 줄 번호도 그쪽 기준이어야 한다.
+-- 실제로 어긋난 사례: 여기 register_customer 는 닉네임을 자르지 않지만, 운영과
+-- 정본에는 20260728_manager_hardening.sql §7(N4)로 left(..., 20) 이 들어가 있다.
+-- 대조가 필요하면 매니저에게 최신본을 요청하고, 이 파일의 줄 번호를 인용하지 말 것.
+--
 -- Tarot Manager App - Supabase schema for sharing
 -- Generated from the tables/columns used by tarot-manager-app.
 -- Scope: manager app CRUD tables + RLS needed by src/supabaseClient.js admin JWT flow.

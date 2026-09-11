@@ -468,7 +468,11 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'message', 'Phone number already registered.');
   END IF;
 
-  v_nickname := COALESCE(NULLIF(p_nickname, ''), 'user_' || right(p_phone, 4));
+  -- customers.nickname 이 varchar(20) 이라 자르지 않으면 21자에서 22001 로 가입이
+  -- 통째로 실패한다. 매니저가 20260728_manager_hardening.sql §7(N4)로 운영에 넣은
+  -- 정의와 같은 문장이다 — register_customer 는 양쪽이 다 정의하는 함수라, 유저앱
+  -- SQL 이 나중에 적용되면 여기가 옛 정의면 그 수정이 그대로 지워진다.
+  v_nickname := left(COALESCE(NULLIF(btrim(p_nickname), ''), 'user_' || right(p_phone, 4)), 20);
   INSERT INTO public.customers (phone_number, password, nickname)
   VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname)
   RETURNING id INTO v_customer_id;

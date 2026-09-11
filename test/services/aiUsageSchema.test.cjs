@@ -253,6 +253,15 @@ test('account schema: account deletion anonymizes identity without breaking the 
   assert.ok('000-0000-0000'.length <= 13);
 });
 
+test('account schema: signup truncates the nickname to the column width', () => {
+  const register = getFunctionBody('register_customer');
+
+  // customers.nickname 은 varchar(20). 자르지 않으면 21자에서 22001 로 가입이
+  // 통째로 실패한다. register_customer 는 매니저 앱도 정의하는 함수라, 유저앱
+  // SQL 이 나중에 적용되면 이 줄이 옛 정의일 때 매니저의 N4 수정이 지워진다.
+  assert.match(register, /left\(COALESCE\(NULLIF\(btrim\(p_nickname\), ''\), 'user_' \|\| right\(p_phone, 4\)\), 20\)/);
+});
+
 test('guest session schema: expired AI guest sessions are purgeable', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
   const cleanup = getFunctionBody('cleanup_ai_guest_sessions');

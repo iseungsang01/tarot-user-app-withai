@@ -14,11 +14,15 @@ const INITIAL_REPORT_DATA = {
   screenshot: null,
 };
 
-// 서버가 돌려주는 report_type 은 ASCII 코드다. 아는 코드만 한국어로 바꾸고
-// 모르는 값은 원문 그대로 둔다 — 매니저가 정규화한 4종 중 유저앱이 확인한 것은
-// submit_bug_report 의 기본값 하나뿐이라, 나머지는 확인되는 대로 여기에 더한다.
+// 서버가 돌려주는 report_type 은 ASCII 코드다. 한글 리터럴을 키로 두면 인코딩
+// 사고에서 데이터가 깨지기 때문에 코드로 저장하고 라벨은 여기서 붙인다.
+// chk_bug_reports_report_type 이 VALIDATED 라 이 4종 외의 값은 들어올 수 없지만,
+// 매니저가 종류를 늘릴 수 있으므로 모르는 값은 원문을 그대로 보여준다.
 const REPORT_TYPE_LABELS = {
   app_bug: '앱 버그',
+  feature_request: '기능 요청',
+  store_request: '매장 요청',
+  etc: '기타',
 };
 
 const reportTypeLabel = (value) => REPORT_TYPE_LABELS[value] || value || '앱 버그';
