@@ -331,7 +331,10 @@ CREATE OR REPLACE FUNCTION public.validate_password_complexity(p_password text)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE
-AS $$ SELECT p_password IS NOT NULL AND char_length(p_password) >= 6 $$;
+-- 최소 길이를 6자로 되돌리면 매니저가 remove_password_min_length.sql 로 완화한
+-- 정책이 회귀하고, 6자 미만 비밀번호를 쓰던 기존 고객이 영향을 받는다.
+-- 이 함수는 매니저 소유다 — 유저앱이 값을 바꾸지 않는다.
+AS $$ SELECT p_password IS NOT NULL AND char_length(p_password) > 0 $$;
 
 CREATE OR REPLACE FUNCTION public.resolve_customer_session(p_session_token text)
 RETURNS uuid
@@ -462,7 +465,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'message', 'Invalid phone format. Use 010-1234-5678.');
   END IF;
   IF NOT public.validate_password_complexity(p_password) THEN
-    RETURN jsonb_build_object('success', false, 'message', 'Password must be at least 6 characters.');
+    RETURN jsonb_build_object('success', false, 'message', 'Password is required.');
   END IF;
   IF EXISTS (SELECT 1 FROM public.customers WHERE phone_number = p_phone AND deleted_at IS NULL) THEN
     RETURN jsonb_build_object('success', false, 'message', 'Phone number already registered.');
@@ -496,9 +499,11 @@ DECLARE
   v_lock_expires_at timestamptz;
   v_session_token text;
 BEGIN
-  SELECT max(lock_expires_at) INTO v_lock_expires_at
+  -- 잠금은 기기 단위로만 본다. '__phone__' 전역 행까지 읽으면 전화번호만 아는
+  -- 사람이 5회 실패를 유발해 그 계정의 로그인을 차단할 수 있다 (협의 9-2 락아웃 DoS).
+  SELECT lock_expires_at INTO v_lock_expires_at
   FROM public.login_attempt_tracker
-  WHERE phone_hash = v_phone_hash AND ip_device_hash IN ('__phone__', v_device_hash);
+  WHERE phone_hash = v_phone_hash AND ip_device_hash = v_device_hash;
 
   IF COALESCE(v_lock_expires_at, '-infinity'::timestamptz) > now() THEN
     RETURN jsonb_build_object('success', false, 'locked', true, 'lock_expires_at', v_lock_expires_at, 'message', 'Too many login attempts.');
@@ -511,7 +516,12 @@ BEGIN
     VALUES (v_phone_hash, '__phone__', 1, NULL, now(), now()), (v_phone_hash, v_device_hash, 1, NULL, now(), now())
     ON CONFLICT (phone_hash, ip_device_hash) DO UPDATE SET
       failed_attempts = public.login_attempt_tracker.failed_attempts + 1,
-      lock_expires_at = CASE WHEN public.login_attempt_tracker.failed_attempts + 1 >= 5 THEN now() + interval '5 minutes' ELSE NULL END,
+      -- '__phone__' 행은 관측용 카운터다. 여기에 잠금을 걸면 조회를 기기 단위로
+      -- 바꿔도 전역 잠금 값이 계속 쌓여 DoS 의 재료가 남는다.
+      lock_expires_at = CASE
+        WHEN public.login_attempt_tracker.ip_device_hash = '__phone__' THEN NULL
+        WHEN public.login_attempt_tracker.failed_attempts + 1 >= 5 THEN now() + interval '5 minutes'
+        ELSE NULL END,
       last_failed_at = now(),
       updated_at = now();
 

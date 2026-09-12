@@ -140,6 +140,31 @@ test('session schema: resolve_customer_session is defined and login issues sessi
   assert.match(loginFunction, /'session_token', v_session_token/);
 });
 
+test('login schema: lockout is per-device and the phone-wide row never locks', () => {
+  const loginFunction = getFunctionBody('login_customer');
+
+  // 협의 9-2 의 락아웃 DoS. 전화번호만 아는 사람이 5회 실패를 유발해 남의 계정
+  // 로그인을 차단할 수 있었다. 매니저가 운영에서 고쳤지만 유저앱 schema.sql 이
+  // 옛 정의를 들고 있으면 적용될 때마다 되돌아간다.
+  const lockRead = loginFunction.match(/SELECT[^;]*lock_expires_at INTO v_lock_expires_at[\s\S]*?;/);
+  assert.ok(lockRead, '잠금 조회문이 있어야 한다');
+  assert.doesNotMatch(lockRead[0], /__phone__/, '잠금 조회가 전화번호 전역 행을 읽으면 안 된다');
+  assert.match(lockRead[0], /ip_device_hash = v_device_hash/);
+
+  // 조회만 고치면 전역 행에 잠금 값이 계속 쌓여 DoS 의 재료가 남는다.
+  // '__phone__' 행은 관측용 카운터로만 둔다.
+  assert.match(loginFunction, /WHEN public\.login_attempt_tracker\.ip_device_hash = '__phone__' THEN NULL/);
+});
+
+test('password schema: the minimum-length policy stays relaxed', () => {
+  const complexity = getFunctionBody('validate_password_complexity');
+
+  // 매니저가 remove_password_min_length.sql 로 의도적으로 완화한 정책이다.
+  // 6자로 되돌리면 6자 미만 비밀번호를 쓰던 기존 고객이 영향을 받는다.
+  assert.match(complexity, /char_length\(p_password\) > 0/);
+  assert.doesNotMatch(complexity, /char_length\(p_password\) >= \d/);
+});
+
 test('session schema: AI guest sessions are server-issued and resolvable by the AI proxy only', () => {
   const issueFunction = getFunctionBody('issue_ai_guest_session');
   const resolveFunction = getFunctionBody('resolve_ai_proxy_session');
