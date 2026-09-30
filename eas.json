@@ -24,7 +24,8 @@
   "submit": {
     "production": {
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "serviceAccountKeyPath": "./secrets/google-play-service-account.json"
       }
     }
   }

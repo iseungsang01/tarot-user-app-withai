@@ -98,3 +98,5 @@ supabase/.temp/
 assets/card
 assets/card-thumb
 assets/card-original
+# Google Play 서비스 계정 키 (eas submit 용)
+secrets/
