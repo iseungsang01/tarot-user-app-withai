@@ -51,6 +51,34 @@ function getClientIp(req: Request) {
   return ip.trim().slice(0, 64);
 }
 
+/**
+ * 본문을 MAX_BODY_BYTES 까지만 읽는다. Content-Length 없는 chunked 요청은 헤더 검사를
+ * 지나가고 req.text() 는 끝까지 메모리에 올리므로, 세면서 읽다가 넘으면 끊는다.
+ */
+async function readBodyLimited(req: Request): Promise<string | null> {
+  if (!req.body) return '';
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 async function callGoogle({ system, user, temperature, maxTokens, responseSchema }: TaskRequest) {
   requireEnv('GOOGLE_API_KEY', GOOGLE_API_KEY);
 
@@ -129,6 +157,11 @@ Deno.serve(async (req) => {
       return jsonError('Authentication information is required.', 401);
     }
 
+    const rawBody = await readBodyLimited(req);
+    if (rawBody === null) {
+      return jsonError('Request body is too large.', 413);
+    }
+
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: sessionData, error: sessionError } = await adminClient.rpc('resolve_ai_proxy_session', {
@@ -148,11 +181,6 @@ Deno.serve(async (req) => {
     if (quotaError) throw quotaError;
     if (!quota?.allowed) {
       return jsonError('AI 사용 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.', 429);
-    }
-
-    const rawBody = await req.text();
-    if (new TextEncoder().encode(rawBody).length > MAX_BODY_BYTES) {
-      return jsonError('Request body is too large.', 413);
     }
 
     let body;

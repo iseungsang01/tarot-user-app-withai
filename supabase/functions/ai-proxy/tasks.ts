@@ -18,8 +18,18 @@ export type BuildResult = { ok: true; request: TaskRequest } | { ok: false; erro
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/** 잘린 자리에 남은 서로게이트 반쪽을 버린다. 반쪽 이모지가 있으면 업스트림이 요청을 거부한다. */
+const clip = (value: string, max: number) => value.slice(0, max).replace(/[\uD800-\uDBFF]$/, '');
+
 /** 문자열이면 trim 후 max 자로 자른다. 문자열이 아니면 빈 문자열. */
-const text = (value: unknown, max: number) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+const text = (value: unknown, max: number) => (typeof value === 'string' ? clip(value.trim(), max) : '');
+
+/**
+ * 한 줄짜리 필드(이름·날짜·카드 정보). 줄바꿈을 공백으로 접어서 프롬프트에
+ * "[작성 규칙]" 같은 가짜 구간을 끼워 넣지 못하게 한다.
+ */
+const line = (value: unknown, max: number) =>
+  typeof value === 'string' ? clip(value.replace(/\s+/g, ' ').trim(), max) : '';
 
 const stringSchema = (description: string) => ({ type: 'string', description });
 
@@ -32,7 +42,8 @@ const objectSchema = (properties: Record<string, unknown>) => ({
 
 const MAX_VISITS = 50;
 const MAX_REVIEW_LENGTH = 3000;
-const MAX_VISITS_TOTAL_LENGTH = 30000;
+// 입력 토큰이 호출당 비용을 정한다. 리뷰 몇 개 분량이면 흐름 분석에 충분하다.
+const MAX_VISITS_TOTAL_LENGTH = 12000;
 
 function buildAnalyzeVisitHistory(input: Record<string, unknown>): BuildResult {
   if (!Array.isArray(input.visits) || input.visits.length === 0) {
@@ -44,15 +55,15 @@ function buildAnalyzeVisitHistory(input: Record<string, unknown>): BuildResult {
 
   const visits = input.visits
     .filter(isRecord)
-    .map((visit) => ({ date: text(visit.date, 10) || '날짜 없음', review: text(visit.review, MAX_REVIEW_LENGTH) }))
+    .map((visit) => ({ date: line(visit.date, 10) || '날짜 없음', review: text(visit.review, MAX_REVIEW_LENGTH) }))
     .filter((visit) => visit.review);
 
   if (visits.length === 0) return { ok: false, error: '분석할 상담 기록이 없습니다.' };
 
   const visitsText = visits
     .map((visit, i) => `[${i + 1}번째 방문 - ${visit.date}]\n${visit.review}`)
-    .join('\n\n---\n\n')
-    .slice(0, MAX_VISITS_TOTAL_LENGTH);
+    .join('\n\n---\n\n');
+  const clippedVisitsText = clip(visitsText, MAX_VISITS_TOTAL_LENGTH);
 
   return {
     ok: true,
@@ -68,7 +79,7 @@ function buildAnalyzeVisitHistory(input: Record<string, unknown>): BuildResult {
   "recommendation": "향후 상담 방향 제안",
   "totalVisits": ${visits.length}
 }`,
-      user: `총 ${visits.length}회의 상담 기록을 분석해주세요:\n\n${visitsText}`,
+      user: `총 ${visits.length}회의 상담 기록을 분석해주세요:\n\n${clippedVisitsText}`,
       temperature: 0.5,
       maxTokens: 800,
       responseSchema: objectSchema({
@@ -141,27 +152,27 @@ function buildGetDailyFortune(input: Record<string, unknown>): BuildResult {
   const card = isRecord(input.card) ? input.card : {};
   const domains = isRecord(card.domains) ? card.domains : {};
   const keywords = Array.isArray(card.keywords)
-    ? card.keywords.slice(0, 10).map((keyword) => text(keyword, 30)).filter(Boolean)
+    ? card.keywords.slice(0, 10).map((keyword) => line(keyword, 30)).filter(Boolean)
     : [];
-  const cardName = text(card.name, 40);
+  const cardName = line(card.name, 40);
   if (!cardName) return { ok: false, error: '오늘의 카드 정보가 없습니다.' };
 
-  const userName = text(input.userName, 20) || '사용자';
-  const previousFortune = text(input.previousFortune, 120);
+  const userName = line(input.userName, 20) || '사용자';
+  const previousFortune = line(input.previousFortune, 120);
 
-  const cardContext = `id: ${text(card.id, 40)}
+  const cardContext = `id: ${line(card.id, 40)}
 name: ${cardName}
-nameKr: ${text(card.nameKr, 40)}
+nameKr: ${line(card.nameKr, 40)}
 keywords: ${keywords.join(', ')}
-light: ${text(card.light, CARD_FIELD_LENGTH)}
-shadow: ${text(card.shadow, CARD_FIELD_LENGTH)}
-advice: ${text(card.advice, CARD_FIELD_LENGTH)}
+light: ${line(card.light, CARD_FIELD_LENGTH)}
+shadow: ${line(card.shadow, CARD_FIELD_LENGTH)}
+advice: ${line(card.advice, CARD_FIELD_LENGTH)}
 
 [분야별 참고]
-관계: ${text(domains.relationship, CARD_FIELD_LENGTH)}
-일/공부: ${text(domains.work, CARD_FIELD_LENGTH)}
-금전: ${text(domains.money, CARD_FIELD_LENGTH)}
-컨디션: ${text(domains.health, CARD_FIELD_LENGTH)}`;
+관계: ${line(domains.relationship, CARD_FIELD_LENGTH)}
+일/공부: ${line(domains.work, CARD_FIELD_LENGTH)}
+금전: ${line(domains.money, CARD_FIELD_LENGTH)}
+컨디션: ${line(domains.health, CARD_FIELD_LENGTH)}`;
 
   return {
     ok: true,
