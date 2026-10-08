@@ -43,10 +43,8 @@ jobs:
   security:
     runs-on: ubuntu-latest
     env:
-      AI_PROXY_REQUIRE_AUTH: true
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v7

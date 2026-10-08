@@ -183,7 +183,10 @@ test('session schema: AI guest sessions are server-issued and resolvable by the 
   assert.match(resolveFunction, /'guest:' \|\| v_guest_session_id::text/);
   assert.match(logoutFunction, /SET revoked_at = now\(\)/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.issue_ai_guest_session\(\) TO anon, authenticated;/);
-  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.resolve_ai_proxy_session\(text\) TO anon, authenticated;/);
+  // 세션 → user_id 해석은 ai-proxy(service_role)만 한다.
+  assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.resolve_ai_proxy_session\(text\) TO [^;]*anon/);
+  assert.match(schema, /REVOKE ALL ON FUNCTION public\.resolve_ai_proxy_session\(text\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.resolve_ai_proxy_session\(text\) TO service_role;/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.logout_ai_guest_session\(text\) TO anon, authenticated;/);
 });
 

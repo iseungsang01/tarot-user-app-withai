@@ -26,12 +26,14 @@ The `supabase/functions/ai-proxy` Edge Function expects these secrets in the Sup
 GOOGLE_API_KEY=
 GOOGLE_MODEL=
 SUPABASE_URL=
-SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-AI_PROXY_REQUIRE_AUTH=true
 ```
 
-`AI_PROXY_REQUIRE_AUTH=false` is only for controlled development/testing.
+The function always requires a customer or guest session token. Prompts are built server-side in
+`supabase/functions/ai-proxy/tasks.ts`; the app sends only `{ task, input }`. Usage limits are
+counted in the database by `consume_ai_proxy_quota` (see
+`supabase/migrations/20261008120000_ai_proxy_server_side_quota.sql`), so that migration must be
+applied before deploying the function.
 
 ## Product/architecture notes
 

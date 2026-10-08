@@ -12,15 +12,15 @@ search_in_workflow() {
   fi
 }
 
-if ! search_in_workflow "AI_PROXY_REQUIRE_AUTH:[[:space:]]*true"; then
-  echo "❌ security-ci workflow must set AI_PROXY_REQUIRE_AUTH=true"
+# 인증을 끄는 토글은 제거됐다. 다시 생기면 막는다.
+if grep -q "AI_PROXY_REQUIRE_AUTH" supabase/functions/ai-proxy/index.ts "$WORKFLOW_FILE"; then
+  echo "❌ ai-proxy must not have an auth bypass toggle (AI_PROXY_REQUIRE_AUTH)"
   exit 1
 fi
 
 required_refs=(
   "GOOGLE_API_KEY"
   "SUPABASE_URL"
-  "SUPABASE_ANON_KEY"
   "SUPABASE_SERVICE_ROLE_KEY"
 )
 

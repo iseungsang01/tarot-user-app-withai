@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
+import { buildTaskRequest, type TaskRequest } from './tasks.ts';
 
 // Supabase Edge Function: ai-proxy
 // Deploy example: supabase functions deploy ai-proxy
@@ -7,73 +8,25 @@ const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
 const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-4-31b-it';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() ?? '';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')?.trim() ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() ?? '';
-
-const REQUIRE_AUTH = (Deno.env.get('AI_PROXY_REQUIRE_AUTH') || 'true').toLowerCase() !== 'false';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-id, x-customer-session-token',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-customer-session-token',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// In-memory rate limiter configurations
-const rateLimitMap = new Map<string, { tokens: number; lastRefill: number }>();
-const MAX_TOKENS = 10;
-const REFILL_RATE_MS = 6000; // 6 seconds per token (10 tokens per minute)
-const ALLOWED_TASKS = new Set([
-  'summarizeReview',
-  'analyzeVisitHistory',
-  'polishReviewText',
-  'sendChatMessage',
-  'getDailyFortune',
-  'condenseVoiceMemo',
-]);
-const MAX_MESSAGE_COUNT = 20;
-const MAX_TOTAL_CONTENT_LENGTH = 60000;
+const MAX_BODY_BYTES = 64 * 1024;
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 function jsonError(message: string, status = 400) {
-  return new Response(
-    JSON.stringify({ error: message }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-  );
-}
-
-// Remove expired entries to prevent memory leak
-function cleanupRateLimitMap() {
-  const now = Date.now();
-  for (const [userId, bucket] of rateLimitMap.entries()) {
-    if (now - bucket.lastRefill > 5 * 60 * 1000) {
-      rateLimitMap.delete(userId);
-    }
-  }
-}
-
-// Token bucket rate limiter check
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  let bucket = rateLimitMap.get(userId);
-
-  if (!bucket) {
-    bucket = { tokens: MAX_TOKENS, lastRefill: now };
-  } else {
-    const elapsed = now - bucket.lastRefill;
-    const refilledTokens = Math.floor(elapsed / REFILL_RATE_MS);
-    if (refilledTokens > 0) {
-      bucket.tokens = Math.min(MAX_TOKENS, bucket.tokens + refilledTokens);
-      bucket.lastRefill = bucket.lastRefill + refilledTokens * REFILL_RATE_MS;
-    }
-  }
-
-  if (bucket.tokens <= 0) {
-    rateLimitMap.set(userId, bucket);
-    return false;
-  }
-
-  bucket.tokens -= 1;
-  rateLimitMap.set(userId, bucket);
-  return true;
+  return json({ error: message }, status);
 }
 
 function requireEnv(name: string, value: string) {
@@ -82,180 +35,65 @@ function requireEnv(name: string, value: string) {
   }
 }
 
-function getBearerToken(req: Request) {
-  const raw = req.headers.get('authorization')?.trim() ?? '';
-  if (!raw.toLowerCase().startsWith('bearer ')) {
-    return '';
-  }
-  return raw.slice(7).trim();
-}
-
 function getCustomerSessionToken(req: Request) {
-  return req.headers.get('x-customer-session-token')?.trim() || getBearerToken(req);
+  const custom = req.headers.get('x-customer-session-token')?.trim();
+  if (custom) return custom;
+  const raw = req.headers.get('authorization')?.trim() ?? '';
+  return raw.toLowerCase().startsWith('bearer ') ? raw.slice(7).trim() : '';
 }
 
-type GoogleGenerationConfig = {
-  temperature: number;
-  maxOutputTokens: number;
-  responseMimeType: string;
-  responseJsonSchema?: Record<string, unknown>;
-};
-
-const responseSchemasByTask: Record<string, Record<string, unknown>> = {
-  polishReviewText: {
-    type: 'object',
-    properties: {
-      polished: {
-        type: 'string',
-        description: 'Polished Korean consultation memo, preserving original facts and intent',
-      },
-    },
-    required: ['polished'],
-    additionalProperties: false,
-  },
-  condenseVoiceMemo: {
-    type: 'object',
-    properties: {
-      condensed: {
-        type: 'string',
-        description: '3 to 6 word short Korean condensed memo',
-      },
-    },
-    required: ['condensed'],
-    additionalProperties: false,
-  },
-  getDailyFortune: {
-    type: 'object',
-    properties: {
-      summary: { type: 'string', description: 'Core daily message' },
-      fortune: { type: 'string', description: 'Daily fortune body' },
-      relationship: { type: 'string', description: 'Relationship advice' },
-      work: { type: 'string', description: 'Work or study advice' },
-      money: { type: 'string', description: 'Money advice' },
-      care: { type: 'string', description: 'Care point' },
-      action: { type: 'string', description: 'Concrete action for today' },
-      luckyColor: { type: 'string', description: 'Lucky color' },
-      luckyItem: { type: 'string', description: 'Lucky item' },
-    },
-    required: ['summary', 'fortune', 'relationship', 'work', 'money', 'care', 'action', 'luckyColor', 'luckyItem'],
-    additionalProperties: false,
-  },
-};
-
-
-function buildGenerationConfig(task = ''): GoogleGenerationConfig {
-  const generationConfig: GoogleGenerationConfig = {
-    temperature: 0.7,
-    maxOutputTokens: 1000,
-    responseMimeType: 'application/json',
-  };
-
-  const schema = responseSchemasByTask[task];
-  if (schema) {
-    generationConfig.responseJsonSchema = schema;
-  }
-
-  return generationConfig;
+/**
+ * 클라이언트 IP. x-forwarded-for 첫 항목은 클라이언트가 끼워 넣을 수 있어
+ * Cloudflare 가 채우는 cf-connecting-ip 를 먼저 본다. 위조돼도 회원·게스트별 한도는 남는다.
+ */
+function getClientIp(req: Request) {
+  const ip = req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || '';
+  return ip.trim().slice(0, 64);
 }
 
-async function callGoogle(messages: any[], temperature = 0.7, maxTokens = 1000, task = '') {
+async function callGoogle({ system, user, temperature, maxTokens, responseSchema }: TaskRequest) {
   requireEnv('GOOGLE_API_KEY', GOOGLE_API_KEY);
 
-  const system = messages.find((m) => m.role === 'system')?.content || '';
-  const contents = messages
-    .filter((m) => m.role !== 'system')
-    .map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
+  // 키는 URL 쿼리(?key=)가 아니라 헤더로 보낸다. URL 은 프록시·로그에 남는다.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
+  const contents = [{ role: 'user', parts: [{ text: user }] }];
+  const baseConfig = { temperature, maxOutputTokens: maxTokens, responseMimeType: 'application/json' };
+  const systemInstruction = { role: 'system', parts: [{ text: system }] };
 
-  if (contents.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: 'Please enter memo content.' }] });
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent?key=${GOOGLE_API_KEY}`;
-  const generationConfig = {
-    ...buildGenerationConfig(task),
-    temperature,
-    maxOutputTokens: maxTokens,
-  };
-  const systemInstruction = system ? { role: 'system', parts: [{ text: system }] } : undefined;
-  const requestBody = {
-    contents,
-    generationConfig,
-    ...(systemInstruction ? { systemInstruction } : {}),
-  };
-
-  const buildInlineSystemFallbackBody = () => {
-    const fallbackContents = contents.map((content, index) => {
-      if (index !== 0 || content.role !== 'user' || !system) return content;
-      const separator = task === 'condenseVoiceMemo'
-        ? '[The following is a system instruction and is not memo text to condense]'
-        : '[System instruction]';
-      return {
-        ...content,
-        parts: [{ text: `${separator}\n${system}\n\n[User input]\n${content.parts[0].text}` }],
-      };
+  const post = async (body: unknown) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GOOGLE_API_KEY },
+      body: JSON.stringify(body),
     });
-
-    return {
-      contents: fallbackContents,
-      generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens,
-        responseMimeType: 'application/json',
-      },
-    };
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody),
+  let { response, payload } = await post({
+    contents,
+    generationConfig: { ...baseConfig, responseJsonSchema: responseSchema },
+    systemInstruction,
   });
 
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error?.message || `Google AI request failed with status ${response.status}`;
-    const schemaRejected = generationConfig.responseJsonSchema &&
-      /response(Json)?Schema|schema|generationConfig/i.test(message);
-    const systemInstructionRejected = systemInstruction &&
-      /systemInstruction|system instruction/i.test(message);
+    // 모델에 따라 responseJsonSchema 나 systemInstruction 을 거부한다. 거부된 쪽만 빼고 한 번 더 보낸다.
+    const message = payload?.error?.message || '';
+    const systemInstructionRejected = /systemInstruction|system instruction/i.test(message);
+    const schemaRejected = /response(Json)?Schema|schema|generationConfig/i.test(message);
 
-    if (schemaRejected || systemInstructionRejected) {
-      const fallbackResponse = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(systemInstructionRejected ? buildInlineSystemFallbackBody() : {
-          contents,
-          generationConfig: {
-            temperature,
-            maxOutputTokens: maxTokens,
-            responseMimeType: 'application/json',
-          },
-          ...(systemInstruction ? { systemInstruction } : {}),
-        }),
-      });
-
-      const fallbackPayload = await fallbackResponse.json().catch(() => ({}));
-      if (!fallbackResponse.ok) {
-        const fallbackMessage = fallbackPayload?.error?.message ||
-          `Google AI request failed with status ${fallbackResponse.status}`;
-        throw new Error(fallbackMessage);
-      }
-
-      const fallbackText = (fallbackPayload?.candidates?.[0]?.content?.parts || [])
-        .map((part: { text?: string }) => part?.text || '')
-        .join('');
-
-      return {
-        data: fallbackText,
-        usage: fallbackPayload?.usageMetadata || null,
-        provider: 'google-gemma',
-      };
+    if (systemInstructionRejected) {
+      ({ response, payload } = await post({
+        contents: [{ role: 'user', parts: [{ text: `[System instruction]\n${system}\n\n[User input]\n${user}` }] }],
+        generationConfig: baseConfig,
+      }));
+    } else if (schemaRejected) {
+      ({ response, payload } = await post({ contents, generationConfig: baseConfig, systemInstruction }));
     }
+  }
 
-    throw new Error(message);
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || `Google AI request failed with status ${response.status}`);
   }
 
   const text = (payload?.candidates?.[0]?.content?.parts || [])
@@ -273,119 +111,66 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  if (req.method !== 'POST') {
+    return jsonError('Method not allowed.', 405);
+  }
 
-  // Request size limit verification (max 100KB)
-  const contentLength = req.headers.get('content-length');
-  if (contentLength && parseInt(contentLength, 10) > 100 * 1024) {
-    return new Response(
-      JSON.stringify({ error: 'Request body is too large. Maximum size is 100KB.' }),
-      { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  const contentLength = Number(req.headers.get('content-length') || 0);
+  if (contentLength > MAX_BODY_BYTES) {
+    return jsonError('Request body is too large.', 413);
   }
 
   try {
     requireEnv('SUPABASE_URL', SUPABASE_URL);
-    requireEnv('SUPABASE_ANON_KEY', SUPABASE_ANON_KEY);
     requireEnv('SUPABASE_SERVICE_ROLE_KEY', SUPABASE_SERVICE_ROLE_KEY);
+
     const token = getCustomerSessionToken(req);
-    if (REQUIRE_AUTH && !token) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication information is required.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    if (!token) {
+      return jsonError('Authentication information is required.', 401);
     }
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    let userId: string | null = null;
-    if (token) {
-      const { data: sessionData, error: sessionError } = await adminClient.rpc('resolve_ai_proxy_session', {
-        p_session_token: token,
-      });
-      if (!sessionError && sessionData?.success && sessionData?.user_id) {
-        userId = String(sessionData.user_id);
-      }
+    const { data: sessionData, error: sessionError } = await adminClient.rpc('resolve_ai_proxy_session', {
+      p_session_token: token,
+    });
+    if (sessionError) throw sessionError;
+    if (!sessionData?.success || !sessionData?.user_id) {
+      return jsonError('Invalid or expired authentication token.', 401);
     }
 
-    if (REQUIRE_AUTH && !userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired authentication token.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+    // 사용량은 DB 에서 센다. isolate 메모리 카운터는 콜드스타트·다중 인스턴스마다
+    // 0 으로 돌아가서 한도 역할을 못 했다. 검증 실패 요청도 한도를 소모한다.
+    const { data: quota, error: quotaError } = await adminClient.rpc('consume_ai_proxy_quota', {
+      p_subject: String(sessionData.user_id),
+      p_client_ip: getClientIp(req),
+    });
+    if (quotaError) throw quotaError;
+    if (!quota?.allowed) {
+      return jsonError('AI 사용 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.', 429);
     }
 
-    // Rate Limiting (max 10 requests per minute per user)
-    if (userId) {
-      cleanupRateLimitMap();
-      if (!checkRateLimit(userId)) {
-        return new Response(
-          JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    const rawBody = await req.text();
+    if (new TextEncoder().encode(rawBody).length > MAX_BODY_BYTES) {
+      return jsonError('Request body is too large.', 413);
     }
 
     let body;
     try {
-      body = await req.json();
+      body = JSON.parse(rawBody);
     } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid request format. JSON data is required.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      return jsonError('Invalid request format. JSON data is required.', 400);
     }
 
-    const { messages, options, task } = body;
-    const taskName = typeof task === 'string' ? task : '';
-    if (!ALLOWED_TASKS.has(taskName)) {
-      return jsonError('Unsupported AI task.', 400);
+    const built = buildTaskRequest(body?.task, body?.input);
+    if (!built.ok) {
+      return jsonError(built.error, 400);
     }
 
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return jsonError('messages must contain at least one item.', 400);
-    }
-
-    if (messages.length > MAX_MESSAGE_COUNT) {
-      return jsonError(`messages can contain at most ${MAX_MESSAGE_COUNT} items.`, 400);
-    }
-
-    let totalContentLength = 0;
-    for (const msg of messages) {
-      if (!msg || typeof msg !== 'object') {
-        return jsonError('Each message must be an object.', 400);
-      }
-      if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
-        return jsonError('Invalid message role. Use one of: user, assistant, system.', 400);
-      }
-      if (typeof msg.content !== 'string' || msg.content.trim() === '') {
-        return jsonError('Message content cannot be empty.', 400);
-      }
-      if (msg.content.length > 50000) {
-        return jsonError('Message content is too long. Maximum length is 50000 characters.', 400);
-      }
-      totalContentLength += msg.content.length;
-      if (totalContentLength > MAX_TOTAL_CONTENT_LENGTH) {
-        return jsonError(`Total message length cannot exceed ${MAX_TOTAL_CONTENT_LENGTH} characters.`, 400);
-      }
-    }
-
-    const requestedTemperature = Number(options?.temperature ?? 0.7);
-    const requestedMaxTokens = Number(options?.maxTokens ?? 1000);
-    if (!Number.isFinite(requestedTemperature) || !Number.isFinite(requestedMaxTokens)) {
-      return jsonError('temperature and maxTokens must be numbers.', 400);
-    }
-    const temperature = Math.min(1, Math.max(0, requestedTemperature));
-    const maxTokens = Math.min(1500, Math.max(100, Math.floor(requestedMaxTokens)));
-    const googleResult = await callGoogle(messages, temperature, maxTokens, taskName);
-
-    return new Response(JSON.stringify(googleResult), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json(await callGoogle(built.request));
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    // 상세 원인(환경변수 누락, 업스트림 오류 문구 등)은 로그에만 남긴다.
+    console.error('ai-proxy failed:', error);
+    return jsonError('AI 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.', 502);
   }
 });
