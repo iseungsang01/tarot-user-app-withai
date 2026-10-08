@@ -18,17 +18,11 @@ if grep -q "AI_PROXY_REQUIRE_AUTH" supabase/functions/ai-proxy/index.ts "$WORKFL
   exit 1
 fi
 
-required_refs=(
-  "GOOGLE_API_KEY"
-  "SUPABASE_URL"
-  "SUPABASE_SERVICE_ROLE_KEY"
-)
-
-for ref in "${required_refs[@]}"; do
-  if ! search_in_workflow "${ref}"; then
-    echo "❌ security-ci workflow missing ${ref} secret/env reference"
-    exit 1
-  fi
-done
+# CI 는 서버 시크릿을 받지 않는다. 쓰는 단계가 없는데 잡 env 로 두면 npm ci 의
+# 설치 스크립트가 읽을 수 있다. 다시 생기면 막는다.
+if search_in_workflow 'secrets\.(GOOGLE_API_KEY|SUPABASE_SERVICE_ROLE_KEY)'; then
+  echo "❌ security-ci workflow must not receive GOOGLE_API_KEY / SUPABASE_SERVICE_ROLE_KEY"
+  exit 1
+fi
 
 echo "✅ ai-proxy config check passed"

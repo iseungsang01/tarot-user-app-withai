@@ -99,3 +99,13 @@ assets/card-thumb
 assets/card-original
 # Google Play 서비스 계정 키 (eas submit 용)
 secrets/
+
+# 서명 키·서비스 설정 파일. 공개 저장소라 한 번 올라가면 이력에서 못 지운다
+*.jks
+*.p12
+*.pfx
+*.pem
+google-services.json
+GoogleService-Info.plist
+*service-account*.json
+credentials.json
