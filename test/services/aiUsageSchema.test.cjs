@@ -120,9 +120,8 @@ test('visit schema: customer deletion flag hides visits without removing admin r
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.hide_my_visit\(text, integer\) TO anon, authenticated;/);
 });
 
-test('session schema: resolve_customer_session is defined and login issues session tokens', () => {
+test('session schema: resolve_customer_session is defined and matches hashed tokens', () => {
   const resolveFunction = getFunctionBody('resolve_customer_session');
-  const loginFunction = getFunctionBody('login_customer');
   const schema = fs.readFileSync(schemaPath, 'utf8');
 
   assert.match(schema, /CREATE TABLE IF NOT EXISTS public\.customer_sessions/);
@@ -135,34 +134,43 @@ test('session schema: resolve_customer_session is defined and login issues sessi
   assert.doesNotMatch(resolveFunction, /s\.token = p_session_token/);
   assert.match(resolveFunction, /revoked_at IS NULL/);
   assert.match(resolveFunction, /expires_at > now\(\)/);
-  assert.match(loginFunction, /INSERT INTO public\.customer_sessions \(customer_id, token_hash, expires_at, last_used_at\)/);
-  assert.match(loginFunction, /extensions\.digest\(v_session_token, 'sha256'\)/);
-  assert.match(loginFunction, /'session_token', v_session_token/);
 });
 
-test('login schema: lockout is per-device and the phone-wide row never locks', () => {
-  const loginFunction = getFunctionBody('login_customer');
+test('ownership: schema.sql never defines, drops or grants the manager-owned shared functions', () => {
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  const managerOwned = [
+    'login_customer', 'register_customer', 'validate_password_complexity', 'submit_bug_report',
+    'submit_vote_response', 'cancel_vote_response', 'get_vote_summary', 'verify_admin_password',
+  ];
 
-  // 협의 9-2 의 락아웃 DoS. 전화번호만 아는 사람이 5회 실패를 유발해 남의 계정
-  // 로그인을 차단할 수 있었다. 매니저가 운영에서 고쳤지만 유저앱 schema.sql 이
-  // 옛 정의를 들고 있으면 적용될 때마다 되돌아간다.
-  const lockRead = loginFunction.match(/SELECT[^;]*lock_expires_at INTO v_lock_expires_at[\s\S]*?;/);
-  assert.ok(lockRead, '잠금 조회문이 있어야 한다');
-  assert.doesNotMatch(lockRead[0], /__phone__/, '잠금 조회가 전화번호 전역 행을 읽으면 안 된다');
-  assert.match(lockRead[0], /ip_device_hash = v_device_hash/);
+  // 매니저 7차: 옛 login_customer 본문이 다시 적용되면 p_password=null 로그인이 되살아난다.
+  // 정본은 매니저 저장소 하나다. 유저앱은 호출만 한다.
+  for (const name of managerOwned) {
+    const statement = new RegExp(`(CREATE OR REPLACE FUNCTION|DROP FUNCTION IF EXISTS|GRANT EXECUTE ON FUNCTION|REVOKE [A-Z ]+ ON FUNCTION) public\\.${name}\\(`);
+    assert.doesNotMatch(schema, statement, `${name} 은 매니저 소유다`);
+  }
 
-  // 조회만 고치면 전역 행에 잠금 값이 계속 쌓여 DoS 의 재료가 남는다.
-  // '__phone__' 행은 관측용 카운터로만 둔다.
-  assert.match(loginFunction, /WHEN public\.login_attempt_tracker\.ip_device_hash = '__phone__' THEN NULL/);
+  // 매니저 7차가 회수한 권한을 되돌리지 않는다: customers 테이블 단위 SELECT(비밀번호 해시), 시퀀스.
+  const tableGrant = schema.match(/GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE[\s\S]*?TO authenticated;/);
+  assert.ok(tableGrant);
+  assert.doesNotMatch(tableGrant[0], /public\.customers/);
+  assert.doesNotMatch(schema, /GRANT USAGE, SELECT ON ALL SEQUENCES/);
 });
 
-test('password schema: the minimum-length policy stays relaxed', () => {
-  const complexity = getFunctionBody('validate_password_complexity');
+test('account schema: password re-check never treats a NULL password as a match', () => {
+  const verify = getFunctionBody('verify_my_password');
+  const update = getFunctionBody('update_my_password');
+  const remove = getFunctionBody('delete_my_account');
 
-  // 매니저가 remove_password_min_length.sql 로 의도적으로 완화한 정책이다.
-  // 6자로 되돌리면 6자 미만 비밀번호를 쓰던 기존 고객이 영향을 받는다.
-  assert.match(complexity, /char_length\(p_password\) > 0/);
-  assert.doesNotMatch(complexity, /char_length\(p_password\) >= \d/);
+  // crypt() 는 STRICT 라 NULL 을 넣으면 NULL 이 나오고, IF NOT NULL 은 실패 분기를 건너뛴다.
+  assert.match(verify, /input_password IS NULL OR input_password = ''/);
+  assert.match(verify, /RETURN COALESCE\(v_hashed_password = extensions\.crypt\(input_password, v_hashed_password\), false\)/);
+  assert.match(verify, /hit_ai_rate_counter\('reauth:' \|\| v_customer_id::text, interval '1 hour', 10\)/);
+  assert.match(update, /IF NOT COALESCE\(public\.verify_my_password\(p_session_token, current_password\), false\)/);
+  assert.match(remove, /IF NOT COALESCE\(public\.verify_my_password\(p_session_token, input_password\), false\)/);
+
+  // 비밀번호를 바꾸면 지금 세션만 남기고 나머지는 끊는다.
+  assert.match(update, /UPDATE public\.customer_sessions[\s\S]*?token_hash <> encode\(extensions\.digest\(p_session_token, 'sha256'\), 'hex'\)/);
 });
 
 test('session schema: AI guest sessions are server-issued and resolvable by the AI proxy only', () => {
@@ -279,15 +287,6 @@ test('account schema: account deletion anonymizes identity without breaking the 
   assert.ok(check, 'phone format CHECK 가 있어야 한다');
   assert.match('000-0000-0000', new RegExp(check[1]));
   assert.ok('000-0000-0000'.length <= 13);
-});
-
-test('account schema: signup truncates the nickname to the column width', () => {
-  const register = getFunctionBody('register_customer');
-
-  // customers.nickname 은 varchar(20). 자르지 않으면 21자에서 22001 로 가입이
-  // 통째로 실패한다. register_customer 는 매니저 앱도 정의하는 함수라, 유저앱
-  // SQL 이 나중에 적용되면 이 줄이 옛 정의일 때 매니저의 N4 수정이 지워진다.
-  assert.match(register, /left\(COALESCE\(NULLIF\(btrim\(p_nickname\), ''\), 'user_' \|\| right\(p_phone, 4\)\), 20\)/);
 });
 
 test('guest session schema: expired AI guest sessions are purgeable', () => {

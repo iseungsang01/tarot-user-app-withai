@@ -158,8 +158,9 @@ $$;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 
 -- Required table privileges. RLS below still decides row/operation access.
+-- customers 는 빠진다: 매니저 7차가 관리자 JWT 로도 password 해시를 못 읽게
+-- 열 단위로 막았다. 여기서 테이블 단위로 다시 주면 그 조치가 되돌아간다.
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
-  public.customers,
   public.visit_history,
   public.coupon_history,
   public.notices,
@@ -169,7 +170,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
 TO authenticated;
 
 GRANT SELECT ON TABLE public.notices, public.votes TO anon;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+-- 시퀀스 권한은 매니저 7차가 회수했다. 다시 주지 않는다.
 
 DROP POLICY IF EXISTS "Public can read published notices" ON public.notices;
 CREATE POLICY "Public can read published notices"
@@ -320,21 +321,17 @@ REVOKE ALL ON public.ai_guest_sessions FROM anon, authenticated;
 
 
 -- Cleanup for stale functions intentionally not used by the current app.
-DROP FUNCTION IF EXISTS public.verify_admin_password(text);
 DROP FUNCTION IF EXISTS public.verify_admin_login(text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.update_admin_settings(text, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.increment_visit_count(uuid) CASCADE;
-DROP FUNCTION IF EXISTS public.register_customer(uuid, text, text, text) CASCADE;
 
 
-CREATE OR REPLACE FUNCTION public.validate_password_complexity(p_password text)
-RETURNS boolean
-LANGUAGE sql
-IMMUTABLE
--- 최소 길이를 6자로 되돌리면 매니저가 remove_password_min_length.sql 로 완화한
--- 정책이 회귀하고, 6자 미만 비밀번호를 쓰던 기존 고객이 영향을 받는다.
--- 이 함수는 매니저 소유다 — 유저앱이 값을 바꾸지 않는다.
-AS $$ SELECT p_password IS NOT NULL AND char_length(p_password) > 0 $$;
+-- ── 매니저 소유 공유 함수는 여기 없다 ───────────────────────────────────
+-- login_customer, register_customer, validate_password_complexity, submit_bug_report,
+-- submit_vote_response, cancel_vote_response, get_vote_summary 는 매니저앱이 정의한다
+-- (정본: tarot-manager-app supabase/sql/20261008_security_round7.sql, 커밋 11ae80c).
+-- 이 파일이 옛 본문을 다시 적용하면 NULL 비밀번호 로그인·대입 제한이 되돌아가서 지웠다.
+-- 유저앱은 호출만 한다. 정의·DROP·GRANT 를 다시 넣지 않는다.
 
 CREATE OR REPLACE FUNCTION public.resolve_customer_session(p_session_token text)
 RETURNS uuid
@@ -435,8 +432,14 @@ BEGIN
     RETURN jsonb_build_object('allowed', false, 'reason', 'ip_minute');
   END IF;
 
+  -- 전체 상한이 비용 상한이다. 게스트는 세션을 새로 받으면, 회원은 가입을 새로 하면
+  -- 개인 한도가 초기화된다.
   IF v_is_guest AND NOT public.hit_ai_rate_counter('guests:day', interval '1 day', 2000) THEN
     RETURN jsonb_build_object('allowed', false, 'reason', 'guests_day');
+  END IF;
+
+  IF NOT v_is_guest AND NOT public.hit_ai_rate_counter('members:day', interval '1 day', 5000) THEN
+    RETURN jsonb_build_object('allowed', false, 'reason', 'members_day');
   END IF;
 
   -- 지난 창은 가끔 지운다. 일일 창이 가장 길어서 2일이면 충분하다.
@@ -553,91 +556,6 @@ BEGIN
     AND revoked_at IS NULL;
 
   RETURN true;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.register_customer(p_phone text, p_password text, p_nickname text DEFAULT NULL)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE v_customer_id uuid; v_nickname text;
-BEGIN
-  IF p_phone !~ '^\d{3}-\d{3,4}-\d{4}$' THEN
-    RETURN jsonb_build_object('success', false, 'message', 'Invalid phone format. Use 010-1234-5678.');
-  END IF;
-  IF NOT public.validate_password_complexity(p_password) THEN
-    RETURN jsonb_build_object('success', false, 'message', 'Password is required.');
-  END IF;
-  IF EXISTS (SELECT 1 FROM public.customers WHERE phone_number = p_phone AND deleted_at IS NULL) THEN
-    RETURN jsonb_build_object('success', false, 'message', 'Phone number already registered.');
-  END IF;
-
-  -- customers.nickname 이 varchar(20) 이라 자르지 않으면 21자에서 22001 로 가입이
-  -- 통째로 실패한다. 매니저가 20260728_manager_hardening.sql §7(N4)로 운영에 넣은
-  -- 정의와 같은 문장이다 — register_customer 는 양쪽이 다 정의하는 함수라, 유저앱
-  -- SQL 이 나중에 적용되면 여기가 옛 정의면 그 수정이 그대로 지워진다.
-  v_nickname := left(COALESCE(NULLIF(btrim(p_nickname), ''), 'user_' || right(p_phone, 4)), 20);
-  INSERT INTO public.customers (phone_number, password, nickname)
-  VALUES (p_phone, extensions.crypt(p_password, extensions.gen_salt('bf')), v_nickname)
-  RETURNING id INTO v_customer_id;
-
-  RETURN jsonb_build_object('success', true, 'id', v_customer_id);
-EXCEPTION WHEN OTHERS THEN
-  RETURN jsonb_build_object('success', false, 'message', SQLERRM);
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.login_customer(p_phone text, p_password text, p_client_fingerprint text DEFAULT NULL)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE
-  v_customer public.customers%ROWTYPE;
-  v_phone_hash text := encode(extensions.digest(p_phone, 'sha256'), 'hex');
-  v_device_hash text := encode(extensions.digest(COALESCE(NULLIF(trim(p_client_fingerprint), ''), 'unknown'), 'sha256'), 'hex');
-  v_lock_expires_at timestamptz;
-  v_session_token text;
-BEGIN
-  -- 잠금은 기기 단위로만 본다. '__phone__' 전역 행까지 읽으면 전화번호만 아는
-  -- 사람이 5회 실패를 유발해 그 계정의 로그인을 차단할 수 있다 (협의 9-2 락아웃 DoS).
-  SELECT lock_expires_at INTO v_lock_expires_at
-  FROM public.login_attempt_tracker
-  WHERE phone_hash = v_phone_hash AND ip_device_hash = v_device_hash;
-
-  IF COALESCE(v_lock_expires_at, '-infinity'::timestamptz) > now() THEN
-    RETURN jsonb_build_object('success', false, 'locked', true, 'lock_expires_at', v_lock_expires_at, 'message', 'Too many login attempts.');
-  END IF;
-
-  SELECT * INTO v_customer FROM public.customers WHERE phone_number = p_phone AND deleted_at IS NULL;
-
-  IF v_customer.id IS NULL OR v_customer.password != extensions.crypt(p_password, v_customer.password) THEN
-    INSERT INTO public.login_attempt_tracker (phone_hash, ip_device_hash, failed_attempts, lock_expires_at, last_failed_at, updated_at)
-    VALUES (v_phone_hash, '__phone__', 1, NULL, now(), now()), (v_phone_hash, v_device_hash, 1, NULL, now(), now())
-    ON CONFLICT (phone_hash, ip_device_hash) DO UPDATE SET
-      failed_attempts = public.login_attempt_tracker.failed_attempts + 1,
-      -- '__phone__' 행은 관측용 카운터다. 여기에 잠금을 걸면 조회를 기기 단위로
-      -- 바꿔도 전역 잠금 값이 계속 쌓여 DoS 의 재료가 남는다.
-      lock_expires_at = CASE
-        WHEN public.login_attempt_tracker.ip_device_hash = '__phone__' THEN NULL
-        WHEN public.login_attempt_tracker.failed_attempts + 1 >= 5 THEN now() + interval '5 minutes'
-        ELSE NULL END,
-      last_failed_at = now(),
-      updated_at = now();
-
-    RETURN jsonb_build_object('success', false, 'reason', 'INVALID_PASSWORD', 'message', 'Invalid phone or password.');
-  END IF;
-
-  DELETE FROM public.login_attempt_tracker WHERE phone_hash = v_phone_hash AND ip_device_hash IN ('__phone__', v_device_hash);
-
-  v_session_token := encode(extensions.gen_random_bytes(32), 'hex');
-  INSERT INTO public.customer_sessions (customer_id, token_hash, expires_at, last_used_at)
-  VALUES (v_customer.id, encode(extensions.digest(v_session_token, 'sha256'), 'hex'), now() + interval '30 days', now());
-
-  RETURN jsonb_build_object('success', true, 'session_token', v_session_token, 'expires_at', now() + interval '30 days', 'customer', to_jsonb(v_customer) - 'password');
 END;
 $$;
 
@@ -834,53 +752,6 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.submit_vote_response(p_session_token text, p_vote_id integer, p_selected_options integer[], p_response_id integer DEFAULT NULL)
-RETURNS public.vote_responses LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_customer_id uuid; v_vote public.votes%ROWTYPE; v_response public.vote_responses%ROWTYPE; v_count integer;
-BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN RAISE EXCEPTION 'Invalid or expired customer session' USING ERRCODE = '28000'; END IF;
-  SELECT * INTO v_vote FROM public.votes WHERE id = p_vote_id AND is_active = true AND starts_at <= now() AND (ends_at IS NULL OR ends_at > now());
-  IF v_vote.id IS NULL THEN RAISE EXCEPTION 'Vote is not active' USING ERRCODE = '22023'; END IF;
-  v_count := COALESCE(array_length(p_selected_options, 1), 0);
-  IF v_count = 0 OR (NOT v_vote.allow_multiple AND v_count > 1) OR v_count > v_vote.max_selections THEN RAISE EXCEPTION 'Invalid vote selection' USING ERRCODE = '22023'; END IF;
-  IF EXISTS (SELECT 1 FROM unnest(p_selected_options) x WHERE x < 0) THEN RAISE EXCEPTION 'Invalid selected option' USING ERRCODE = '22023'; END IF;
-
-  IF p_response_id IS NOT NULL THEN
-    UPDATE public.vote_responses SET selected_options = p_selected_options, voted_at = now()
-    WHERE id = p_response_id AND vote_id = p_vote_id AND customer_id = v_customer_id RETURNING * INTO v_response;
-  ELSE
-    INSERT INTO public.vote_responses (vote_id, customer_id, selected_options)
-    VALUES (p_vote_id, v_customer_id, p_selected_options)
-    ON CONFLICT (vote_id, customer_id) DO UPDATE SET selected_options = EXCLUDED.selected_options, voted_at = now()
-    RETURNING * INTO v_response;
-  END IF;
-  RETURN v_response;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.cancel_vote_response(p_session_token text, p_vote_id integer)
-RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_customer_id uuid;
-BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN RAISE EXCEPTION 'Invalid or expired customer session' USING ERRCODE = '28000'; END IF;
-  DELETE FROM public.vote_responses WHERE vote_id = p_vote_id AND customer_id = v_customer_id;
-  RETURN true;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.get_vote_summary(p_vote_id integer)
-RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-  SELECT jsonb_build_object(
-    'results', COALESCE((
-      SELECT jsonb_object_agg(option_id::text, option_count)
-      FROM (SELECT selected_option option_id, count(*) option_count FROM public.vote_responses vr CROSS JOIN LATERAL unnest(vr.selected_options) selected_option WHERE vr.vote_id = p_vote_id GROUP BY selected_option) x
-    ), '{}'::jsonb),
-    'count', (SELECT count(*) FROM public.vote_responses WHERE vote_id = p_vote_id)
-  )
-$$;
-
 CREATE OR REPLACE FUNCTION public.get_my_bug_reports(p_session_token text)
 RETURNS SETOF public.bug_reports LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_customer_id uuid;
@@ -891,23 +762,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.submit_bug_report(p_session_token text, p_title text, p_description text, p_report_type text DEFAULT 'app_bug', p_screenshot text DEFAULT NULL, p_device_info jsonb DEFAULT NULL)
-RETURNS public.bug_reports LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_customer_id uuid; v_report public.bug_reports%ROWTYPE;
-BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN RAISE EXCEPTION 'Invalid or expired customer session' USING ERRCODE = '28000'; END IF;
-  IF length(trim(coalesce(p_title, ''))) = 0 OR length(trim(coalesce(p_description, ''))) = 0 THEN RAISE EXCEPTION 'Report title and description are required' USING ERRCODE = '22023'; END IF;
-  INSERT INTO public.bug_reports (customer_id, title, description, report_type, screenshot, device_info)
-  VALUES (v_customer_id, left(trim(p_title), 100), trim(p_description), coalesce(nullif(trim(p_report_type), ''), 'app_bug'), nullif(trim(coalesce(p_screenshot, '')), ''), coalesce(p_device_info, '{}'::jsonb))
-  RETURNING * INTO v_report;
-  RETURN v_report;
-END;
-$$;
 
-
-GRANT EXECUTE ON FUNCTION public.register_customer(text, text, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.login_customer(text, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.issue_ai_guest_session() TO anon, authenticated;
 -- resolve_ai_proxy_session 은 ai-proxy(service_role)만 부른다.
 REVOKE ALL ON FUNCTION public.resolve_ai_proxy_session(text) FROM PUBLIC, anon, authenticated;
@@ -931,7 +786,11 @@ DECLARE
   v_hashed_password text;
 BEGIN
   v_customer_id := public.resolve_customer_session(p_session_token);
-  IF v_customer_id IS NULL THEN
+  IF v_customer_id IS NULL OR input_password IS NULL OR input_password = '' THEN
+    RETURN false;
+  END IF;
+
+  IF NOT public.hit_ai_rate_counter('reauth:' || v_customer_id::text, interval '1 hour', 10) THEN
     RETURN false;
   END IF;
 
@@ -939,7 +798,7 @@ BEGIN
   FROM public.customers
   WHERE id = v_customer_id AND deleted_at IS NULL;
 
-  RETURN v_hashed_password IS NOT NULL AND v_hashed_password = extensions.crypt(input_password, v_hashed_password);
+  RETURN COALESCE(v_hashed_password = extensions.crypt(input_password, v_hashed_password), false);
 END;
 $$;
 
@@ -957,12 +816,12 @@ BEGIN
     RETURN false;
   END IF;
 
-  IF NOT public.verify_my_password(p_session_token, current_password) THEN
+  IF NOT COALESCE(public.verify_my_password(p_session_token, current_password), false) THEN
     RETURN false;
   END IF;
 
-  IF NOT public.validate_password_complexity(new_password) THEN
-    RAISE EXCEPTION 'Password must be at least 6 characters.';
+  IF NOT COALESCE(public.validate_password_complexity(new_password), false) THEN
+    RAISE EXCEPTION 'Password does not meet the policy.' USING ERRCODE = '22023';
   END IF;
 
   UPDATE public.customers
@@ -971,8 +830,15 @@ BEGIN
 
   IF NOT FOUND THEN RETURN false; END IF;
 
+  UPDATE public.customer_sessions
+  SET revoked_at = now()
+  WHERE customer_id = v_customer_id
+    AND revoked_at IS NULL
+    AND token_hash <> encode(extensions.digest(p_session_token, 'sha256'), 'hex');
+
   INSERT INTO public.customer_password_audit_logs (customer_id, changed_by, reason, metadata)
-  VALUES (v_customer_id, 'customer', p_reason, jsonb_build_object('source', 'update_my_password'));
+  VALUES (v_customer_id, 'customer', left(COALESCE(p_reason, 'settings_change'), 50),
+          jsonb_build_object('source', 'update_my_password'));
 
   RETURN true;
 END;
@@ -992,7 +858,7 @@ BEGIN
     RETURN false;
   END IF;
 
-  IF NOT public.verify_my_password(p_session_token, input_password) THEN
+  IF NOT COALESCE(public.verify_my_password(p_session_token, input_password), false) THEN
     RETURN false;
   END IF;
 
@@ -1050,8 +916,4 @@ GRANT EXECUTE ON FUNCTION public.get_my_coupons(text, boolean) TO anon, authenti
 GRANT EXECUTE ON FUNCTION public.get_my_coupon_count(text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_vote_responses(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_vote_response(text, integer) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.submit_vote_response(text, integer, integer[], integer) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.cancel_vote_response(text, integer) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.get_vote_summary(integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_bug_reports(text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.submit_bug_report(text, text, text, text, text, jsonb) TO anon, authenticated;
