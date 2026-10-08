@@ -59,7 +59,23 @@
 - 한 줄짜리 입력 필드의 줄바꿈을 접어서, 프롬프트에 가짜 구간을 끼워 넣지 못하게 했습니다.
 - 분석 입력 상한을 30k자에서 12k자로 줄였습니다.
 
-**적용 순서:** `20261008120000` → `20261008150000` → `supabase functions deploy ai-proxy` → 앱 배포.
+### 추가: 오늘의 운세 다시 뽑기 광고 검증 — `20261008180000_daily_fortune_ad_reward_ssv.sql`
+
+"광고 보고 다시 뽑기"를 앱 로컬 기록만 보고 판단해서, 앱 데이터를 지우거나 ai-proxy 를 직접
+부르면 광고 없이 무제한으로 다시 뽑을 수 있었습니다. 이제 오늘(KST) 첫 뽑기만 무료이고,
+그다음부터는 AdMob 서버 측 검증(SSV) 콜백이 확인한 광고 보상 nonce 를 하나씩 소모합니다.
+
+| 객체 | 변경 |
+| --- | --- |
+| `ai_ad_rewards`, `ai_fortune_draws` (신규 테이블) | RLS on, anon/authenticated 접근 없음 |
+| `issue_ad_reward_nonce`, `record_ad_reward` (신규) | `service_role` 전용 |
+| `consume_ai_proxy_quota` | 인자 4개로 바뀜(`p_task`, `p_ad_nonce` 추가). 옛 2인자 판은 DROP |
+| `admob-ssv` (신규 Edge Function) | Google 서명 검증 후 `record_ad_reward`. `verify_jwt = false` |
+
+**적용 순서:** `20261008120000` → `20261008150000` → `20261008180000` →
+`supabase functions deploy ai-proxy` + `supabase functions deploy admob-ssv` → 앱 배포.
+AdMob 콘솔에서 보상형 광고 단위의 서버 측 확인 콜백 URL 을
+`https://<project-ref>.supabase.co/functions/v1/admob-ssv` 로 설정해야 다시 뽑기가 동작합니다.
 
 ---
 
