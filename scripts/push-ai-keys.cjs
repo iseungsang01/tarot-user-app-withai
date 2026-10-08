@@ -16,7 +16,8 @@ if (keys.length === 0) {
   console.error('❌ .env 에 GOOGLE_API_KEY_1= … 값이 없습니다.');
   process.exit(1);
 }
-const malformed = keys.filter((key) => !/^AIza[0-9A-Za-z_-]{35}$/.test(key));
+// 옛 형식 AIza… 와 AI Studio 의 새 형식 AQ.… 둘 다 받는다.
+const malformed = keys.filter((key) => !/^(AIza[0-9A-Za-z_-]{35}|AQ\.[0-9A-Za-z._-]{40,})$/.test(key));
 if (malformed.length > 0) {
   console.error(`❌ Google API 키 형식이 아닌 값이 ${malformed.length}개 있습니다.`);
   process.exit(1);

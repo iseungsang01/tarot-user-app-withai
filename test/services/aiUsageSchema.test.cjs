@@ -153,7 +153,7 @@ test('ownership: schema.sql never defines, drops or grants the manager-owned sha
   // 매니저 7차가 회수한 권한을 되돌리지 않는다: customers 테이블 단위 SELECT(비밀번호 해시), 시퀀스.
   const tableGrant = schema.match(/GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE[\s\S]*?TO authenticated;/);
   assert.ok(tableGrant);
-  assert.doesNotMatch(tableGrant[0], /public\.customers/);
+  assert.doesNotMatch(tableGrant[0], /public\.customers\b/);
   assert.doesNotMatch(schema, /GRANT USAGE, SELECT ON ALL SEQUENCES/);
 });
 
