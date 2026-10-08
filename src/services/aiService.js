@@ -317,7 +317,8 @@ const withFunctionErrorDetails = async (error) => {
 
         const detailedError = new Error(message);
         detailedError.name = error.name || 'FunctionsHttpError';
-        detailedError.code = error.code;
+        // ai-proxy 가 붙이는 code(AD_REQUIRED, AD_PENDING, QUOTA_EXCEEDED 등)를 살린다.
+        detailedError.code = payload?.code || error.code;
         detailedError.status = response.status;
         detailedError.originalError = error;
         return detailedError;
@@ -472,12 +473,41 @@ export const condenseVoiceMemo = async (transcriptText, signal = null) => {
 // 3. 오늘의 운세 (Daily Fortune)
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * 보상형 광고에 실을 일회용 nonce 를 받는다. 광고를 끝까지 보면 AdMob 이 서버(admob-ssv)에
+ * 이 nonce 로 보상을 알리고, 다시 뽑기 요청이 그 보상을 하나 소모한다.
+ */
+export const issueAdRewardNonce = async () => {
+    try {
+        const authState = await ensureAuthenticatedSession();
+        if (!authState.ok) return { data: null, error: withAuthErrorHandling(authState.error, 'Login is required.') };
+
+        const { data, error } = await supabase.functions.invoke(EDGE_FUNCTION_NAME, {
+            body: { task: 'issueAdRewardNonce' },
+            headers: { 'x-customer-session-token': authState.session.token },
+        });
+        if (error) return { data: null, error: withAuthErrorHandling(await withFunctionErrorDetails(error), 'AI proxy request failed.') };
+        if (typeof data?.nonce !== 'string') return { data: null, error: new Error('Ad reward nonce was not issued.') };
+        return { data: data.nonce, error: null };
+    } catch (error) {
+        return { data: null, error };
+    }
+};
+
+const AD_PENDING_RETRY_DELAYS_MS = [1000, 1500, 2000, 3000, 4000];
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const getDailyFortune = async (userName = '사용자', previousFortune = '', cardContext = null, usageOptions = {}) => {
-    const { data, error } = await callAIProxy(
-        'getDailyFortune',
-        { userName, previousFortune: String(previousFortune || ''), card: cardContext || {} },
-        { signal: usageOptions.signal || null },
-    );
+    const input = { userName, previousFortune: String(previousFortune || ''), card: cardContext || {} };
+    if (usageOptions.adNonce) input.adNonce = usageOptions.adNonce;
+
+    let { data, error } = await callAIProxy('getDailyFortune', input, { signal: usageOptions.signal || null });
+    // 광고를 닫은 직후에는 Google 의 서버 콜백이 아직 안 왔을 수 있다. 잠깐씩 기다렸다 다시 묻는다.
+    for (const delay of AD_PENDING_RETRY_DELAYS_MS) {
+        if (error?.code !== 'AD_PENDING') break;
+        await wait(delay);
+        ({ data, error } = await callAIProxy('getDailyFortune', input, { signal: usageOptions.signal || null }));
+    }
     if (error) return { data: null, error };
 
     try {

@@ -3,3 +3,7 @@
 # Disable platform JWT verification so non-JWT customer tokens reach the handler.
 verify_jwt = false
 
+
+[functions.admob-ssv]
+# AdMob 이 보내는 GET 콜백이다. 인증 헤더가 없고, 핸들러가 Google 서명을 검증한다.
+verify_jwt = false

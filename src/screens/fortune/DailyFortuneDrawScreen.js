@@ -8,7 +8,7 @@ import { ArchiveTitleHeader, GoldActionButton, PremiumCard, ScreenContainer } fr
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { useAuth } from '../../hooks/useAuth';
 import { useTarotCardImage } from '../../hooks/useTarotCardImage';
-import { getDailyFortune, normalizeDailyFortunePayload } from '../../services/aiService';
+import { getDailyFortune, issueAdRewardNonce, normalizeDailyFortunePayload } from '../../services/aiService';
 import { showDailyFortuneRewardedAd } from '../../services/rewardedAdService';
 import { storage } from '../../utils/storage';
 import { dialog } from '../../utils/dialog';
@@ -32,6 +32,8 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const drawingRef = useRef(false);
+  // 광고는 봤는데 서버 확인이 늦은 nonce. 다음 시도에 광고 없이 다시 쓴다.
+  const pendingAdNonceRef = useRef(null);
 
   const todayStr = useMemo(() => getLocalDateString(), []);
 
@@ -69,13 +71,24 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
     try {
       const latestStored = normalizeDailyFortunePayload(await storage.getDailyFortune(todayStr));
 
-      if (needsRewardedAdForDailyFortune(latestStored)) {
-        const adResult = await showDailyFortuneRewardedAd();
-        const rewarded = adResult === true || adResult?.rewarded === true;
-        if (!rewarded) {
+      // 광고를 보고 서버가 확인한 nonce 를 받아 온다. null 이면 광고를 끝까지 안 본 것이다.
+      const watchRewardedAd = async () => {
+        const { data: nonce, error: nonceError } = await issueAdRewardNonce();
+        if (nonceError || !nonce) throw nonceError || new Error('Ad reward nonce was not issued.');
+        const adResult = await showDailyFortuneRewardedAd(nonce);
+        if (adResult?.rewarded !== true) {
           dialog.alert('광고 시청 필요', '광고 시청이 완료되어야 다시 뽑을 수 있습니다.');
-          return;
+          return null;
         }
+        return nonce;
+      };
+
+      // 다시 뽑기인지는 서버가 정한다(오늘 KST 첫 뽑기만 무료). 로컬 기록은 미리 광고를
+      // 띄울지 고르는 데만 쓰고, 서버가 AD_REQUIRED 를 주면 그때 광고를 띄운다.
+      let adNonce = pendingAdNonceRef.current;
+      if (!adNonce && needsRewardedAdForDailyFortune(latestStored)) {
+        adNonce = await watchRewardedAd();
+        if (!adNonce) return;
       }
 
       const card = pickRandomMajorArcana();
@@ -85,8 +98,27 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
       const nickname = customer?.nickname || customer?.name || '사용자';
       const previousFortune = latestStored?.fortune || '';
       const cardContext = buildCardContext(card);
-      const fortuneResult = await getDailyFortune(nickname, previousFortune, cardContext, { countUsage: nextDrawCount > 1 });
+      let fortuneResult = await getDailyFortune(nickname, previousFortune, cardContext, { adNonce });
 
+      if (fortuneResult.error?.code === 'AD_REQUIRED' && !adNonce) {
+        adNonce = await watchRewardedAd();
+        if (!adNonce) return;
+        fortuneResult = await getDailyFortune(nickname, previousFortune, cardContext, { adNonce });
+      }
+
+      pendingAdNonceRef.current = fortuneResult.error?.code === 'AD_PENDING' ? adNonce : null;
+      if (fortuneResult.error?.code === 'AD_PENDING') {
+        dialog.alert('광고 확인 지연', '광고 시청 확인이 늦어지고 있습니다. 잠시 후 다시 뽑기를 눌러 주세요. 광고를 다시 보지 않아도 됩니다.');
+        return;
+      }
+      if (fortuneResult.error?.code === 'AD_REQUIRED') {
+        dialog.alert('광고 시청 필요', '광고 시청이 확인되지 않았습니다. 다시 시도해 주세요.');
+        return;
+      }
+      if (fortuneResult.error?.code === 'QUOTA_EXCEEDED') {
+        dialog.alert('오늘 사용량 초과', 'AI 사용 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
       if (fortuneResult.error) throw fortuneResult.error;
 
       const finalFortune = buildStoredDailyFortune({

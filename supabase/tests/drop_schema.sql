@@ -23,13 +23,17 @@ DROP FUNCTION IF EXISTS public.increment_my_ai_monthly_usage(text, text, date, i
 DROP TABLE IF EXISTS public.ai_monthly_usage CASCADE;
 DROP FUNCTION IF EXISTS public.increment_ai_proxy_rate_limit(text, text, text, timestamptz, integer) CASCADE;
 DROP FUNCTION IF EXISTS public.apply_ai_proxy_token_usage(uuid, date, text, bigint, bigint, bigint) CASCADE;
-DROP FUNCTION IF EXISTS public.consume_ai_proxy_quota(text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.consume_ai_proxy_quota(text, text, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.issue_ad_reward_nonce(text) CASCADE;
+DROP FUNCTION IF EXISTS public.record_ad_reward(text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.hit_ai_rate_counter(text, interval, integer) CASCADE;
 
 -- 2. 모든 테이블 삭제
 DROP TABLE IF EXISTS public.ai_proxy_token_quotas CASCADE;
 DROP TABLE IF EXISTS public.ai_proxy_rate_limits CASCADE;
 DROP TABLE IF EXISTS public.ai_proxy_rate_counters CASCADE;
+DROP TABLE IF EXISTS public.ai_ad_rewards CASCADE;
+DROP TABLE IF EXISTS public.ai_fortune_draws CASCADE;
 DROP TABLE IF EXISTS public.customer_password_audit_logs CASCADE;
 DROP TABLE IF EXISTS public.login_attempt_tracker CASCADE;
 DROP TABLE IF EXISTS public.app_configs CASCADE;

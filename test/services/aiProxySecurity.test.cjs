@@ -72,8 +72,8 @@ test('ai-proxy quota schema: counters and quota RPC are hidden from client roles
   assert.match(schema, /CREATE TABLE IF NOT EXISTS public\.ai_proxy_rate_counters/);
   assert.match(schema, /REVOKE ALL ON public\.ai_proxy_rate_counters FROM anon, authenticated;/);
   assert.match(schema, /REVOKE ALL ON FUNCTION public\.hit_ai_rate_counter\(text, interval, integer\) FROM PUBLIC, anon, authenticated;/);
-  assert.match(schema, /REVOKE ALL ON FUNCTION public\.consume_ai_proxy_quota\(text, text\) FROM PUBLIC, anon, authenticated;/);
-  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.consume_ai_proxy_quota\(text, text\) TO service_role;/);
+  assert.match(schema, /REVOKE ALL ON FUNCTION public\.consume_ai_proxy_quota\(text, text, text, text\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.consume_ai_proxy_quota\(text, text, text, text\) TO service_role;/);
   assert.doesNotMatch(schema, /GRANT EXECUTE ON FUNCTION public\.(hit_ai_rate_counter|consume_ai_proxy_quota)\([^)]*\) TO [^;]*anon/);
 
   // 게스트 세션 발급에도 한도가 걸려 있어야 한다.

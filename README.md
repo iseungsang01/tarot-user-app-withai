@@ -35,6 +35,23 @@ counted in the database by `consume_ai_proxy_quota` (see
 `supabase/migrations/20261008120000_ai_proxy_server_side_quota.sql`), so that migration must be
 applied before deploying the function.
 
+### Daily fortune redraws (AdMob server-side verification)
+
+The first daily fortune draw per day (KST) is free; every redraw needs a rewarded ad that the
+server has verified. The app gets a one-time nonce from `ai-proxy`, passes it to AdMob as SSV
+`customData`, and AdMob calls `supabase/functions/admob-ssv` with a signed callback that records
+the reward. Setup:
+
+1. Apply `supabase/migrations/20261008180000_daily_fortune_ad_reward_ssv.sql`.
+2. `supabase functions deploy admob-ssv` (JWT verification is off in `config.toml`; the handler
+   verifies Google's ECDSA signature).
+3. In the AdMob console, open the rewarded ad unit → **Server-side verification** → set the
+   callback URL to `https://<project-ref>.supabase.co/functions/v1/admob-ssv`.
+4. Optional secret `ADMOB_REWARDED_AD_UNITS`: comma-separated numeric ad unit ids (the part after
+   `/`) that the callback accepts.
+
+Google's test ad units do not call the SSV URL, so redraws cannot be completed in dev builds.
+
 ## Product/architecture notes
 
 - Authentication intentionally uses the custom customer session model. Do not migrate this app to Supabase Auth without an explicit product decision.

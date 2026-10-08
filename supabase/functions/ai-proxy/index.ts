@@ -25,9 +25,14 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function jsonError(message: string, status = 400) {
-  return json({ error: message }, status);
+function jsonError(message: string, status = 400, code?: string) {
+  return json(code ? { error: message, code } : { error: message }, status);
 }
+
+const QUOTA_REJECTIONS: Record<string, { status: number; code: string; message: string }> = {
+  ad_required: { status: 403, code: 'AD_REQUIRED', message: '광고 시청이 완료되어야 다시 뽑을 수 있습니다.' },
+  ad_pending: { status: 409, code: 'AD_PENDING', message: '광고 시청 확인을 기다리고 있습니다.' },
+};
 
 function requireEnv(name: string, value: string) {
   if (!value) {
@@ -162,6 +167,13 @@ Deno.serve(async (req) => {
       return jsonError('Request body is too large.', 413);
     }
 
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return jsonError('Invalid request format. JSON data is required.', 400);
+    }
+
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: sessionData, error: sessionError } = await adminClient.rpc('resolve_ai_proxy_session', {
@@ -172,22 +184,32 @@ Deno.serve(async (req) => {
       return jsonError('Invalid or expired authentication token.', 401);
     }
 
+    const subject = String(sessionData.user_id);
+
+    // 보상형 광고에 실을 일회용 nonce. 광고를 끝까지 보면 admob-ssv 가 이 nonce 에
+    // 보상을 기록하고, 오늘의 운세 다시 뽑기가 그것을 하나 소모한다.
+    if (body?.task === 'issueAdRewardNonce') {
+      const { data: issued, error: issueError } = await adminClient.rpc('issue_ad_reward_nonce', { p_subject: subject });
+      if (issueError) throw issueError;
+      if (!issued?.success) return jsonError('광고 요청이 너무 많습니다. 내일 다시 시도해 주세요.', 429, 'AD_NONCE_LIMITED');
+      return json({ nonce: issued.nonce });
+    }
+
     // 사용량은 DB 에서 센다. isolate 메모리 카운터는 콜드스타트·다중 인스턴스마다
     // 0 으로 돌아가서 한도 역할을 못 했다. 검증 실패 요청도 한도를 소모한다.
+    // 오늘의 운세는 오늘(KST) 두 번째 뽑기부터 보상된 광고 nonce 가 있어야 한다.
+    const adNonce = typeof body?.input?.adNonce === 'string' ? body.input.adNonce.slice(0, 64) : null;
     const { data: quota, error: quotaError } = await adminClient.rpc('consume_ai_proxy_quota', {
-      p_subject: String(sessionData.user_id),
+      p_subject: subject,
       p_client_ip: getClientIp(req),
+      p_task: typeof body?.task === 'string' ? body.task.slice(0, 64) : null,
+      p_ad_nonce: adNonce,
     });
     if (quotaError) throw quotaError;
     if (!quota?.allowed) {
-      return jsonError('AI 사용 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.', 429);
-    }
-
-    let body;
-    try {
-      body = JSON.parse(rawBody);
-    } catch {
-      return jsonError('Invalid request format. JSON data is required.', 400);
+      const rejection = QUOTA_REJECTIONS[quota?.reason];
+      if (rejection) return jsonError(rejection.message, rejection.status, rejection.code);
+      return jsonError('AI 사용 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.', 429, 'QUOTA_EXCEEDED');
     }
 
     const built = buildTaskRequest(body?.task, body?.input);

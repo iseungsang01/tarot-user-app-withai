@@ -69,7 +69,11 @@ export const initializeAdMob = async () => {
   return initializePromise;
 };
 
-export const showDailyFortuneRewardedAd = async () => {
+/**
+ * @param {string} [rewardNonce] 서버가 발급한 nonce. AdMob 서버 측 검증 콜백의 custom_data 로
+ *   실려 가서, 서버가 이 광고를 실제로 봤는지 확인하는 근거가 된다.
+ */
+export const showDailyFortuneRewardedAd = async (rewardNonce) => {
   if (getPlatformOS() === 'web') {
     return { rewarded: false, reason: 'unsupported_platform' };
   }
@@ -95,6 +99,7 @@ export const showDailyFortuneRewardedAd = async () => {
 
     const rewardedAd = RewardedAd.createForAdRequest(adUnitId, {
       requestNonPersonalizedAdsOnly: true,
+      ...(rewardNonce ? { serverSideVerificationOptions: { customData: rewardNonce } } : {}),
     });
     const unsubscribers = [];
     let earnedReward = null;
