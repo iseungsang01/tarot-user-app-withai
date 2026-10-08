@@ -9,8 +9,14 @@ module.exports = () => {
   const iosAppId = process.env.ADMOB_IOS_APP_ID || GOOGLE_IOS_TEST_APP_ID;
   const isProductionBuild = process.env.EXPO_PUBLIC_ENV === 'production' || process.env.EAS_BUILD_PROFILE === 'production';
 
-  if (isProductionBuild && (!process.env.ADMOB_ANDROID_APP_ID || !process.env.ADMOB_IOS_APP_ID)) {
-    throw new Error('Production AdMob builds require ADMOB_ANDROID_APP_ID and ADMOB_IOS_APP_ID.');
+  // 운영 빌드는 빌드하는 플랫폼의 실제 AdMob 앱 ID 가 있어야 한다. 테스트 ID 로는 수익도, 보상 확인 콜백도 없다.
+  const buildPlatform = process.env.EAS_BUILD_PLATFORM;
+  const missingAppIds = [
+    buildPlatform !== 'ios' && !process.env.ADMOB_ANDROID_APP_ID && 'ADMOB_ANDROID_APP_ID',
+    buildPlatform !== 'android' && !process.env.ADMOB_IOS_APP_ID && 'ADMOB_IOS_APP_ID',
+  ].filter(Boolean);
+  if (isProductionBuild && missingAppIds.length > 0) {
+    throw new Error(`Production AdMob builds require ${missingAppIds.join(' and ')}.`);
   }
 
   expo.plugins = [
