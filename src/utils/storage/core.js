@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureToken } from './secureToken';
 
 export const STORAGE_KEYS = {
   CUSTOMER: 'tarot_customer',
@@ -109,13 +110,44 @@ const mergeValues = (key, source, target) => {
 
 const scopedKeysForMigration = Array.from(SCOPED_STORAGE_KEYS);
 
+// 세션 객체 중 token 만 보안 저장소로 뺀다. 나머지(customerId·type)는 스코프 판정에
+// 동기적으로 자주 쓰여 AsyncStorage 에 남긴다.
+const isSessionKey = (key) => key === STORAGE_KEYS.CUSTOMER_SESSION;
+
+const saveSession = async (value) => {
+  if (!secureToken.isAvailable() || !value || typeof value !== 'object' || !value.token) {
+    await AsyncStorage.setItem(STORAGE_KEYS.CUSTOMER_SESSION, JSON.stringify(value));
+    return;
+  }
+  const { token, ...rest } = value;
+  await secureToken.set(token);
+  await AsyncStorage.setItem(STORAGE_KEYS.CUSTOMER_SESSION, JSON.stringify(rest));
+};
+
+const getSession = async () => {
+  const stored = safeParse(await AsyncStorage.getItem(STORAGE_KEYS.CUSTOMER_SESSION));
+  if (!stored || typeof stored !== 'object' || !secureToken.isAvailable()) return stored;
+
+  // 1.0.8 이하는 token 을 AsyncStorage 에 같이 저장했다. 읽는 김에 옮긴다.
+  if (stored.token) {
+    await saveSession(stored);
+    return stored;
+  }
+  const token = await secureToken.get();
+  return token ? { ...stored, token } : stored;
+};
+
 export const coreStorage = {
   STORAGE_KEYS,
 
   async save(key, value) {
     try {
-      const resolvedKey = shouldScope(key) ? scopeKey(await getCurrentScope(), key) : key;
-      await AsyncStorage.setItem(resolvedKey, JSON.stringify(value));
+      if (isSessionKey(key)) {
+        await saveSession(value);
+      } else {
+        const resolvedKey = shouldScope(key) ? scopeKey(await getCurrentScope(), key) : key;
+        await AsyncStorage.setItem(resolvedKey, JSON.stringify(value));
+      }
       invalidateScopeIfNeeded(key);
     }
     catch (e) { console.error(`Storage save error (${key}):`, e); }
@@ -123,6 +155,7 @@ export const coreStorage = {
 
   async get(key) {
     try {
+      if (isSessionKey(key)) return await getSession();
       if (!shouldScope(key)) return safeParse(await AsyncStorage.getItem(key));
 
       const scopedVal = await AsyncStorage.getItem(scopeKey(await getCurrentScope(), key));
@@ -137,6 +170,7 @@ export const coreStorage = {
     try {
       const resolvedKey = shouldScope(key) ? scopeKey(await getCurrentScope(), key) : key;
       await AsyncStorage.removeItem(resolvedKey);
+      if (isSessionKey(key) && secureToken.isAvailable()) await secureToken.remove();
       invalidateScopeIfNeeded(key);
     }
     catch (e) { console.error(`Storage remove error (${key}):`, e); }
