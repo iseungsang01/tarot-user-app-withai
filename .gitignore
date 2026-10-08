@@ -55,10 +55,9 @@ dist/
 web-build/
 
 # Environment variables
-.env
-.env.local
-.env.production
-.env.*.local
+# .env_utf8 처럼 이름이 조금 다른 사본도 막는다 (2026-05 에 실제로 커밋됐었다)
+.env*
+!.env.example
 
 # Testing
 /coverage
