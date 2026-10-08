@@ -4,7 +4,12 @@ import { buildTaskRequest, type TaskRequest } from './tasks.ts';
 // Supabase Edge Function: ai-proxy
 // Deploy example: supabase functions deploy ai-proxy
 
-const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')?.trim() ?? '';
+// 쉼표로 구분한 Google API 키 여러 개. 요청마다 시작 키를 무작위로 골라 부하를 나누고,
+// 한 키가 한도(429)·권한(401/403)·키 오류·서버 오류에 걸리면 다음 키로 넘어간다.
+const GOOGLE_API_KEYS = (Deno.env.get('GOOGLE_API_KEYS') ?? '')
+  .split(',')
+  .map((key) => key.trim())
+  .filter(Boolean);
 const GOOGLE_MODEL = Deno.env.get('GOOGLE_MODEL')?.trim() || 'gemma-4-31b-it';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.trim() ?? '';
@@ -84,9 +89,35 @@ async function readBodyLimited(req: Request): Promise<string | null> {
   return new TextDecoder().decode(bytes);
 }
 
-async function callGoogle({ system, user, temperature, maxTokens, responseSchema }: TaskRequest) {
-  requireEnv('GOOGLE_API_KEY', GOOGLE_API_KEY);
+/** 다른 키로 다시 보내 볼 만한 실패인가. 요청 내용 탓인 400 은 다른 키로도 똑같이 실패한다. */
+const isKeyLevelFailure = (status: number, message: string) =>
+  status === 401 || status === 403 || status === 429 || status >= 500
+  || /api key|API_KEY|quota|exhausted/i.test(message);
 
+async function callGoogle(request: TaskRequest) {
+  if (GOOGLE_API_KEYS.length === 0) throw new Error('GOOGLE_API_KEYS not configured');
+
+  const start = Math.floor(Math.random() * GOOGLE_API_KEYS.length);
+  let lastError: Error | null = null;
+  for (let i = 0; i < GOOGLE_API_KEYS.length; i += 1) {
+    const keyIndex = (start + i) % GOOGLE_API_KEYS.length;
+    const result = await callGoogleWithKey(GOOGLE_API_KEYS[keyIndex], request);
+    if (result.ok) return result.value;
+    // 키 값은 남기지 않는다. 몇 번째 키인지만 남긴다.
+    lastError = new Error(`Google AI key #${keyIndex + 1} failed (${result.status}): ${result.message}`);
+    if (!isKeyLevelFailure(result.status, result.message)) break;
+    console.error(lastError.message);
+  }
+  throw lastError ?? new Error('Google AI request failed');
+}
+
+async function callGoogleWithKey(
+  apiKey: string,
+  { system, user, temperature, maxTokens, responseSchema }: TaskRequest,
+): Promise<
+  | { ok: true; value: { data: string; usage: unknown; provider: string } }
+  | { ok: false; status: number; message: string }
+> {
   // 키는 URL 쿼리(?key=)가 아니라 헤더로 보낸다. URL 은 프록시·로그에 남는다.
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
   const contents = [{ role: 'user', parts: [{ text: user }] }];
@@ -96,7 +127,7 @@ async function callGoogle({ system, user, temperature, maxTokens, responseSchema
   const post = async (body: unknown) => {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GOOGLE_API_KEY },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
     });
     const payload = await response.json().catch(() => ({}));
@@ -126,7 +157,7 @@ async function callGoogle({ system, user, temperature, maxTokens, responseSchema
   }
 
   if (!response.ok) {
-    throw new Error(payload?.error?.message || `Google AI request failed with status ${response.status}`);
+    return { ok: false, status: response.status, message: String(payload?.error?.message || '') };
   }
 
   const text = (payload?.candidates?.[0]?.content?.parts || [])
@@ -134,9 +165,12 @@ async function callGoogle({ system, user, temperature, maxTokens, responseSchema
     .join('');
 
   return {
-    data: text,
-    usage: payload?.usageMetadata || null,
-    provider: 'google-gemma',
+    ok: true,
+    value: {
+      data: text,
+      usage: payload?.usageMetadata || null,
+      provider: 'google-gemma',
+    },
   };
 }
 

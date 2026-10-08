@@ -23,7 +23,7 @@ Copy `.env.example` to `.env` and fill these values for local development.
 The `supabase/functions/ai-proxy` Edge Function expects these secrets in the Supabase environment:
 
 ```text
-GOOGLE_API_KEY=
+GOOGLE_API_KEYS=   # comma-separated; one key per Google account/project, tried in turn
 GOOGLE_MODEL=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=

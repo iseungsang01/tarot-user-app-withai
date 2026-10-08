@@ -60,7 +60,7 @@ test('ai-proxy: no auth bypass toggle, API key stays out of the URL, quota is DB
 
   assert.doesNotMatch(source, /AI_PROXY_REQUIRE_AUTH/);
   assert.doesNotMatch(source, /generateContent\?key=/);
-  assert.match(source, /'x-goog-api-key': GOOGLE_API_KEY/);
+  assert.match(source, /'x-goog-api-key': apiKey/);
   assert.match(source, /rpc\('consume_ai_proxy_quota'/);
   assert.doesNotMatch(source, /rateLimitMap/);
   assert.doesNotMatch(source, /body\.messages|const \{ messages/);
