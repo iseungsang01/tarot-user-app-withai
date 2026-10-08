@@ -29,22 +29,49 @@ const ALLOWLIST = {
 
   // image-size 두 건은 같은 처지라 근거가 같다. 의존 경로도 하나뿐이다:
   //   expo@54 → @expo/metro@54 → metro@0.83.3 → image-size@1.2.1
+  // 2026-10-08 재검토: 2.0.3 에서 패치됐지만 1.x 라인(최신 1.2.1)에는 패치판이 없다.
+  // overrides 로 2.x 를 강제하는 것은 검토 후 기각했다 — metro 0.83.x(최신 0.83.8 도
+  // image-size ^1.0.2)의 src/Assets.js 가 `imageSize(filePath)` 처럼 파일 경로 문자열을 넘기는데,
+  // 2.x 의 기본 export 는 Uint8Array 만 받는다(경로는 별도 비동기 imageSizeFromFile). 강제하면
+  // 이미지 에셋 해석이 빌드 중에 깨진다.
   'GHSA-w3rx-r6r6-pgpr': {
     package: 'image-size',
-    why: '패치판이 없다. 권고의 취약 범위가 <=2.0.2 인데 2.0.2 가 레지스트리 최신이다. '
-      + 'metro 가 image-size 를 물고 있고 react-native 0.81.5 가 그 metro 를 고정한다. '
+    why: '패치판(2.0.3)은 semver major 이고 API 가 바뀌었다(경로 입력 제거). metro 0.83.x 가 ^1.0.2 를 '
+      + '고정하고 경로 문자열로 호출하므로 override 로 올릴 수 없다. 1.x 라인에는 패치판이 없다. '
       + 'npm audit 이 제안하는 "수정"은 react-native 0.72.17 로의 다운그레이드(semver major)라 채택할 수 없다.',
     risk: 'image-size 는 Metro 번들러의 빌드타임 의존성이라 앱 번들에 들어가지 않는다. '
       + '빌드 중 읽는 것은 저장소 안의 우리 이미지(WebP/PNG/SVG)뿐이고, 외부에서 들어온 이미지가 '
       + '이 파서에 닿는 경로가 없다. 사용자가 첨부하는 사진은 런타임에 expo-image-manipulator 가 '
       + '처리하며 image-size 와 무관하다. 문제의 ICNS·JXL·HEIF 는 이 프로젝트가 쓰지도 않는 포맷이다.',
-    reviewBy: '2026-10-09',
+    reviewBy: '2026-11-08',
   },
   'GHSA-5p2g-fcmc-qvqq': {
     package: 'image-size',
     why: 'GHSA-w3rx-r6r6-pgpr 와 동일 (같은 패키지·같은 미해결 상태).',
     risk: 'GHSA-w3rx-r6r6-pgpr 와 동일 (빌드타임 전용, 외부 입력이 닿지 않음).',
-    reviewBy: '2026-10-09',
+    reviewBy: '2026-11-08',
+  },
+
+  // 2026-10-08 추가. 경로: expo@54 → @expo/metro → metro-file-map@0.83.3 → micromatch@4.0.8 → braces@3.0.3
+  // (그 밖에 react-native → jest 계열 → micromatch 도 같은 braces 를 쓴다)
+  'GHSA-vfj7-8cjw-p6xm': {
+    package: 'braces',
+    why: '패치판이 없다. 취약 범위가 <=3.0.3 이고 3.0.3 이 레지스트리 최신이다 (first_patched_version 없음).',
+    risk: 'braces 는 Metro 파일맵·jest 의 glob 매칭에만 쓰이는 빌드/개발 도구 의존성이라 앱 번들에 들어가지 않는다. '
+      + '패턴은 Metro/jest 설정과 저장소 경로에서만 오고, 외부 입력이 glob 패턴으로 들어가는 경로가 없다. '
+      + '영향도 빌드 프로세스의 스택 고갈(DoS)뿐이다.',
+    reviewBy: '2026-11-08',
+  },
+  // 2026-10-08 추가. 경로: expo@54 → @expo/cli@54.0.27 → node-forge@1.4.0
+  // (@expo/cli → @expo/code-signing-certificates → node-forge 도 같은 판)
+  'GHSA-86w9-cpqp-85rv': {
+    package: 'node-forge',
+    why: '패치판이 없다. 취약 범위가 <=1.4.0 이고 1.4.0 이 레지스트리 최신이다 (first_patched_version 없음). '
+      + '@expo/cli 54 최신판도 node-forge ^1.3.3 을 그대로 쓴다.',
+    risk: 'node-forge 는 개발 머신에서 도는 @expo/cli(개발 서버 HTTPS·EAS Update 코드 서명 인증서 생성)에서만 쓰이고 '
+      + '앱 번들에 들어가지 않는다. 문제는 RSA PKCS#1 v1.5 서명 "검증"의 느슨함인데, 이 프로젝트는 '
+      + 'expo-updates 코드 서명을 쓰지 않으며 앱 런타임 어디서도 node-forge 로 서명을 검증하지 않는다.',
+    reviewBy: '2026-11-08',
   },
 };
 
