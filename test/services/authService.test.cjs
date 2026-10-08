@@ -48,8 +48,12 @@ test('authService: 로그인 실패 시 시도 횟수를 증가한다', async ()
   });
 
   const result = await authService.login('01011112222', 'wrong');
-  assert.equal(result.error.message, '비밀번호가 일치하지 않습니다.');
-  assert.deepEqual(saved[0], ['auth_login_guard', { failedAttempts: 2, lockUntil: 0 }]);
+  // 가입 여부가 드러나지 않게 실패 문구는 하나로 둔다
+  assert.equal(result.error.message, '전화번호 또는 비밀번호가 일치하지 않습니다.');
+  assert.deepEqual(saved.find(([key]) => key === 'auth_login_guard'), ['auth_login_guard', { failedAttempts: 2, lockUntil: 0 }]);
+  // 로그인 기기 식별값은 설치마다 만든 무작위 값이다(전화번호·타임존이 아니다)
+  const [, deviceId] = saved.find(([key]) => key === 'device_id');
+  assert.match(deviceId, /^[0-9a-f]{32}$/);
 });
 
 test('authService: 5회 실패 시 클라이언트 잠금 시간을 저장한다', async () => {

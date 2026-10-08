@@ -21,6 +21,13 @@ import { APP_INFO } from '../constants/Config';
 const MAX_ENTRIES = 200;
 // 접수에 실어 보내는 건수. device_info 가 jsonb 라 통째로 보내면 행이 비대해진다
 const ATTACHED_ENTRIES = 50;
+// submit_bug_report 는 device_info 의 jsonb 텍스트가 1000자를 넘으면 접수를 거부한다
+// (매니저 7차). jsonb 출력은 ',' ':' 뒤에 공백을 붙여서 JSON.stringify 보다 길다.
+const MAX_DEVICE_INFO_CHARS = 1000;
+const jsonbTextLength = (value) => {
+  const text = JSON.stringify(value);
+  return text.length + (text.match(/[,:]/g)?.length ?? 0);
+};
 const MAX_MESSAGE_LENGTH = 200;
 const MAX_EXTRA_LENGTH = 400;
 // 에러는 보통 연쇄로 터진다. 건마다 쓰지 않고 한 번에 모아 쓴다
@@ -163,12 +170,15 @@ export const describeDevice = () => {
 /** 버그 접수에 실어 보낼 device_info. submit_bug_report 의 p_device_info 로 그대로 들어간다 */
 export const buildDeviceInfo = async () => {
   const entries = await ensureLoaded().catch(() => []);
-  return {
+  const info = {
     app: APP_INFO.version,
     ...describeDevice(),
     collectedAt: new Date().toISOString(),
     logs: entries.slice(-ATTACHED_ENTRIES).reverse(),
   };
+  // 한도를 넘으면 오래된 것부터 뺀다
+  while (info.logs.length > 0 && jsonbTextLength(info) > MAX_DEVICE_INFO_CHARS) info.logs.pop();
+  return info;
 };
 
 /** 테스트 전용 — 모듈 수준 버퍼를 비운다 */

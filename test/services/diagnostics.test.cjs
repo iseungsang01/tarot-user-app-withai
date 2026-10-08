@@ -96,8 +96,10 @@ test('diagnostics: device_info carries app version, device, and the most recent 
   assert.equal(info.platform, 'android');
   assert.equal(info.os, 'Android 13');
   assert.equal(info.device, 'samsung SM-A516N');
-  // 행이 비대해지지 않도록 접수에는 최근 50건만 싣는다
-  assert.equal(info.logs.length, 50);
+  // submit_bug_report 가 jsonb 텍스트 1000자 초과를 거부하므로 최근 것부터 들어가는 만큼만 싣는다
+  const serialized = JSON.stringify(info);
+  assert.ok(serialized.length + serialized.match(/[,:]/g).length <= 1000);
+  assert.ok(info.logs.length > 0);
   assert.equal(info.logs[0].msg, '오류 59');
 });
 

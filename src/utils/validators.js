@@ -17,13 +17,25 @@
  */
 export const validatePhoneNumber = (phone) => /^010-\d{4}-\d{4}$/.test(phone);
 
+// 서버 validate_password_complexity 와 같은 규칙(매니저 7차): 6자 이상, UTF-8 72바이트 이하
+// (bcrypt 가 그 뒤를 버린다), '123456' 금지(매니저 초기 비밀번호였다).
 const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_BYTES = 72;
+const FORBIDDEN_PASSWORDS = new Set(['123456']);
 
-export const validatePassword = (password) => (
-  typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH
-);
+const utf8ByteLength = (text) => new TextEncoder().encode(text).length;
 
-export const getPasswordValidationMessage = () => `비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다.`;
+export const getPasswordValidationMessage = (password) => {
+  // 서버는 char_length(코드포인트)로 센다. 이모지는 UTF-16 길이로 2라 그대로 세면 어긋난다.
+  if (typeof password !== 'string' || Array.from(password).length < MIN_PASSWORD_LENGTH) {
+    return `비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다.`;
+  }
+  if (utf8ByteLength(password) > MAX_PASSWORD_BYTES) return '비밀번호가 너무 깁니다.';
+  if (FORBIDDEN_PASSWORDS.has(password)) return '너무 쉬운 비밀번호입니다. 다른 비밀번호를 써 주세요.';
+  return null;
+};
+
+export const validatePassword = (password) => getPasswordValidationMessage(password) === null;
 
 /**
  * 비밀번호 변경 폼 입력값 검증
@@ -34,7 +46,7 @@ export const getPasswordValidationMessage = () => `비밀번호는 ${MIN_PASSWOR
  */
 export const validatePasswordChange = ({ currentPassword, newPassword, confirmPassword }) => {
   if (!currentPassword || !newPassword || !confirmPassword) return '모든 필드를 입력해 주세요.';
-  if (!validatePassword(newPassword)) return getPasswordValidationMessage();
+  if (!validatePassword(newPassword)) return getPasswordValidationMessage(newPassword);
   if (newPassword !== confirmPassword) return '새 비밀번호 확인이 일치하지 않습니다.';
   return null;
 };

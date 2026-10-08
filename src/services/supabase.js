@@ -51,12 +51,15 @@ const isAuthContextError = (error) => {
 
   if (AUTH_ERROR_CODES.has(String(error.code || ''))) return true;
 
+  // 28000: resolve_customer_session 실패(만료·폐기된 세션). 'auth' 부분 문자열로
+  // 판정하던 때는 서버 문구에 auth 가 들어간 아무 오류에도 전역 로그아웃이 났다.
+  if (String(error.code || '') === '28000') return true;
+
   const message = (error.message || '').toLowerCase();
   return (
     message.includes('jwt')
     || message.includes('not authenticated')
     || message.includes('unauthorized')
-    || message.includes('auth')
   );
 };
 

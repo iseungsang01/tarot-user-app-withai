@@ -47,7 +47,7 @@ const RegisterScreen = ({ navigation }) => {
         }
 
         if (!validatePassword(password)) {
-            setMessage({ text: getPasswordValidationMessage(), type: 'error' });
+            setMessage({ text: getPasswordValidationMessage(password), type: 'error' });
             return;
         }
 

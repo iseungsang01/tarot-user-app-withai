@@ -37,6 +37,26 @@ const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType =
 
 const getStoredSession = async () => storage.get(CUSTOMER_SESSION_KEY);
 
+const randomHex = (byteLength) => {
+  const bytes = new Uint8Array(byteLength);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < byteLength; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+// 설치마다 한 번 만들어 계속 쓴다. 전화번호·타임존처럼 남이 맞힐 수 있는 값이면
+// 공격자가 피해자의 "아는 기기"를 흉내 낼 수 있다.
+const getDeviceId = async () => {
+  const saved = await storage.get(STORAGE_KEYS.DEVICE_ID);
+  if (typeof saved === 'string' && /^[0-9a-f]{32}$/.test(saved)) return saved;
+  const created = randomHex(16);
+  await storage.save(STORAGE_KEYS.DEVICE_ID, created);
+  return created;
+};
+
 const LOGOUT_REMOTE_TIMEOUT_MS = 1500;
 
 const settleWithin = async (operation, timeoutMs = LOGOUT_REMOTE_TIMEOUT_MS) => {
@@ -55,10 +75,11 @@ const settleWithin = async (operation, timeoutMs = LOGOUT_REMOTE_TIMEOUT_MS) => 
   }
 };
 
+// 서버 message 는 영어이거나 내부 문구일 수 있어 화면에 그대로 쓰지 않는다.
 const getFailureMessage = (resultData) => {
-  if (resultData?.reason === 'INVALID_PASSWORD') return '비밀번호가 일치하지 않습니다.';
-  if (resultData?.reason === 'CUSTOMER_NOT_FOUND') return '가입된 회원 정보를 찾을 수 없습니다.';
-  return resultData?.message || '전화번호 또는 비밀번호가 일치하지 않습니다.';
+  if (resultData?.locked || resultData?.lock_expires_at) return '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
+  if (resultData?.reason === 'INTERNAL_ERROR') return '서버 연결 중 오류가 발생했습니다.';
+  return '전화번호 또는 비밀번호가 일치하지 않습니다.';
 };
 
 const getRegisterFailureMessage = (resultData, fallback = '회원가입에 실패했습니다.') => {
@@ -75,7 +96,8 @@ const getRegisterFailureMessage = (resultData, fallback = '회원가입에 실�
     return '이미 가입된 전화번호입니다. 로그인 화면에서 기존 계정으로 로그인해주세요.';
   }
 
-  return message;
+  if (normalizedMessage.includes('password')) return '비밀번호는 6자 이상이어야 하고 123456 은 쓸 수 없습니다.';
+  return fallback;
 };
 
 const getRpcFailureMessage = (rpcError) => {
@@ -91,14 +113,15 @@ const getGuestLoginFailureMessage = (rpcError, resultData) => {
     return '게스트 로그인 서버 설정이 아직 적용되지 않았습니다. 관리자에게 문의해주세요.';
   }
 
-  return rpcError?.message || resultData?.message || '게스트 세션을 만들지 못했습니다.';
+  if (resultData?.code === 'GUEST_RATE_LIMITED') return resultData.message;
+  return '게스트 세션을 만들지 못했습니다. 잠시 후 다시 시도해주세요.';
 };
 
 export const authService = {
   async login(phoneNumber, password) {
     try {
       const guard = await getLoginGuard();
-      const clientFingerprint = `${phoneNumber.trim()}::${Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'}`;
+      const clientFingerprint = await getDeviceId();
 
       const { data: resultData, error: rpcError } = await supabaseClient.loginCustomer({
         p_phone: phoneNumber.trim(),

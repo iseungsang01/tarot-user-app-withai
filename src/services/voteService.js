@@ -16,6 +16,8 @@ export const voteService = {
       .from('votes')
       .select('*')
       .eq('is_active', true)
+      // 시작 전 투표는 서버가 제출·집계를 거부한다(매니저 7차). 목록에도 띄우지 않는다.
+      .lte('starts_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 
     return { data, error };

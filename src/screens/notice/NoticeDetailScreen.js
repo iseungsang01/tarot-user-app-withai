@@ -5,6 +5,7 @@ import { ArchiveTitleHeader, PremiumCard, ScreenContainer } from '../../componen
 import { CommonStyles } from '../../styles/CommonStyles';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { formatDateDot } from '../../utils/formatters';
+import { isWebUrl } from '../../utils/url';
 import ResponsiveImage from '../../components/common/ResponsiveImage';
 
 const parseContent = (content = '') => {
@@ -63,7 +64,7 @@ const NoticeDetailScreen = ({ route, navigation }) => {
                     <View style={styles.contentWrap}>
                         {parts.map((part, idx) => (
                             part.type === 'link' ? (
-                                <Text key={idx} style={styles.link} onPress={() => Linking.openURL(part.url)}>{part.text}</Text>
+                                <Text key={idx} style={styles.link} onPress={() => isWebUrl(part.url) && Linking.openURL(part.url)}>{part.text}</Text>
                             ) : (
                                 <Text key={idx} style={styles.content}>{part.content}</Text>
                             )

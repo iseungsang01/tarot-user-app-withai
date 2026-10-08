@@ -18,6 +18,9 @@ export const STORAGE_KEYS = {
   // 진단 로그도 기기별이다. 로그인 이전이나 로그인 실패 자체가 남아야 하는데
   // 스코프를 태우면 그 구간이 게스트 쪽으로 흩어진다.
   DIAGNOSTIC_LOG: 'diagnostic_log',
+  // 로그인 기기 식별값. 서버는 로그인에 성공한 적 있는 기기를 "아는 기기"로 보고
+  // 대입 공격 중에도 그 기기의 로그인은 막지 않는다. 계정이 아니라 기기에 묶여야 한다.
+  DEVICE_ID: 'device_id',
 };
 
 const LOCAL_SCOPE_PREFIX = 'tarot_local';

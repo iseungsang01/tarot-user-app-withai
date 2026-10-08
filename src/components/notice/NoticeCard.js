@@ -3,6 +3,7 @@ import { Text } from '../common/AppText';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 import { PremiumCard } from '../common/PremiumUI';
 import { formatDateDot } from '../../utils/formatters';
+import { isWebUrl } from '../../utils/url';
 
 export const NoticeCard = ({ notice, onPress }) => {
   const parseContent = (content) => {
@@ -24,6 +25,7 @@ export const NoticeCard = ({ notice, onPress }) => {
   };
 
   const handleLinkPress = (url) => {
+    if (!isWebUrl(url)) return;
     Linking.openURL(url).catch((err) => console.error('링크 열기 실패:', err));
   };
 

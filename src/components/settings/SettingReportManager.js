@@ -27,6 +27,10 @@ const REPORT_TYPE_LABELS = {
 
 const reportTypeLabel = (value) => REPORT_TYPE_LABELS[value] || value || '앱 버그';
 
+// submit_bug_report 상한(매니저 7차). 넘기면 서버가 접수 자체를 거부한다
+const REPORT_TITLE_MAX_LENGTH = 200;
+const REPORT_DESCRIPTION_MAX_LENGTH = 2000;
+
 const PICKER_OPTIONS = { allowsEditing: true, quality: 0.7 };
 const COMPRESS_OPTIONS = { maxWidth: 1000, quality: 0.6 };
 
@@ -78,6 +82,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         style={styles.input}
         value={reportData.title}
         onChangeText={(t) => handleFieldChange('title', t)}
+        maxLength={REPORT_TITLE_MAX_LENGTH}
         placeholder="제목"
         placeholderTextColor="rgba(166, 137, 102, 0.5)"
       />
@@ -85,6 +90,7 @@ export const SettingReportManager = ({ myReports, onSubmit, getStatusColor, proc
         style={[styles.input, styles.textArea]}
         value={reportData.description}
         onChangeText={(t) => handleFieldChange('description', t)}
+        maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
         placeholder="버그 상황을 자세히 적어주세요"
         placeholderTextColor="rgba(166, 137, 102, 0.5)"
         multiline
