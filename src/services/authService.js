@@ -86,6 +86,9 @@ const getRegisterFailureMessage = (resultData, fallback = '회원가입에 실�
   const message = resultData?.message || fallback;
   const normalizedMessage = message.toLowerCase();
 
+  // 매니저 register_customer 의 IP 당 시간당 가입 상한(8차).
+  if (resultData?.reason === 'RATE_LIMITED') return '가입 시도가 너무 많습니다. 1시간 후 다시 시도해주세요.';
+
   if (
     resultData?.reason === 'PHONE_ALREADY_REGISTERED'
     || normalizedMessage.includes('already registered')

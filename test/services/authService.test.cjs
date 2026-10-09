@@ -268,6 +268,26 @@ test('authService: 회원가입 중 이미 등록된 전화번호는 한국어 �
   assert.equal(result.error.message, '이미 가입된 전화번호입니다. 로그인 화면에서 기존 계정으로 로그인해주세요.');
 });
 
+test('authService: 가입 IP 상한(RATE_LIMITED)은 재시도 안내를 반환한다', async () => {
+  const storage = createStorageMock();
+  const supabaseClient = {
+    registerCustomer: async () => ({
+      data: { success: false, reason: 'RATE_LIMITED', message: 'Too many sign-up attempts. Please try again later.' },
+      error: null,
+    }),
+  };
+
+  const { authService } = loadModule('src/services/authService.js', {
+    './supabaseClient': { supabaseClient },
+    '../utils/storage': { storage },
+  });
+
+  const result = await authService.register('010-1111-2222', 'password', 'tester');
+
+  assert.equal(result.data, null);
+  assert.equal(result.error.message, '가입 시도가 너무 많습니다. 1시간 후 다시 시도해주세요.');
+});
+
 test('authService: 로그아웃은 서버 세션 폐기 후 로컬 키를 삭제한다', async () => {
   const storage = createStorageMock();
   await storage.save('tarot_customer_session', { token: 'saved-token', customerId: 'customer-1' });
