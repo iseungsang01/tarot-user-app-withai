@@ -6,6 +6,12 @@ import { voteService } from '../services/voteService';
 import { handleApiCall } from '../utils/errorHandler';
 
 import { dialog } from '../utils/dialog';
+
+// 종료 판정은 서버 시각 기준이라 화면에 아직 진행 중으로 보여도 22023 VOTE_CLOSED 가 올 수 있다.
+const alertIfVoteClosed = (error) => {
+    if (error?.message === 'VOTE_CLOSED') dialog.alert('알림', '이미 종료된 투표입니다.', [{ text: '확인' }]);
+};
+
 export const useVoteLogic = () => {
     const { customer } = useAuth();
 
@@ -170,6 +176,7 @@ export const useVoteLogic = () => {
                         () => voteService.cancelVote(selectedVote.id, customer.id)
                     );
 
+                    alertIfVoteClosed(error);
                     if (!error) {
                         // 로컬 상태 업데이트
                         setMyVoteMap(prev => {
@@ -203,6 +210,7 @@ export const useVoteLogic = () => {
                 () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions)
             );
 
+            alertIfVoteClosed(res.error);
             if (res.data) {
                 // 로컬 상태 업데이트
                 setMyVoteMap(prev => ({ ...prev, [selectedVote.id]: res.data }));
