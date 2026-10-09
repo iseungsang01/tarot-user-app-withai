@@ -328,39 +328,12 @@ DROP FUNCTION IF EXISTS public.increment_visit_count(uuid) CASCADE;
 
 -- ── 매니저 소유 공유 함수는 여기 없다 ───────────────────────────────────
 -- login_customer, register_customer, validate_password_complexity, submit_bug_report,
--- submit_vote_response, cancel_vote_response, get_vote_summary 는 매니저앱이 정의한다
+-- submit_vote_response, cancel_vote_response, get_vote_summary,
+-- resolve_customer_session, resolve_customer_session_allow_restricted 는 매니저앱이 정의한다
 -- (정본: tarot-manager-app supabase/sql/20261008_security_round7.sql, 커밋 11ae80c).
 -- 이 파일이 옛 본문을 다시 적용하면 NULL 비밀번호 로그인·대입 제한이 되돌아가서 지웠다.
 -- 유저앱은 호출만 한다. 정의·DROP·GRANT 를 다시 넣지 않는다.
 
-CREATE OR REPLACE FUNCTION public.resolve_customer_session(p_session_token text)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE v_customer_id uuid; v_token_hash text;
-BEGIN
-  IF p_session_token IS NULL OR length(trim(p_session_token)) = 0 THEN RETURN NULL; END IF;
-  v_token_hash := encode(extensions.digest(p_session_token, 'sha256'), 'hex');
-
-  SELECT s.customer_id INTO v_customer_id
-  FROM public.customer_sessions s
-  JOIN public.customers c ON c.id = s.customer_id
-  WHERE s.token_hash = v_token_hash
-    AND s.revoked_at IS NULL
-    AND s.expires_at > now()
-    AND c.deleted_at IS NULL;
-
-  IF v_customer_id IS NOT NULL THEN
-    UPDATE public.customer_sessions SET last_used_at = now() WHERE token_hash = v_token_hash;
-  END IF;
-
-  RETURN v_customer_id;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.resolve_customer_session(text) FROM PUBLIC, anon, authenticated;
 
 -- 1.0.9: AI 프록시 사용량은 DB 에서 센다 (migrations/20261008120000_ai_proxy_server_side_quota.sql).
 CREATE TABLE IF NOT EXISTS public.ai_proxy_rate_counters (
@@ -707,7 +680,7 @@ SET search_path = public, extensions
 AS $$
 DECLARE v_customer public.customers%ROWTYPE; v_customer_id uuid;
 BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
+  v_customer_id := public.resolve_customer_session_allow_restricted(p_session_token);
   IF v_customer_id IS NULL THEN
     RETURN jsonb_build_object('success', false, 'message', 'Invalid or expired session.');
   END IF;
@@ -925,7 +898,7 @@ DECLARE
   v_customer_id uuid;
   v_hashed_password text;
 BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
+  v_customer_id := public.resolve_customer_session_allow_restricted(p_session_token);
   IF v_customer_id IS NULL OR input_password IS NULL OR input_password = '' THEN
     RETURN false;
   END IF;
@@ -951,7 +924,7 @@ AS $$
 DECLARE
   v_customer_id uuid;
 BEGIN
-  v_customer_id := public.resolve_customer_session(p_session_token);
+  v_customer_id := public.resolve_customer_session_allow_restricted(p_session_token);
   IF v_customer_id IS NULL THEN
     RETURN false;
   END IF;

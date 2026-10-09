@@ -120,20 +120,12 @@ test('visit schema: customer deletion flag hides visits without removing admin r
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.hide_my_visit\(text, integer\) TO anon, authenticated;/);
 });
 
-test('session schema: resolve_customer_session is defined and matches hashed tokens', () => {
-  const resolveFunction = getFunctionBody('resolve_customer_session');
+test('session schema: customer_sessions stores only hashed tokens', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
 
   assert.match(schema, /CREATE TABLE IF NOT EXISTS public\.customer_sessions/);
   assert.match(schema, /token_hash text NOT NULL UNIQUE/);
   assert.doesNotMatch(schema, /customer_sessions \(\s*token text PRIMARY KEY/);
-  assert.match(resolveFunction, /RETURNS uuid/);
-  assert.match(resolveFunction, /FROM public\.customer_sessions/);
-  assert.match(resolveFunction, /v_token_hash := encode\(extensions\.digest\(p_session_token, 'sha256'\), 'hex'\)/);
-  assert.match(resolveFunction, /s\.token_hash = v_token_hash/);
-  assert.doesNotMatch(resolveFunction, /s\.token = p_session_token/);
-  assert.match(resolveFunction, /revoked_at IS NULL/);
-  assert.match(resolveFunction, /expires_at > now\(\)/);
 });
 
 test('ownership: schema.sql never defines, drops or grants the manager-owned shared functions', () => {
@@ -141,6 +133,8 @@ test('ownership: schema.sql never defines, drops or grants the manager-owned sha
   const managerOwned = [
     'login_customer', 'register_customer', 'validate_password_complexity', 'submit_bug_report',
     'submit_vote_response', 'cancel_vote_response', 'get_vote_summary', 'verify_admin_password',
+    // 매니저 8차: 제한 세션(must_change_password)을 거르는 해석기. 옛 본문이 재적용되면 풀린다.
+    'resolve_customer_session', 'resolve_customer_session_allow_restricted',
   ];
 
   // 매니저 7차: 옛 login_customer 본문이 다시 적용되면 p_password=null 로그인이 되살아난다.
@@ -244,17 +238,24 @@ test('coupon schema: direct coupon mutations are denied to client roles', () => 
 
 test('account schema: sensitive operations resolve customer from session token', () => {
   const schema = fs.readFileSync(schemaPath, 'utf8');
-  const functionBodies = [
+  // 매니저 8차 제한 세션: 강제 변경 흐름(프로필 복원·재확인·변경)만 제한 세션을 받는다.
+  const restrictedOk = [
     getFunctionBody('verify_my_password'),
     getFunctionBody('update_my_password'),
-    schema.match(/CREATE OR REPLACE FUNCTION public\.delete_my_account\(p_session_token text, input_password text\)[\s\S]*?\n\$\$;/)[0],
+    getFunctionBody('get_my_profile'),
   ];
+  const deleteAccount = schema.match(/CREATE OR REPLACE FUNCTION public\.delete_my_account\(p_session_token text, input_password text\)[\s\S]*?\n\$\$;/)[0];
 
-  for (const functionBody of functionBodies) {
+  for (const functionBody of [...restrictedOk, deleteAccount]) {
     assert.match(functionBody, /p_session_token text/);
-    assert.match(functionBody, /public\.resolve_customer_session\(p_session_token\)/);
     assert.doesNotMatch(functionBody, /customer_uuid uuid/);
   }
+  for (const functionBody of restrictedOk) {
+    assert.match(functionBody, /public\.resolve_customer_session_allow_restricted\(p_session_token\)/);
+  }
+  assert.match(deleteAccount, /public\.resolve_customer_session\(p_session_token\)/);
+  const others = restrictedOk.reduce((rest, body) => rest.replace(body, ''), schema);
+  assert.doesNotMatch(others, /resolve_customer_session_allow_restricted\(/, '그 밖의 RPC 는 제한 세션을 받지 않는다');
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.verify_my_password\(text, text\) TO anon, authenticated;/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.update_my_password\(text, text, text, text\) TO anon, authenticated;/);
   assert.match(schema, /GRANT EXECUTE ON FUNCTION public\.delete_my_account\(text, text\) TO anon, authenticated;/);
