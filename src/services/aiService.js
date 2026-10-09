@@ -8,19 +8,6 @@ import { readFunctionError } from './supabaseClient';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
 
-const stringifyError = (errorValue) => {
-    if (!errorValue) return '';
-    if (typeof errorValue === 'string') return errorValue;
-    if (typeof errorValue === 'object') {
-        try {
-            return JSON.stringify(errorValue);
-        } catch {
-            return String(errorValue);
-        }
-    }
-    return String(errorValue);
-};
-
 /** 모델 출력에서 코드펜스와 스마트 따옴표를 걷어낸다. */
 const stripJSONDecorators = (text) => {
     if (typeof text !== 'string') return '';
@@ -327,15 +314,8 @@ const callAIProxy = async (task, input, { signal } = {}) => {
         // 실패 code(db-redesign §2-1): AD_REQUIRED · AD_PENDING · QUOTA_EXCEEDED · INVALID_SESSION 등
         if (error) return { data: null, error: await readFunctionError(error) };
 
-        if (!data || data.error) {
-            return {
-                data: null,
-                error: new Error(stringifyError(data?.error) || 'AI response was not received.'),
-            };
-        }
-
         // Validate AI response structure
-        if (typeof data.data !== 'string' || !data.data.trim()) {
+        if (typeof data?.data !== 'string' || !data.data.trim()) {
             return {
                 data: null,
                 error: new Error('AI response data is invalid or empty.'),
@@ -343,12 +323,7 @@ const callAIProxy = async (task, input, { signal } = {}) => {
         }
 
 
-        return {
-            data: sanitizeAIText(data.data),
-            usage: data.usage,
-            provider: data.provider,
-            error: null,
-        };
+        return { data: sanitizeAIText(data.data), error: null };
     } catch (error) {
         return { data: null, error };
     }

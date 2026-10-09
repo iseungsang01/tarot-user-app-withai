@@ -7,7 +7,7 @@ test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async 
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: '일반 텍스트 응답', usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: '일반 텍스트 응답' }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -63,7 +63,7 @@ test('aiService: sends customer session token in a custom header', async () => {
         functions: {
           invoke: async (_, options) => {
             invokedOptions = options;
-            return { data: { data: '{"fortune":"ok","luckyColor":"gold","luckyItem":"note"}', usage: {}, provider: 'mock' }, error: null };
+            return { data: { data: '{"fortune":"ok","luckyColor":"gold","luckyItem":"note"}' }, error: null };
           },
         },
       },
@@ -138,7 +138,7 @@ test('aiService: daily fortune extracts JSON object from decorated model output'
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: modelOutput }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -169,7 +169,7 @@ test('aiService: daily fortune sanitizes malformed JSON-like fortune output', as
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: modelOutput }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -196,7 +196,7 @@ test('aiService: daily fortune tolerates trailing comma and smart quotes', async
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: modelOutput }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -225,7 +225,7 @@ test('aiService: daily fortune raw Korean fallback receives safe lucky defaults'
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: '오늘은 차분하게 기회를 살피면 좋은 하루입니다.', usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: '오늘은 차분하게 기회를 살피면 좋은 하루입니다.' }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -256,7 +256,7 @@ test('aiService: daily fortune repairs raw newline inside JSON string', async ()
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: modelOutput }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -289,7 +289,7 @@ test('aiService: daily fortune collapses degenerate Korean syllable repeats', as
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: modelOutput }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -318,7 +318,7 @@ test('aiService: daily fortune collapses degenerate repeated English tokens', as
     './supabase': {
       supabase: {
         functions: {
-          invoke: async () => ({ data: { data: modelOutput, usage: {}, provider: 'mock' }, error: null }),
+          invoke: async () => ({ data: { data: modelOutput }, error: null }),
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
@@ -370,7 +370,7 @@ test('aiService: voice memo condense uses the dedicated proxy task', async () =>
         functions: {
           invoke: async (_, options) => {
             invokedOptions = options;
-            return { data: { data: '{"condensed":"short memo"}', usage: {}, provider: 'mock' }, error: null };
+            return { data: { data: '{"condensed":"short memo"}' }, error: null };
           },
         },
       },
