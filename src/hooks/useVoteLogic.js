@@ -200,7 +200,7 @@ export const useVoteLogic = () => {
             // 아래에서 결과 화면으로 바뀌는 것으로 대신한다.
             const res = await handleApiCall(
                 'VotePanel.submitVote',
-                () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions, myVote?.id)
+                () => voteService.submitVote(selectedVote.id, customer.id, selectedOptions)
             );
 
             if (res.data) {
@@ -219,11 +219,8 @@ export const useVoteLogic = () => {
     };
 
     // Helper logic for rendering
-    const normalizeOptions = (opts) => {
-        if (Array.isArray(opts)) return opts.map((t, i) => ({ id: i, text: typeof t === 'string' ? t : t.text || t }));
-        if (opts) return Object.entries(opts).map(([k, v]) => ({ id: parseInt(k), text: v }));
-        return [];
-    };
+    // votes.options 는 문자열 배열이고 옵션 id 는 배열 인덱스다(db-redesign §3).
+    const normalizeOptions = (opts) => (Array.isArray(opts) ? opts.map((text, id) => ({ id, text })) : []);
 
     return {
         state: {

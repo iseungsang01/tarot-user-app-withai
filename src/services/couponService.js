@@ -3,19 +3,11 @@ import { requireCustomerSessionToken } from './customerSession';
 
 const SILENT_COUPON_USE_ERROR_CODES = new Set([
   'ADMIN_PASSWORD_REQUIRED',
-  'invalid_admin_password',
+  'INVALID_CREDENTIALS',
 ]);
 
-/**
- * 쿠폰 서비스
- * 쿠폰 조회, 사용, 발급
- */
 export const couponService = {
-  /**
-   * 고객의 쿠폰 목록 조회 (사용하지 않은 쿠폰만)
-   * @param {string} customerId - 고객 ID (UUID)
-   * @returns {object} { data, error }
-   */
+  // [{ id, coupon_code, coupon_type('stamp'|'birthday'), issued_at, valid_until }]
   async getCoupons(customerId) {
     if (customerId === 'guest') return { data: [], error: null };
     try {
@@ -33,35 +25,8 @@ export const couponService = {
     }
   },
 
-  /**
-   * 고객의 쿠폰 개수 조회 (사용하지 않은 쿠폰만)
-   * @param {string} customerId - 고객 ID (UUID)
-   * @returns {object} { count, error }
-   */
-  async getCouponCount(customerId) {
-    if (customerId === 'guest') return { count: 0, error: null };
-    try {
-
-      const token = await requireCustomerSessionToken();
-      const { data: count, error } = await supabaseClient.getMyCouponCount({
-        p_session_token: token,
-        p_valid_only: false,
-      });
-
-      if (error) throw error;
-
-      return { count: count || 0, error: null };
-    } catch (error) {
-      console.error('Get coupon count error:', error);
-      return { count: 0, error };
-    }
-  },
-
-  /**
-   * 쿠폰 사용
-   * @param {number} couponId - 쿠폰 ID
-   * @returns {object} { error }
-   */
+  // 매장 직원이 관리자 비밀번호를 입력해 사용 처리한다. 실패 사유는 error.reason
+  // (INVALID_CREDENTIALS · NOT_FOUND · COUPON_USED · COUPON_EXPIRED · RATE_LIMITED 등).
   async useCoupon(couponId, adminPassword) {
     try {
       if (!adminPassword?.trim()) {
@@ -71,50 +36,19 @@ export const couponService = {
       }
 
       const token = await requireCustomerSessionToken();
-      const { data, error } = await supabaseClient.redeemCoupon({
+      const { error } = await supabaseClient.redeemCoupon({
         couponId,
         adminPassword,
         sessionToken: token,
       });
 
       if (error) throw error;
-
-      const result = Array.isArray(data) ? data[0] : data;
-
-      if (result?.success !== true || result?.message !== 'ok') {
-        const message = result?.message || 'coupon_redemption_failed';
-        const useError = new Error(message);
-        useError.code = message;
-        throw useError;
-      }
-
-      return { error: null, message: result.message };
+      return { error: null };
     } catch (error) {
       if (!SILENT_COUPON_USE_ERROR_CODES.has(error?.code)) {
         console.error('Use coupon error:', error);
       }
       return { error };
-    }
-  },
-
-  /**
-   * 유효한 쿠폰 개수 조회 (만료되지 않고 사용하지 않은 쿠폰만)
-   * @param {string} customerId - 고객 ID (UUID)
-   * @returns {object} { count, error }
-   */
-  async getValidCouponCount(customerId, signal = null) {
-    if (customerId === 'guest') return { count: 0, error: null };
-    try {
-      const token = await requireCustomerSessionToken();
-      const { data: count, error } = await supabaseClient.getMyCouponCount({
-        p_session_token: token,
-        p_valid_only: true,
-      }, { abortSignal: signal });
-
-      return { count: count || 0, error };
-    } catch (error) {
-      console.error('Get valid coupon count error:', error);
-      return { count: 0, error };
     }
   },
 };

@@ -15,49 +15,10 @@ export const voteService = {
     const { data, error } = await supabase
       .from('votes')
       .select('*')
-      .eq('is_active', true)
-      // 시작 전 투표는 서버가 제출·집계를 거부한다(매니저 7차). 목록에도 띄우지 않는다.
-      .lte('starts_at', new Date().toISOString())
+      // 활성·시작 여부는 RLS 가 거른다(클라이언트 시각을 믿지 않는다).
       .order('created_at', { ascending: false });
 
     return { data, error };
-  },
-
-  /**
-   * 특정 투표 조회
-   * @param {number} voteId - 투표 ID
-   * @returns {object} { data, error }
-   */
-  async getVote(voteId) {
-    const { data, error } = await supabase
-      .from('votes')
-      .select('*')
-      .eq('id', voteId)
-      .single();
-
-    return { data, error };
-  },
-
-  /**
-   * 내 투표 기록 조회
-   * @param {number} voteId - 투표 ID
-   * @param {number} customerId - 고객 ID
-   * @returns {object} { data, error }
-   */
-  async getMyVote(voteId, customerId) {
-    if (customerId === 'guest') return { data: null, error: null };
-    try {
-      const token = await requireCustomerSessionToken();
-      const { data, error } = await supabaseClient.getMyVoteResponse({
-        p_session_token: token,
-        p_vote_id: voteId,
-      });
-
-      return { data: data?.id ? data : null, error };
-    } catch (error) {
-      console.error('Get my vote error:', error);
-      return { data: null, error };
-    }
   },
 
   /**
@@ -92,11 +53,10 @@ export const voteService = {
    * 투표하기 또는 수정하기
    * @param {number} voteId - 투표 ID
    * @param {number} customerId - 고객 ID
-   * @param {array} selectedOptions - 선택한 옵션 ID 배열
-   * @param {number} existingVoteId - 기존 투표 ID (수정 시)
-   * @returns {object} { data, error }
+   * @param {array} selectedOptions - 선택한 옵션 인덱스 배열
+   * @returns {object} { data: { id, selected_options }, error } — 서버가 (vote_id, customer_id) 로 upsert 한다
    */
-  async submitVote(voteId, customerId, selectedOptions, existingVoteId = null) {
+  async submitVote(voteId, customerId, selectedOptions) {
     if (customerId === 'guest') return { data: null, error: 'Guest cannot vote' };
     try {
       const token = await requireCustomerSessionToken();
@@ -104,7 +64,6 @@ export const voteService = {
         p_session_token: token,
         p_vote_id: voteId,
         p_selected_options: selectedOptions,
-        p_response_id: existingVoteId,
       });
 
       if (error) throw error;
@@ -143,13 +102,13 @@ export const voteService = {
     if (customerId === 'guest') return { data: null, error: 'Guest cannot cancel vote' };
     try {
       const token = await requireCustomerSessionToken();
-      const { data, error } = await supabaseClient.cancelVoteResponse({
+      const { error } = await supabaseClient.cancelVoteResponse({
         p_session_token: token,
         p_vote_id: voteId,
       });
 
       if (error) throw error;
-      return { data: data === true, error: null };
+      return { data: true, error: null };
     } catch (error) {
       console.error('Cancel vote error:', error);
       return { data: null, error };

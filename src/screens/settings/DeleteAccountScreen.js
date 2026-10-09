@@ -11,7 +11,7 @@ import { createValidationError, handleApiCall, showErrorAlert } from '../../util
 import { dialog } from '../../utils/dialog';
 const DeleteAccountScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { customer, logout } = useAuth();
+  const { logout } = useAuth();
   const [processing, setProcessing] = useState(false);
 
   const handleDeleteAccount = async (password) => {
@@ -38,7 +38,7 @@ const DeleteAccountScreen = ({ navigation }) => {
             onPress: async () => {
               const { error } = await handleApiCall(
                 'DeleteAccountScreen.delete',
-                () => customerService.deleteCustomer(customer.id, password),
+                () => customerService.deleteCustomer(password),
                 { silentErrorCodes: ['invalid_password'] },
               );
               if (error) {

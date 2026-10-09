@@ -1,13 +1,11 @@
 import { supabaseClient } from './supabaseClient';
-import { ensureAuthenticatedSession, withAuthErrorHandling } from './supabase';
+import { ensureAuthenticatedSession } from './supabase';
 import { storage } from '../utils/storage';
 
 const requireSession = async () => {
   const session = await ensureAuthenticatedSession();
   return session.ok ? null : session.error;
 };
-
-
 
 export const visitService = {
   syncLocalVisitFields: async (visitId, updates) => {
@@ -30,7 +28,7 @@ export const visitService = {
         p_session_token: sessionState.session.token,
       });
 
-      if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
+      if (error) throw error;
       return { data, error: null };
     } catch (error) {
       console.error('❌ [visitService] getVisits 오류:', error.message);
@@ -70,7 +68,8 @@ export const visitService = {
         p_visit_id: visitId,
       });
 
-      if (error) return { data: null, error: withAuthErrorHandling(error, sessionState.error?.message) };
+      // 대상이 없으면 P0002 NOT_FOUND 다.
+      if (error) return { data: null, error };
 
       const [card_image, card_review, title, ai_insight] = await Promise.all([
         storage.getCardImage(visitId),
@@ -94,14 +93,11 @@ export const visitService = {
       const sessionState = await ensureAuthenticatedSession();
       if (!sessionState.ok) return { error: sessionState.error };
 
-      const { data, error } = await supabaseClient.hideMyVisit({
+      const { error } = await supabaseClient.hideMyVisit({
         p_session_token: sessionState.session.token,
         p_visit_id: visitId,
       });
-      if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
-      if (data !== true) {
-        throw new Error('Visit not found or already hidden.');
-      }
+      if (error) throw error;
 
       await Promise.all([
         storage.deleteCardImage(visitId),
@@ -114,41 +110,6 @@ export const visitService = {
     } catch (error) {
       console.error('❌ [visitService] deleteVisit 오류:', error);
       return { error };
-    }
-  },
-
-  async getCustomerStats(customerId, signal = null) {
-    if (customerId === 'guest') {
-      return { data: { current_stamps: 0, visit_count: 0 }, error: null };
-    }
-
-    try {
-      const sessionState = await ensureAuthenticatedSession();
-      if (!sessionState.ok) return { data: null, error: sessionState.error };
-
-      const { data, error } = await supabaseClient.getCustomerStats({
-        p_session_token: sessionState.session.token,
-      }, { abortSignal: signal });
-
-      if (error) throw withAuthErrorHandling(error, sessionState.error?.message);
-      if (!data?.success) {
-        const statsError = {
-          message: data?.message || 'Unable to load stamp information.',
-          code: 'CUSTOMER_STATS_FAILED',
-        };
-        throw withAuthErrorHandling(statsError, statsError.message);
-      }
-
-      return {
-        data: {
-          current_stamps: data.current_stamps || 0,
-          visit_count: data.visit_count || 0,
-        },
-        error: null,
-      };
-    } catch (error) {
-      console.error('스탬프 정보 조회 실패:', error);
-      return { data: null, error };
     }
   },
 };

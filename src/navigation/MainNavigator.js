@@ -139,15 +139,21 @@ const TabNavigator = () => {
   );
 };
 
+// 비밀번호 변경이 필요한 동안은 강제 변경 화면만 둔다. must_change_password 가 바뀌면
+// (로그인 직후, 서버의 PASSWORD_CHANGE_REQUIRED, 변경 완료 후 refreshCustomer) 화면 묶음이 통째로 바뀐다.
 const MainNavigator = () => {
   const { customer } = useAuth();
 
+  if (customer?.must_change_password) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="ForcedPasswordChange" component={ForcedPasswordChangeScreen} options={{ gestureEnabled: false }} />
+      </Stack.Navigator>
+    );
+  }
+
   return (
-    <Stack.Navigator
-      screenOptions={{ headerShown: false }}
-      initialRouteName={customer?.must_change_password ? 'ForcedPasswordChange' : 'MainTabs'}
-    >
-      <Stack.Screen name="ForcedPasswordChange" component={ForcedPasswordChangeScreen} options={{ gestureEnabled: false }} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="DailyFortuneDraw" component={DailyFortuneDrawScreen} options={{ presentation: 'card' }} />
       <Stack.Screen name="VisitDetail" component={VisitDetailScreen} options={{ presentation: 'card' }} />

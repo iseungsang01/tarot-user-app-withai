@@ -2,55 +2,62 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadModule } = require('../helpers/moduleLoader.cjs');
 
-const loadClient = (invoke) =>
+const loadClient = (invoke, handled = []) =>
   loadModule('src/services/supabaseClient.js', {
-    './supabase': { supabase: { functions: { invoke } } },
+    './supabase': {
+      supabase: { functions: { invoke } },
+      withAuthErrorHandling: (error) => { handled.push(error); return error; },
+    },
   }).supabaseClient;
 
-test('redeemCoupon: posts the edge function contract and returns its payload', async () => {
+test('redeemCoupon: posts the edge function contract and treats 2xx as success', async () => {
   const calls = [];
   const client = loadClient(async (name, options) => {
     calls.push([name, options]);
-    return { data: { success: true, message: 'ok' }, error: null };
+    return { data: { id: 7, coupon_code: 'STAMP-7' }, error: null };
   });
 
   const result = await client.redeemCoupon({ couponId: 7, adminPassword: 'pw', sessionToken: 'token' });
 
   assert.deepEqual(calls, [['redeem-coupon', { body: { couponId: 7, adminPassword: 'pw', sessionToken: 'token' } }]]);
-  assert.deepEqual(result, { data: { success: true, message: 'ok' }, error: null });
+  assert.deepEqual(result, { error: null });
 });
 
-test('redeemCoupon: passes a 2xx failure body straight through', async () => {
-  // 함수는 도메인 실패(관리자 비밀번호 오답 등)를 200 + success:false 로 돌려준다.
-  // 이 경로에는 감싸기가 없으므로 본문이 그대로 호출부에 닿아야 한다.
-  const body = { success: false, message: 'invalid_admin_password' };
-  const client = loadClient(async () => ({ data: body, error: null }));
-
-  const result = await client.redeemCoupon({ couponId: 7, adminPassword: 'nope', sessionToken: 'token' });
-
-  assert.deepEqual(result, { data: body, error: null });
-});
-
-test('redeemCoupon: unwraps the { success, message } body out of a non-2xx response', async () => {
-  // 요청 형식 오류(invalid_request)는 400 으로 온다. supabase-js 가 비-2xx 를
-  // FunctionsHttpError 로 감싸고 본문을 error.context 에 남기므로 꺼내야 한다.
-  const body = { success: false, message: 'invalid_request' };
+test('redeemCoupon: lifts { code } out of a non-2xx body into error.reason and auth handling', async () => {
+  const handled = [];
   const client = loadClient(async () => ({
     data: null,
-    error: { name: 'FunctionsHttpError', context: { clone: () => ({ json: async () => body }) } },
-  }));
+    error: { name: 'FunctionsHttpError', context: { status: 409, clone: () => ({ json: async () => ({ code: 'COUPON_USED' }) }) } },
+  }), handled);
 
-  const result = await client.redeemCoupon({ couponId: 7, adminPassword: 'nope', sessionToken: 'token' });
+  const { error } = await client.redeemCoupon({ couponId: 7, adminPassword: 'pw', sessionToken: 'token' });
 
-  assert.deepEqual(result, { data: body, error: null });
+  assert.equal(error.reason, 'COUPON_USED');
+  assert.equal(error.code, 'COUPON_USED');
+  assert.equal(error.status, 409);
+  assert.equal(handled.length, 1);
 });
 
-test('redeemCoupon: keeps transport failures as errors', async () => {
-  const transportError = new Error('Failed to fetch');
-  const client = loadClient(async () => ({ data: null, error: transportError }));
+test('redeemCoupon: transport failures have no reason', async () => {
+  const client = loadClient(async () => ({ data: null, error: new Error('Failed to fetch') }));
 
-  const result = await client.redeemCoupon({ couponId: 7, adminPassword: 'pw', sessionToken: 'token' });
+  const { error } = await client.redeemCoupon({ couponId: 7, adminPassword: 'pw', sessionToken: 'token' });
 
-  assert.equal(result.data, null);
-  assert.equal(result.error, transportError);
+  assert.equal(error.reason, null);
+  assert.equal(error.message, 'Failed to fetch');
+});
+
+test('rpc: every RPC error passes through auth handling', async () => {
+  const handled = [];
+  const { supabaseClient } = loadModule('src/services/supabaseClient.js', {
+    './supabase': {
+      supabase: { rpc: async () => ({ data: null, error: { code: '28000', message: 'INVALID_SESSION' } }) },
+      withAuthErrorHandling: (error) => { handled.push(error); return { ...error, isAuthError: true }; },
+    },
+  });
+
+  const { error } = await supabaseClient.getMyVisits({ p_session_token: 't' });
+
+  assert.equal(error.isAuthError, true);
+  assert.deepEqual(handled, [{ code: '28000', message: 'INVALID_SESSION' }]);
 });

@@ -72,33 +72,6 @@ test('visitService: visit list uses the stored RPC session token', async () => {
   assert.deepEqual(result, { data: [{ id: 10, customer_id: 'c1', visit_date: '2026-03-01' }], error: null });
 });
 
-test('visitService: customer stats use the stored RPC session token', async () => {
-  const calls = [];
-  const supabaseClient = {
-    getCustomerStats: async (payload) => {
-      calls.push(payload);
-      return { data: { success: true, current_stamps: 4, visit_count: 9 }, error: null };
-    },
-  };
-
-  const { visitService } = loadModule('src/services/visitService.js', {
-    './supabase': {
-      ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'rpc-token' }, error: null }),
-      withAuthErrorHandling: (error) => error,
-      supabase: {},
-    },
-    './supabaseClient': { supabaseClient },
-    '../utils/storage': { storage },
-  });
-
-  const result = await visitService.getCustomerStats('customer-1');
-
-  assert.deepEqual(calls, [{ p_session_token: 'rpc-token' }]);
-  assert.deepEqual(result, { data: { current_stamps: 4, visit_count: 9 }, error: null });
-});
-
-
-
 test('visitService: updateVisit keeps local-only fields bound to storage object and off server payload', async () => {
   const calls = [];
   const mockedStorage = {

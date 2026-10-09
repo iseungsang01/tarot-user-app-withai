@@ -35,33 +35,12 @@ test('couponService: loads coupons through customer-session RPC', async () => {
   assert.deepEqual(result, { data: coupons, error: null });
 });
 
-test('couponService: counts valid coupons through customer-session RPC', async () => {
-  const calls = [];
-  const supabaseClient = {
-    getMyCouponCount: async (payload) => {
-      calls.push(payload);
-      return { data: 3, error: null };
-    },
-  };
-
-  const { couponService } = loadModule('src/services/couponService.js', {
-    './supabase': { supabase: createSupabaseTableMock() },
-    './supabaseClient': { supabaseClient },
-    '../utils/storage': { storage: createStorageMock() },
-  });
-
-  const result = await couponService.getValidCouponCount('customer-1');
-
-  assert.deepEqual(calls, [{ p_session_token: 'session-token', p_valid_only: true }]);
-  assert.deepEqual(result, { count: 3, error: null });
-});
-
 test('couponService: uses coupons through the redeem-coupon edge function', async () => {
   const calls = [];
   const supabaseClient = {
     redeemCoupon: async (payload) => {
       calls.push(payload);
-      return { data: [{ success: true, message: 'ok' }], error: null };
+      return { error: null };
     },
   };
 
@@ -74,7 +53,7 @@ test('couponService: uses coupons through the redeem-coupon edge function', asyn
   const result = await couponService.useCoupon(10, 'admin-secret');
 
   assert.deepEqual(calls, [{ couponId: 10, adminPassword: 'admin-secret', sessionToken: 'session-token' }]);
-  assert.deepEqual(result, { error: null, message: 'ok' });
+  assert.deepEqual(result, { error: null });
 });
 
 test('couponService: rejects coupon use without admin password before calling the edge function', async () => {
@@ -82,7 +61,7 @@ test('couponService: rejects coupon use without admin password before calling th
   const supabaseClient = {
     redeemCoupon: async (payload) => {
       calls.push(payload);
-      return { data: [{ success: true, message: 'ok' }], error: null };
+      return { error: null };
     },
   };
 
@@ -106,8 +85,7 @@ test('couponService: treats invalid admin password as user input without console
   try {
     const supabaseClient = {
       redeemCoupon: async () => ({
-        data: [{ success: false, message: 'invalid_admin_password' }],
-        error: null,
+        error: Object.assign(new Error('INVALID_CREDENTIALS'), { code: 'INVALID_CREDENTIALS', reason: 'INVALID_CREDENTIALS' }),
       }),
     };
 
@@ -119,7 +97,7 @@ test('couponService: treats invalid admin password as user input without console
 
     const result = await couponService.useCoupon(10, 'wrong-password');
 
-    assert.equal(result.error.code, 'invalid_admin_password');
+    assert.equal(result.error.reason, 'INVALID_CREDENTIALS');
     assert.equal(errors.length, 0);
   } finally {
     console.error = originalConsoleError;

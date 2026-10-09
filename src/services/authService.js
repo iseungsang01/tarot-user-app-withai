@@ -5,19 +5,7 @@ import { STORAGE_KEYS } from '../utils/storage/core';
 const CUSTOMER_KEY = STORAGE_KEYS.CUSTOMER;
 const CUSTOMER_SESSION_KEY = STORAGE_KEYS.CUSTOMER_SESSION;
 
-const LOGIN_GUARD_KEY = 'auth_login_guard';
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_MS = 5 * 60 * 1000;
-
-const defaultLoginGuard = { failedAttempts: 0, lockUntil: 0 };
-
-const getLoginGuard = async () => (await storage.get(LOGIN_GUARD_KEY)) || { ...defaultLoginGuard };
-const saveLoginGuard = async (guard) => storage.save(LOGIN_GUARD_KEY, guard);
-const resetLoginGuard = async () => storage.remove(LOGIN_GUARD_KEY);
-
-const normalizeCustomer = (payload) => payload?.customer || payload?.profile || payload;
-
-const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType = 'customer_rpc_session' }) => {
+const saveAuthenticatedCustomer = async ({ customer, sessionToken, sessionType = 'customer' }) => {
   if (!customer || !sessionToken) return null;
 
   if (!customer.isGuest && customer.id) {
@@ -75,105 +63,98 @@ const settleWithin = async (operation, timeoutMs = LOGOUT_REMOTE_TIMEOUT_MS) => 
   }
 };
 
-// 서버 message 는 영어이거나 내부 문구일 수 있어 화면에 그대로 쓰지 않는다.
-const getFailureMessage = (resultData) => {
-  if (resultData?.locked || resultData?.lock_expires_at) return '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
-  if (resultData?.reason === 'INTERNAL_ERROR') return '서버 연결 중 오류가 발생했습니다.';
-  return '전화번호 또는 비밀번호가 일치하지 않습니다.';
+// 서버 reason 은 코드라 화면에 그대로 쓰지 않는다(db-redesign §2-1).
+const retryAfterText = (error) => {
+  const seconds = Number(error?.details);
+  if (!Number.isFinite(seconds) || seconds <= 0) return '잠시 후';
+  return seconds >= 60 ? `${Math.ceil(seconds / 60)}분 후` : `${Math.ceil(seconds)}초 후`;
 };
 
-const getRegisterFailureMessage = (resultData, fallback = '회원가입에 실패했습니다.') => {
-  const message = resultData?.message || fallback;
-  const normalizedMessage = message.toLowerCase();
-
-  // 매니저 register_customer 의 IP 당 시간당 가입 상한(8차).
-  if (resultData?.reason === 'RATE_LIMITED') return '가입 시도가 너무 많습니다. 1시간 후 다시 시도해주세요.';
-
-  if (
-    resultData?.reason === 'PHONE_ALREADY_REGISTERED'
-    || normalizedMessage.includes('already registered')
-    || normalizedMessage.includes('duplicate')
-    || normalizedMessage.includes('unique')
-    || normalizedMessage.includes('이미 가입')
-  ) {
-    return '이미 가입된 전화번호입니다. 로그인 화면에서 기존 계정으로 로그인해주세요.';
-  }
-
-  if (normalizedMessage.includes('password')) return '비밀번호는 6자 이상이어야 하고 123456 은 쓸 수 없습니다.';
-  return fallback;
-};
-
-const getRpcFailureMessage = (rpcError) => {
-  if (rpcError?.code === '22023' && rpcError?.message?.toLowerCase?.().includes('invalid salt')) {
-    return '계정 비밀번호 저장 형식에 문제가 있습니다. 매장에 문의해주세요.';
-  }
-
+const getLoginFailureMessage = (error) => {
+  if (error?.code === '28P01') return '전화번호 또는 비밀번호가 일치하지 않습니다.';
+  if (error?.code === 'P0001') return `로그인 시도가 너무 많습니다. ${retryAfterText(error)} 다시 시도해주세요.`;
   return '서버 연결 중 오류가 발생했습니다.';
 };
 
-const getGuestLoginFailureMessage = (rpcError, resultData) => {
-  if (rpcError?.code === 'PGRST202' && rpcError?.message?.includes('issue_ai_guest_session')) {
-    return '게스트 로그인 서버 설정이 아직 적용되지 않았습니다. 관리자에게 문의해주세요.';
-  }
+const getRegisterFailureMessage = (error) => {
+  if (error?.code === '23505') return '이미 가입된 전화번호입니다. 로그인 화면에서 기존 계정으로 로그인해주세요.';
+  if (error?.message === 'WEAK_PASSWORD') return '비밀번호는 6자 이상이어야 하고 123456 은 쓸 수 없습니다.';
+  if (error?.code === '22023') return '입력한 정보를 다시 확인해주세요.';
+  if (error?.code === 'P0001') return `가입 시도가 너무 많습니다. ${retryAfterText(error)} 다시 시도해주세요.`;
+  return '회원가입에 실패했습니다.';
+};
 
-  if (resultData?.code === 'GUEST_RATE_LIMITED') return resultData.message;
-  return '게스트 세션을 만들지 못했습니다. 잠시 후 다시 시도해주세요.';
+const GUEST_USER = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0 };
+
+// login_customer 와 고객 본인이 부른 register_customer 는 같은 응답을 돌려준다.
+const saveSessionResponse = async (data) => {
+  if (!data?.session_token || !data?.customer?.id) {
+    return {
+      data: null,
+      error: { message: '로그인 세션을 만들지 못했습니다. 다시 로그인해주세요.', code: 'AUTH_SESSION_FAILED' },
+    };
+  }
+  const customer = await saveAuthenticatedCustomer({ customer: data.customer, sessionToken: data.session_token });
+  return { data: customer, error: null };
 };
 
 export const authService = {
   async login(phoneNumber, password) {
     try {
-      const guard = await getLoginGuard();
-      const clientFingerprint = await getDeviceId();
-
-      const { data: resultData, error: rpcError } = await supabaseClient.loginCustomer({
+      const { data, error } = await supabaseClient.loginCustomer({
         p_phone: phoneNumber.trim(),
         p_password: password,
-        p_client_fingerprint: clientFingerprint,
+        p_client_fingerprint: await getDeviceId(),
       });
-
-      if (rpcError) {
-        console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: getRpcFailureMessage(rpcError) } };
-      }
-
-      if (!resultData || resultData.success === false) {
-        const failedAttempts = (guard.failedAttempts || 0) + 1;
-        const serverLockUntil = resultData?.lock_expires_at ? new Date(resultData.lock_expires_at).getTime() : 0;
-        const lockUntil = serverLockUntil || (failedAttempts >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_MS : 0);
-
-        await saveLoginGuard({ failedAttempts, lockUntil });
-
-        return {
-          data: null,
-          error: {
-            message: getFailureMessage(resultData),
-            lockedUntil: serverLockUntil || null,
-          },
-        };
-      }
-
-      const sessionToken = resultData.session_token;
-      const customerData = normalizeCustomer(resultData);
-
-      if (!sessionToken || !customerData?.id) {
-        return {
-          data: null,
-          error: {
-            message: '로그인 세션을 만들지 못했습니다. 다시 로그인해주세요.',
-            code: 'AUTH_SESSION_FAILED',
-            requiresReLogin: true,
-          },
-        };
-      }
-
-      const savedCustomer = await saveAuthenticatedCustomer({ customer: customerData, sessionToken });
-      await resetLoginGuard();
-
-      return { data: savedCustomer, error: null };
+      if (error) return { data: null, error: { message: getLoginFailureMessage(error), code: error.code } };
+      return saveSessionResponse(data);
     } catch (error) {
-      console.error('❌ 시스템 에러:', error);
+      console.error('❌ 로그인 오류:', error);
       return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
+    }
+  },
+
+  async register(phoneNumber, password, nickname = '') {
+    try {
+      const { data, error } = await supabaseClient.registerCustomer({
+        p_phone: phoneNumber.trim(),
+        p_password: password,
+        p_nickname: nickname,
+        // 가입하면서 세션이 생기므로 이 기기를 "아는 기기"로 남긴다(login 과 같은 값).
+        p_client_fingerprint: await getDeviceId(),
+      });
+      if (error) return { data: null, error: { message: getRegisterFailureMessage(error), code: error.code } };
+      return saveSessionResponse(data);
+    } catch (error) {
+      console.error('❌ 가입 오류:', error);
+      return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
+    }
+  },
+
+  async guestLogin() {
+    try {
+      const { data, error } = await supabaseClient.issueGuestSession();
+      if (error || !data?.session_token) {
+        return {
+          data: null,
+          error: {
+            message: error?.code === 'P0001'
+              ? `게스트 접속이 너무 많습니다. ${retryAfterText(error)} 다시 시도해주세요.`
+              : '게스트 세션을 만들지 못했습니다. 잠시 후 다시 시도해주세요.',
+            code: error?.code || 'GUEST_SESSION_FAILED',
+          },
+        };
+      }
+
+      const guest = await saveAuthenticatedCustomer({
+        customer: GUEST_USER,
+        sessionToken: data.session_token,
+        sessionType: 'guest',
+      });
+      return { data: guest, error: null };
+    } catch (error) {
+      console.error('Guest Login Error:', error);
+      return { data: null, error: { message: '게스트 로그인 중 오류가 발생했습니다.' } };
     }
   },
 
@@ -182,19 +163,13 @@ export const authService = {
 
     await storage.remove(CUSTOMER_SESSION_KEY);
     await storage.remove(CUSTOMER_KEY);
-    await resetLoginGuard();
 
-    const cleanupTasks = [];
-
-    if (session?.token && session.type === 'ai_guest_session') {
-      cleanupTasks.push(settleWithin(supabaseClient.logoutAIGuestSession({ p_session_token: session.token })));
-    } else if (session?.token) {
-      cleanupTasks.push(settleWithin(supabaseClient.logoutCustomer({ p_session_token: session.token })));
-    }
-
-    await Promise.all(cleanupTasks);
+    // 고객·게스트 공용이고, 토큰이 이미 폐기됐어도 서버는 오류를 내지 않는다.
+    if (session?.token) await settleWithin(supabaseClient.logout({ p_session_token: session.token }));
   },
 
+  // 앱 시작 시 저장된 세션을 복원한다. 서버가 세션을 무효라고 할 때만 지우고,
+  // 네트워크 오류 등은 저장된 고객 정보로 계속 진행한다.
   async getStoredCustomer() {
     try {
       const session = await getStoredSession();
@@ -203,28 +178,19 @@ export const authService = {
         return null;
       }
 
-      if (session.type === 'ai_guest_session' || session.customerId === 'guest') {
+      if (session.type === 'guest') {
         const storedGuest = await storage.get(CUSTOMER_KEY);
-        if (storedGuest?.isGuest) return storedGuest;
-
-        const guestUser = { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
-        await storage.save(CUSTOMER_KEY, guestUser);
-        return guestUser;
+        return storedGuest?.isGuest ? storedGuest : GUEST_USER;
       }
 
       const { data, error } = await supabaseClient.getMyProfile({ p_session_token: session.token });
-      if (error || !data?.success) {
+      if (error?.reason === 'INVALID_SESSION' || (!error && !data?.id)) {
         await this.logout();
         return null;
       }
+      if (error) return storage.get(CUSTOMER_KEY);
 
-      const customer = normalizeCustomer(data);
-      if (!customer?.id) {
-        await this.logout();
-        return null;
-      }
-
-      return saveAuthenticatedCustomer({ customer, sessionToken: session.token });
+      return saveAuthenticatedCustomer({ customer: data, sessionToken: session.token });
     } catch {
       return null;
     }
@@ -238,76 +204,12 @@ export const authService = {
       if (!session?.token) return null;
 
       const { data, error } = await supabaseClient.getMyProfile({ p_session_token: session.token });
-      if (error || !data?.success) {
-        console.error('❌ 정보 갱신 에러:', error?.message || data?.message);
-        return null;
-      }
+      if (error || data?.id !== customerId) return null;
 
-      const customer = normalizeCustomer(data);
-      if (!customer?.id || customer.id !== customerId) return null;
-
-      return saveAuthenticatedCustomer({ customer, sessionToken: session.token });
+      return saveAuthenticatedCustomer({ customer: data, sessionToken: session.token });
     } catch (e) {
       console.error('Refresh Error:', e);
       return null;
     }
   },
-
-  async register(phoneNumber, password, nickname = '') {
-    try {
-      const normalizedPhone = phoneNumber.trim();
-
-      const { data: resultData, error: rpcError } = await supabaseClient.registerCustomer({
-        p_phone: normalizedPhone,
-        p_password: password,
-        p_nickname: nickname,
-      });
-
-      if (rpcError) {
-        console.error('❌ RPC 에러:', rpcError);
-        return { data: null, error: { message: getRegisterFailureMessage(rpcError, getRpcFailureMessage(rpcError)) } };
-      }
-
-      if (!resultData || resultData.success === false) {
-        return {
-          data: null,
-          error: { message: getRegisterFailureMessage(resultData) },
-        };
-      }
-
-      return this.login(normalizedPhone, password);
-    } catch (error) {
-      console.error('❌ 시스템 에러:', error);
-      return { data: null, error: { message: '알 수 없는 오류가 발생했습니다.' } };
-    }
-  },
-
-  async guestLogin() {
-    try {
-      const { data: resultData, error: rpcError } = await supabaseClient.issueAIGuestSession();
-
-      if (rpcError || !resultData?.success || !resultData?.session_token) {
-        return {
-          data: null,
-          error: {
-            message: getGuestLoginFailureMessage(rpcError, resultData),
-            code: rpcError?.code || resultData?.code || 'GUEST_SESSION_FAILED',
-          },
-        };
-      }
-
-      const guestUser = resultData.guest || { id: 'guest', nickname: '게스트', isGuest: true, current_stamps: 0, visit_count: 0 };
-      const savedGuest = await saveAuthenticatedCustomer({
-        customer: guestUser,
-        sessionToken: resultData.session_token,
-        sessionType: 'ai_guest_session',
-      });
-
-      return { data: savedGuest, error: null };
-    } catch (error) {
-      console.error('Guest Login Error:', error);
-      return { data: null, error: { message: '게스트 로그인 중 오류가 발생했습니다.' } };
-    }
-  },
-
 };

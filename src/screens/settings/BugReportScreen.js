@@ -8,15 +8,15 @@ import { buildDeviceInfo } from '../../utils/diagnostics';
 import { DrawerTheme } from '../../constants/DrawerTheme';
 
 import { dialog } from '../../utils/dialog';
-// submit_bug_report 는 한도 초과를 success:false 가 아니라 오류로 던진다(매니저 7차).
-// 시간당 5건 초과는 P0001, 크기 초과는 22023.
+// submit_bug_report 실패(db-redesign §4): 시간당 5건 초과는 P0001 RATE_LIMITED,
+// 크기 초과는 22023 TOO_LARGE.
 const getSubmitErrorMessage = (error) => {
     if (error?.code === 'P0001') return '버그 접수는 1시간에 5건까지 가능합니다. 잠시 후 다시 시도해주세요.';
     if (error?.code === '22023') return '내용이 너무 깁니다. 제목은 200자, 내용은 2000자 이내로 줄여주세요.';
     return '버그 접수에 실패했습니다. 잠시 후 다시 시도해주세요.';
 };
 
-const getStatusColor = (s) => ({ 접수: '#ffa500', 확인중: '#2196f3', 완료: '#4caf50' }[s] || DrawerTheme.mutedIvory);
+const getStatusColor = (s) => ({ 접수: '#ffa500', 확인중: '#2196f3', 완료: '#4caf50', 보류: '#9e9e9e' }[s] || DrawerTheme.mutedIvory);
 
 const BugReportScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();

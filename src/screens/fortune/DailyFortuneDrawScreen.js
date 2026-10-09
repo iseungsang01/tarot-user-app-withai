@@ -95,7 +95,7 @@ const DailyFortuneDrawScreen = ({ navigation }) => {
       const nextDrawCount = getStoredDrawCount(latestStored) + 1;
       setSelectedCard(card);
 
-      const nickname = customer?.nickname || customer?.name || '사용자';
+      const nickname = customer?.nickname || '사용자';
       const previousFortune = latestStored?.fortune || '';
       const cardContext = buildCardContext(card);
       let fortuneResult = await getDailyFortune(nickname, previousFortune, cardContext, { adNonce });

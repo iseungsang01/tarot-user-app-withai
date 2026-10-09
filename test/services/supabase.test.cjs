@@ -63,7 +63,7 @@ test('supabase service: exposes stored custom customer RPC token explicitly', as
     assert.deepEqual(result.session, {
       token: 'custom-rpc-token',
       customerId: 'customer-1',
-      type: 'customer_rpc_session',
+      type: 'customer',
     });
     assert.equal(Object.prototype.hasOwnProperty.call(result.session, 'access_token'), false);
   } finally {
@@ -87,7 +87,7 @@ test('supabase service: exposes stored AI guest session token explicitly', async
         default: {
           getItem: async (key) => {
             assert.equal(key, 'tarot_customer_session');
-            return JSON.stringify({ token: 'guest-token', customerId: 'guest', type: 'ai_guest_session' });
+            return JSON.stringify({ token: 'guest-token', customerId: 'guest', type: 'guest' });
           },
         },
       },
@@ -100,7 +100,7 @@ test('supabase service: exposes stored AI guest session token explicitly', async
     assert.deepEqual(result.session, {
       token: 'guest-token',
       customerId: 'guest',
-      type: 'ai_guest_session',
+      type: 'guest',
     });
   } finally {
     if (oldUrl === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -108,4 +108,39 @@ test('supabase service: exposes stored AI guest session token explicitly', async
     if (oldKey === undefined) delete process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
     else process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = oldKey;
   }
+});
+
+const loadWithHandler = () => {
+  const handled = [];
+  const mod = loadModule('src/services/supabase.js', {
+    '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async () => null } },
+    '@supabase/supabase-js': { createClient: () => ({}) },
+  });
+  mod.setGlobalAuthErrorHandler((error) => handled.push(error));
+  return { ...mod, handled };
+};
+
+test('withAuthErrorHandling: INVALID_SESSION 만 전역 로그아웃으로 넘긴다', () => {
+  const { withAuthErrorHandling, handled } = loadWithHandler();
+
+  const rpcError = withAuthErrorHandling({ code: '28000', message: 'INVALID_SESSION' });
+  const edgeError = withAuthErrorHandling({ code: 'INVALID_SESSION', reason: 'INVALID_SESSION', message: 'x' });
+  const other = { code: '28P01', message: 'INVALID_CREDENTIALS' };
+
+  assert.equal(rpcError.requiresReLogin, true);
+  assert.equal(edgeError.requiresReLogin, true);
+  assert.equal(withAuthErrorHandling(other), other);
+  assert.deepEqual(handled.map((e) => e.reason), ['INVALID_SESSION', 'INVALID_SESSION']);
+  // 서버 reason 코드는 화면 문구로 쓰지 않는다
+  assert.equal(rpcError.message, '로그인이 만료되었습니다. 다시 로그인해주세요.');
+});
+
+test('withAuthErrorHandling: PASSWORD_CHANGE_REQUIRED 는 로그아웃이 아닌 강제 변경으로 넘긴다', () => {
+  const { withAuthErrorHandling, handled } = loadWithHandler();
+
+  const error = withAuthErrorHandling({ code: '28000', message: 'PASSWORD_CHANGE_REQUIRED' });
+
+  assert.equal(error.requiresReLogin, false);
+  assert.equal(error.isAuthError, true);
+  assert.deepEqual(handled.map((e) => e.reason), ['PASSWORD_CHANGE_REQUIRED']);
 });

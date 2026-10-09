@@ -16,6 +16,12 @@ export const AuthProvider = ({ children }) => {
   });
 
   const handleAuthFailure = useCallback(async (authError = {}) => {
+    // 제한 세션은 로그아웃하지 않는다. 플래그만 세우면 MainNavigator 가 강제 변경 화면으로 바꾼다.
+    if (authError.reason === 'PASSWORD_CHANGE_REQUIRED') {
+      setCustomer((prev) => (prev ? { ...prev, must_change_password: true } : prev));
+      return;
+    }
+
     try {
       await authService.logout();
       setCustomer(null);

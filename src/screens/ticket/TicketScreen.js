@@ -17,17 +17,14 @@ const MAX_STAMPS = 10;
 // 스탬프 10칸은 메이저 아르카나 앞 10장을 그대로 쓴다
 const tarotCards = MAJOR_ARCANA.slice(0, MAX_STAMPS);
 
-const getCouponType = (code) => (code?.startsWith('BIRTHDAY') || code?.startsWith('BIRTH') ? 'birthday' : 'stamp');
-
+// redeem-coupon 이 돌려주는 code(db-redesign §2-1). INVALID_SESSION 은 전역 로그아웃이 처리한다.
 const COUPON_REDEEM_MESSAGES = {
-  invalid_session: '로그인이 만료되었습니다. 다시 로그인해 주세요.',
-  invalid_admin_password: '관리자 비밀번호가 일치하지 않습니다.',
-  coupon_not_found: '쿠폰을 찾을 수 없습니다.',
-  coupon_already_used: '이미 사용된 쿠폰입니다.',
-  coupon_expired: '유효기간이 지난 쿠폰입니다.',
-  // 아래 둘은 redeem-coupon Edge Function 이 직접 내는 코드다
-  invalid_request: '쿠폰 사용 요청이 올바르지 않습니다. 앱을 최신 버전으로 업데이트해 주세요.',
-  coupon_redemption_failed: '쿠폰 사용 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+  INVALID_CREDENTIALS: '관리자 비밀번호가 일치하지 않습니다.',
+  NOT_FOUND: '쿠폰을 찾을 수 없습니다.',
+  COUPON_USED: '이미 사용된 쿠폰입니다.',
+  COUPON_EXPIRED: '유효기간이 지난 쿠폰입니다.',
+  RATE_LIMITED: '시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+  INVALID_INPUT: '쿠폰 사용 요청이 올바르지 않습니다. 앱을 최신 버전으로 업데이트해 주세요.',
 };
 
 const StampSlot = ({ card, filled, index, onPress }) => {
@@ -87,7 +84,7 @@ const TicketScreen = () => {
   const selectedStampSource = useTarotCardImage(selectedStampCard?.id);
 
   const currentStamps = Math.max(0, Math.min(Number(customer?.current_stamps) || 0, MAX_STAMPS));
-  const birthdayCoupons = useMemo(() => coupons.filter((coupon) => getCouponType(coupon.coupon_code) === 'birthday'), [coupons]);
+  const birthdayCoupons = useMemo(() => coupons.filter((coupon) => coupon.coupon_type === 'birthday'), [coupons]);
 
   const loadTickets = useCallback(async () => {
     if (!customer?.id) return;
@@ -147,7 +144,7 @@ const TicketScreen = () => {
           const { error } = await handleApiCall(
             'TicketScreen.useCoupon',
             () => couponService.useCoupon(coupon.id, password),
-            { silentErrorCodes: ['invalid_admin_password', 'ADMIN_PASSWORD_REQUIRED'] }
+            { silentErrorCodes: ['INVALID_CREDENTIALS', 'ADMIN_PASSWORD_REQUIRED'] }
           );
           if (!error) {
             // 쿠폰 목록·스탬프가 갱신된 뒤에 안내를 띄운다. 순서가 반대면
@@ -155,8 +152,8 @@ const TicketScreen = () => {
             resetCouponUse();
             await Promise.all([loadTickets(), refreshCustomer?.()]);
             showSuccessAlert('COUPON_USED', '쿠폰이 사용 처리되었습니다.');
-          } else {
-            const redeemMessage = COUPON_REDEEM_MESSAGES[error.code] || error.message || '쿠폰 사용 처리 중 문제가 발생했습니다.';
+          } else if (!error.isAuthError) {
+            const redeemMessage = COUPON_REDEEM_MESSAGES[error.reason] || '쿠폰 사용 처리 중 문제가 발생했습니다.';
             dialog.alert('쿠폰 사용 실패', redeemMessage);
           }
           setProcessingCouponId(null);
@@ -230,7 +227,7 @@ const TicketScreen = () => {
               <View key={coupon.id} style={styles.couponUseBlock}>
                 <CouponCard
                   coupon={coupon}
-                  type={getCouponType(coupon.coupon_code)}
+                  type={coupon.coupon_type}
                   onPress={handleCouponPress}
                   containerStyle={isSelected ? styles.selectedCoupon : null}
                 />

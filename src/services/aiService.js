@@ -3,7 +3,8 @@
  * AI 서비스 호출 (Supabase Edge Function 프록시 - Google Gemini 기반)
  */
 
-import { ensureAuthenticatedSession, supabase, withAuthErrorHandling } from './supabase';
+import { ensureAuthenticatedSession, supabase } from './supabase';
+import { readFunctionError } from './supabaseClient';
 
 const EDGE_FUNCTION_NAME = 'ai-proxy';
 
@@ -306,36 +307,12 @@ export const normalizeDailyFortunePayload = (payload) => {
 };
 
 
-const withFunctionErrorDetails = async (error) => {
-    const response = error?.context;
-    if (!response || typeof response.clone !== 'function') return error;
-
-    try {
-        const payload = await response.clone().json();
-        const message = stringifyError(payload?.error || payload?.message || payload);
-        if (!message) return error;
-
-        const detailedError = new Error(message);
-        detailedError.name = error.name || 'FunctionsHttpError';
-        // ai-proxy 가 붙이는 code(AD_REQUIRED, AD_PENDING, QUOTA_EXCEEDED 등)를 살린다.
-        detailedError.code = payload?.code || error.code;
-        detailedError.status = response.status;
-        detailedError.originalError = error;
-        return detailedError;
-    } catch {
-        return error;
-    }
-};
-
 // 프롬프트는 ai-proxy 가 서버에서 만든다. 여기서는 작업 이름과 입력값만 보낸다.
 const callAIProxy = async (task, input, { signal } = {}) => {
     try {
         const authState = await ensureAuthenticatedSession();
         if (!authState.ok) {
-            return {
-                data: null,
-                error: withAuthErrorHandling(authState.error, 'Login is required. Please sign in again.'),
-            };
+            return { data: null, error: authState.error };
         }
 
 
@@ -347,13 +324,8 @@ const callAIProxy = async (task, input, { signal } = {}) => {
             signal,
         });
 
-        if (error) {
-            const detailedError = await withFunctionErrorDetails(error);
-            return {
-                data: null,
-                error: withAuthErrorHandling(detailedError, 'AI proxy request failed.'),
-            };
-        }
+        // 실패 code(db-redesign §2-1): AD_REQUIRED · AD_PENDING · QUOTA_EXCEEDED · INVALID_SESSION 등
+        if (error) return { data: null, error: await readFunctionError(error) };
 
         if (!data || data.error) {
             return {
@@ -378,10 +350,7 @@ const callAIProxy = async (task, input, { signal } = {}) => {
             error: null,
         };
     } catch (error) {
-        return {
-            data: null,
-            error: withAuthErrorHandling(error, 'AI service integration error occurred.'),
-        };
+        return { data: null, error };
     }
 };
 
@@ -480,13 +449,13 @@ export const condenseVoiceMemo = async (transcriptText, signal = null) => {
 export const issueAdRewardNonce = async () => {
     try {
         const authState = await ensureAuthenticatedSession();
-        if (!authState.ok) return { data: null, error: withAuthErrorHandling(authState.error, 'Login is required.') };
+        if (!authState.ok) return { data: null, error: authState.error };
 
         const { data, error } = await supabase.functions.invoke(EDGE_FUNCTION_NAME, {
             body: { task: 'issueAdRewardNonce' },
             headers: { 'x-customer-session-token': authState.session.token },
         });
-        if (error) return { data: null, error: withAuthErrorHandling(await withFunctionErrorDetails(error), 'AI proxy request failed.') };
+        if (error) return { data: null, error: await readFunctionError(error) };
         if (typeof data?.nonce !== 'string') return { data: null, error: new Error('Ad reward nonce was not issued.') };
         return { data: data.nonce, error: null };
     } catch (error) {

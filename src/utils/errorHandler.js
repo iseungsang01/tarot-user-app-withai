@@ -25,7 +25,7 @@ const parseSupabaseError = (error) => {
   }
 
   // 인증 에러
-  if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+  if (error.isAuthError) {
     return {
       type: ERROR_TYPES.AUTH,
       ...ERROR_MESSAGES[ERROR_TYPES.AUTH].SESSION_EXPIRED,
@@ -33,7 +33,7 @@ const parseSupabaseError = (error) => {
   }
 
   // 데이터 없음
-  if (error.code === 'PGRST116') {
+  if (error.code === 'P0002') {
     return {
       type: ERROR_TYPES.NOT_FOUND,
       ...ERROR_MESSAGES[ERROR_TYPES.NOT_FOUND],

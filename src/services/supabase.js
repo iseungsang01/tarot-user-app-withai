@@ -9,7 +9,6 @@ if (!hasSupabaseConfig) {
   console.error('Supabase URL or Anon Key is missing!');
 }
 
-const AUTH_ERROR_CODES = new Set(['PGRST301', '401', '403']);
 const CUSTOMER_SESSION_KEY = STORAGE_KEYS.CUSTOMER_SESSION;
 
 let globalAuthErrorHandler = null;
@@ -36,45 +35,34 @@ export const getSupabase = () => {
   return cachedSupabaseClient;
 };
 
-const normalizeAuthError = (error, fallbackMessage = '인증이 만료되었습니다. 다시 로그인해주세요.') => {
-  const message = error?.message || fallbackMessage;
-  return {
-    message,
-    code: error?.code || 'AUTH_REQUIRED',
-    requiresReLogin: true,
-    isAuthError: true,
-  };
-};
+// 서버 오류의 reason 코드(db-redesign §2-1). RPC 는 MESSAGE 에, Edge Function 은 본문 code 에 담아
+// 보낸다. Edge 쪽은 호출부가 본문을 꺼내 error.reason 에 넣어 둔다.
+export const getErrorReason = (error) => error?.reason || error?.message || null;
 
-const isAuthContextError = (error) => {
-  if (!error) return false;
+const SESSION_EXPIRED_MESSAGE = '로그인이 만료되었습니다. 다시 로그인해주세요.';
 
-  if (AUTH_ERROR_CODES.has(String(error.code || ''))) return true;
+const normalizeAuthError = (error, reason = 'INVALID_SESSION') => ({
+  message: reason === 'PASSWORD_CHANGE_REQUIRED' ? '비밀번호를 먼저 변경해주세요.' : SESSION_EXPIRED_MESSAGE,
+  code: error?.code || 'AUTH_REQUIRED',
+  reason,
+  requiresReLogin: reason === 'INVALID_SESSION',
+  isAuthError: true,
+});
 
-  // 28000: resolve_customer_session 실패(만료·폐기된 세션). 'auth' 부분 문자열로
-  // 판정하던 때는 서버 문구에 auth 가 들어간 아무 오류에도 전역 로그아웃이 났다.
-  if (String(error.code || '') === '28000') return true;
+// INVALID_SESSION 은 전역 로그아웃, PASSWORD_CHANGE_REQUIRED 는 강제 변경 화면으로 보낸다.
+// 둘 다 AuthContext 의 전역 핸들러가 처리한다.
+export const withAuthErrorHandling = (error) => {
+  const reason = getErrorReason(error);
+  if (reason !== 'INVALID_SESSION' && reason !== 'PASSWORD_CHANGE_REQUIRED') return error;
 
-  const message = (error.message || '').toLowerCase();
-  return (
-    message.includes('jwt')
-    || message.includes('not authenticated')
-    || message.includes('unauthorized')
-  );
+  const normalizedError = normalizeAuthError(error, reason);
+  if (typeof globalAuthErrorHandler === 'function') {
+    globalAuthErrorHandler(normalizedError);
+  }
+  return normalizedError;
 };
 
 const getCustomerRpcSession = async () => coreStorage.get(CUSTOMER_SESSION_KEY);
-
-export const withAuthErrorHandling = (error, defaultMessage) => {
-  if (isAuthContextError(error)) {
-    const normalizedError = normalizeAuthError(error, defaultMessage);
-    if (typeof globalAuthErrorHandler === 'function') {
-      globalAuthErrorHandler(normalizedError);
-    }
-    return normalizedError;
-  }
-  return error;
-};
 
 export const setGlobalAuthErrorHandler = (handler) => {
   globalAuthErrorHandler = handler;
@@ -96,8 +84,8 @@ export const ensureAuthenticatedSession = async () => {
   }
 
   const runSessionCheck = async () => {
-    const reportAndFail = (error, fallbackMessage) => {
-      const normalizedError = normalizeAuthError(error, fallbackMessage);
+    const reportAndFail = () => {
+      const normalizedError = normalizeAuthError(null);
       if (typeof globalAuthErrorHandler === 'function') {
         globalAuthErrorHandler(normalizedError);
       }
@@ -111,13 +99,13 @@ export const ensureAuthenticatedSession = async () => {
         session: {
           token: customerSession.token,
           customerId: customerSession.customerId,
-          type: customerSession.type || 'customer_rpc_session',
+          type: customerSession.type || 'customer',
         },
         error: null,
       };
     }
 
-    return reportAndFail(null, '저장된 고객 세션이 없습니다. 다시 로그인해주세요.');
+    return reportAndFail();
   };
 
   pendingSessionPromise = runSessionCheck();

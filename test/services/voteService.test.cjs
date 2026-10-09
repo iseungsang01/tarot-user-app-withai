@@ -54,13 +54,12 @@ test('voteService: submits votes through customer-session RPC without trusting c
     '../utils/storage': { storage: createStorageMock() },
   });
 
-  const result = await voteService.submitVote(4, 'spoofed-customer-id', [2], null);
+  const result = await voteService.submitVote(4, 'spoofed-customer-id', [2]);
 
   assert.deepEqual(calls, [{
     p_session_token: 'session-token',
     p_vote_id: 4,
     p_selected_options: [2],
-    p_response_id: null,
   }]);
   assert.equal(result.data.id, 9);
   assert.equal(result.error, null);

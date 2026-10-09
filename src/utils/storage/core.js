@@ -63,7 +63,7 @@ let cachedScope = null;
 
 const resolveCurrentScope = async () => {
   const session = await getStoredJson(STORAGE_KEYS.CUSTOMER_SESSION);
-  if (session?.type === 'ai_guest_session' || session?.customerId === 'guest') return 'guest';
+  if (session?.type === 'guest') return 'guest';
   if (session?.customerId) return `member:${session.customerId}`;
 
   const customer = await getStoredJson(STORAGE_KEYS.CUSTOMER);

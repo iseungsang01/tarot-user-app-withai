@@ -27,10 +27,11 @@ test('aiService: JSON 파싱 실패 시 fallback 응답을 반환한다', async 
 });
 
 
-test('aiService: surfaces Edge Function JSON error details', async () => {
+test('aiService: Edge Function 의 { code } 를 error.code·reason 으로 올리고 인증 처리에 넘긴다', async () => {
   const edgeError = new Error('Edge Function returned a non-2xx status code');
   edgeError.name = 'FunctionsHttpError';
-  edgeError.context = new Response(JSON.stringify({ error: 'GOOGLE_MODEL not found' }), { status: 500 });
+  edgeError.context = new Response(JSON.stringify({ code: 'INVALID_SESSION' }), { status: 401 });
+  const handled = [];
 
   const { getDailyFortune } = loadModule('src/services/aiService.js', {
     './supabase': {
@@ -40,15 +41,17 @@ test('aiService: surfaces Edge Function JSON error details', async () => {
         },
       },
       ensureAuthenticatedSession: async () => ({ ok: true, session: { token: 'mock_token' } }),
-      withAuthErrorHandling: (error) => error,
+      withAuthErrorHandling: (error) => { handled.push(error.reason); return error; },
     },
   });
 
   const result = await getDailyFortune('tester');
 
   assert.equal(result.data, null);
-  assert.equal(result.error.message, 'GOOGLE_MODEL not found');
-  assert.equal(result.error.status, 500);
+  assert.equal(result.error.code, 'INVALID_SESSION');
+  assert.equal(result.error.reason, 'INVALID_SESSION');
+  assert.equal(result.error.status, 401);
+  assert.deepEqual(handled, ['INVALID_SESSION']);
 });
 
 test('aiService: sends customer session token in a custom header', async () => {

@@ -10,7 +10,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { validatePasswordChange } from '../../utils/validators';
 
 import { dialog } from '../../utils/dialog';
-const ForcedPasswordChangeScreen = ({ navigation }) => {
+const ForcedPasswordChangeScreen = () => {
   const insets = useSafeAreaInsets();
   const { refreshCustomer, logout } = useAuth();
   const [processing, setProcessing] = useState(false);
@@ -36,9 +36,9 @@ const ForcedPasswordChangeScreen = ({ navigation }) => {
         return;
       }
 
-      await refreshCustomer();
+      // 갱신된 고객의 must_change_password=false 로 MainNavigator 가 메인 화면으로 바꾼다.
       dialog.alert('완료', '비밀번호가 변경되었습니다.');
-      navigation.replace('MainTabs');
+      await refreshCustomer();
     } finally {
       setProcessing(false);
     }
