@@ -26,6 +26,12 @@
 
 ## 2. 운영 적용 요청: 유저앱 단독 객체 (마이그레이션 1개 + Edge Function 재배포)
 
+> **2026-10-09 유저앱 쪽에서 운영에 적용 완료.** `20261008120000`·`150000`·`180000` 을 한 트랜잭션으로
+> 적용했고(`supabase_migrations.schema_migrations` 에도 기록), `ai-proxy`·`admob-ssv` 를 배포했습니다.
+> 게스트 세션으로 무료 1회 → `AD_REQUIRED` → `AD_PENDING` 흐름과 anon 직접 호출 거부(42501)를 확인했습니다.
+> 매니저 쪽에서 아래 SQL 을 다시 돌릴 필요는 없습니다. 또 `GOOGLE_API_KEY` 시크릿은 지우고
+> `GOOGLE_API_KEYS`(새 키 3개)로 바꿨고, `ADMOB_REWARDED_AD_UNITS` 를 설정했습니다.
+
 `supabase/migrations/20261008150000_account_ops_null_password_and_member_ai_cap.sql`
 (선행: `20261008120000_ai_proxy_server_side_quota.sql`)
 
