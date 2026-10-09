@@ -21,7 +21,6 @@ BEGIN
 END $$;
 
 -- ── 1. verify_my_password ─────────────────────────────────────────────
--- ── 1. verify_my_password ─────────────────────────────────────────────
 -- 재확인 시도는 고객당 시간당 10회. 성공도 센다(정상 사용은 화면당 1회).
 CREATE OR REPLACE FUNCTION public.verify_my_password(p_session_token text, input_password text)
 RETURNS boolean
@@ -50,7 +49,6 @@ BEGIN
 END;
 $$;
 
--- ── 2. update_my_password ─────────────────────────────────────────────
 -- ── 2. update_my_password ─────────────────────────────────────────────
 -- 정책 위반은 22023 으로 던진다(앱이 코드로 문구를 고른다). 바꾼 세션만 남기고
 -- 같은 고객의 다른 세션은 모두 끊는다.

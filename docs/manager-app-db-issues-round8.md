@@ -110,3 +110,22 @@ AdMob 콘솔에서 보상형 광고 단위의 서버 측 확인 콜백 URL 을
 ### 참고: 제한 세션(`must_change_password`)
 
 유저앱은 지금도 `must_change_password=true`이면 강제 변경 화면으로 보냅니다. 서버가 그런 세션은 비밀번호 변경만 허용하도록 바꾸는 데 동의합니다. 응답 형태를 정해 주시면 맞추겠습니다.
+
+---
+
+## 4. 매니저 8차 회신 반영 (2026-10-09)
+
+회신: `tarot-manager-app/docs/manager-app-db-issues-round8-reply.md`. 이후 회차는 세션 간 메시지로 주고받는다.
+
+| 매니저 변경 | 유저앱 대응 |
+| --- | --- |
+| `register_customer` IP당 시간당 5회, 초과 시 `reason: 'RATE_LIMITED'` | `getRegisterFailureMessage` 안내 문구 (5a0c531) |
+| `votes` 정책 `(is_active AND starts_at <= now()) OR is_admin()` | 없음 |
+| `resolve_customer_session` 이 `must_change_password` 세션을 NULL 로 봄, 새 `resolve_customer_session_allow_restricted(text)` | `get_my_profile`·`verify_my_password`·`update_my_password` 만 새 해석기로 (`20261009120000`, 18615ff). 두 해석기는 매니저 소유 |
+
+앱 쪽 확인: 강제 변경 화면이 부르는 RPC 는 `update_my_password`(→`verify_my_password`)와
+`get_my_profile` 뿐이고, 화면 밖 스택(MainTabs)은 변경이 끝나기 전엔 마운트되지 않는다.
+"취소" 의 `logout_customer` 는 해석기를 거치지 않아 제한 세션도 폐기된다.
+
+**적용 순서 (운영자 직접):** 매니저 7차 → 매니저 `20261009_security_round8.sql` → 곧바로 유저앱 `20261009120000`.
+둘 사이가 벌어지면 임시 비밀번호 고객은 프로필 복원이 실패해 로그인 화면으로 튕기고 강제 변경을 못 한다.
